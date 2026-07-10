@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node backend/server.js",
     "dev": "node --watch backend/server.js",
-    "vercel-build": "prisma generate --schema=backend/prisma/schema.prisma",
+    "vercel-build": "prisma generate --schema=backend/prisma/schema.prisma && node scripts/build-static.js",
     "prisma:generate": "prisma generate --schema=backend/prisma/schema.prisma",
     "prisma:migrate": "prisma migrate dev --schema=backend/prisma/schema.prisma",
     "prisma:deploy": "prisma migrate deploy --schema=backend/prisma/schema.prisma",
