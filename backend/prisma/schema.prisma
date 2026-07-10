@@ -1,0 +1,183 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Admin {
+  id           Int      @id @default(autoincrement())
+  name         String   @db.VarChar(100)
+  email        String   @unique @db.VarChar(255)
+  passwordHash String   @db.VarChar(255)
+  createdAt    DateTime @default(now())
+  priceHistory PriceHistory[]
+  leadActivities LeadActivity[]
+
+  @@index([email])
+}
+
+model Customer {
+  id        Int            @id @default(autoincrement())
+  name      String         @db.VarChar(100)
+  phone     String         @unique @db.VarChar(10)
+  location  String         @db.VarChar(100)
+  createdAt DateTime       @default(now())
+  quotes    QuoteRequest[]
+
+  @@index([phone])
+  @@index([createdAt])
+}
+
+model QuoteRequest {
+  id               Int               @id @default(autoincrement())
+  enquiryNumber    String            @unique @db.VarChar(32)
+  customerId       Int
+  company          String?           @db.VarChar(120)
+  product          String            @db.VarChar(100)
+  quantity         Int
+  deliveryDate     DateTime?
+  message          String?           @db.VarChar(500)
+  status           QuoteStatus       @default(NEW)
+  source           LeadSource        @default(WEBSITE)
+  priority         LeadPriority      @default(MEDIUM)
+  assignedTo       String?           @db.VarChar(100)
+  nextFollowUpDate DateTime?
+  crmNotes         String?           @db.VarChar(1000)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  customer         Customer          @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  notificationLogs NotificationLog[]
+  activities       LeadActivity[]
+
+  @@index([customerId])
+  @@index([enquiryNumber])
+  @@index([status])
+  @@index([source])
+  @@index([priority])
+  @@index([nextFollowUpDate])
+  @@index([createdAt])
+}
+
+enum QuoteStatus {
+  NEW
+  CONTACTED
+  FOLLOW_UP
+  QUOTATION_SENT
+  NEGOTIATION
+  WON
+  LOST
+  CLOSED
+}
+
+enum LeadSource {
+  WEBSITE
+  PHONE
+  WALK_IN
+  WHATSAPP
+  INDIAMART
+  FACEBOOK
+  INSTAGRAM
+  REFERENCE
+  MANUAL
+  CSV_IMPORT
+}
+
+enum LeadPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+model LeadActivity {
+  id        Int          @id @default(autoincrement())
+  leadId    Int
+  type      ActivityType @default(NOTE)
+  note      String       @db.VarChar(1000)
+  createdBy Int?
+  createdAt DateTime     @default(now())
+  lead      QuoteRequest @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  admin     Admin?       @relation(fields: [createdBy], references: [id], onDelete: SetNull)
+
+  @@index([leadId])
+  @@index([createdBy])
+  @@index([createdAt])
+}
+
+enum ActivityType {
+  CREATED
+  IMPORTED
+  NOTE
+  STATUS_CHANGE
+}
+
+model NotificationLog {
+  id             Int                @id @default(autoincrement())
+  quoteRequestId Int
+  type           NotificationType   @default(EMAIL)
+  recipient      String             @db.VarChar(255)
+  status         NotificationStatus
+  errorMessage   String?            @db.VarChar(1000)
+  createdAt      DateTime           @default(now())
+  quoteRequest   QuoteRequest       @relation(fields: [quoteRequestId], references: [id], onDelete: Cascade)
+
+  @@index([quoteRequestId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+enum NotificationType {
+  EMAIL
+}
+
+enum NotificationStatus {
+  SUCCESS
+  FAILED
+}
+
+model Product {
+  id            Int                 @id @default(autoincrement())
+  name          String              @db.VarChar(100)
+  slug          String              @unique @db.VarChar(120)
+  description   String              @db.VarChar(1000)
+  standardPrice Decimal             @db.Decimal(10, 2)
+  bulkPrice     Decimal             @db.Decimal(10, 2)
+  bulkQuantity  Int
+  unit          String              @db.VarChar(30)
+  image         String              @db.VarChar(255)
+  availability  ProductAvailability @default(IN_STOCK)
+  updatedAt     DateTime            @updatedAt
+  priceHistory  PriceHistory[]
+
+  @@index([slug])
+  @@index([availability])
+  @@index([updatedAt])
+}
+
+model PriceHistory {
+  id        Int       @id @default(autoincrement())
+  productId Int
+  oldPrice  Decimal   @db.Decimal(10, 2)
+  newPrice  Decimal   @db.Decimal(10, 2)
+  priceType PriceType @default(STANDARD)
+  updatedBy Int
+  updatedAt DateTime  @default(now())
+  product   Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  admin     Admin     @relation(fields: [updatedBy], references: [id], onDelete: Restrict)
+
+  @@index([productId])
+  @@index([updatedBy])
+  @@index([updatedAt])
+}
+
+enum ProductAvailability {
+  IN_STOCK
+  OUT_OF_STOCK
+}
+
+enum PriceType {
+  STANDARD
+  BULK
+}

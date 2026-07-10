@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: ssb-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ssb_business
+      POSTGRES_USER: ssb_user
+      POSTGRES_PASSWORD: ssb_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - ssb_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ssb_user -d ssb_business"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  ssb_postgres_data:

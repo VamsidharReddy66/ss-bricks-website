@@ -1,0 +1,41 @@
+{
+  "name": "ss-bricks-business-management-system",
+  "version": "1.0.0",
+  "description": "SS Bricks Phase 1 business management backend with quotation storage.",
+  "main": "backend/server.js",
+  "scripts": {
+    "start": "node backend/server.js",
+    "dev": "node --watch backend/server.js",
+    "vercel-build": "prisma generate --schema=backend/prisma/schema.prisma",
+    "prisma:generate": "prisma generate --schema=backend/prisma/schema.prisma",
+    "prisma:migrate": "prisma migrate dev --schema=backend/prisma/schema.prisma",
+    "prisma:deploy": "prisma migrate deploy --schema=backend/prisma/schema.prisma",
+    "prisma:studio": "prisma studio --schema=backend/prisma/schema.prisma",
+    "test": "node --test backend/tests/*.test.js"
+  },
+  "keywords": [
+    "ss-bricks",
+    "express",
+    "prisma",
+    "postgresql"
+  ],
+  "author": "SS Bricks",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "@prisma/client": "^6.10.1",
+    "bcrypt": "^6.0.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.5.0",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^2.0.1",
+    "nodemailer": "^6.10.1",
+    "xlsx": "^0.18.5",
+    "zod": "^3.25.67"
+  },
+  "devDependencies": {
+    "prisma": "^6.10.1"
+  }
+}
