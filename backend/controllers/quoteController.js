@@ -6,6 +6,21 @@ const { successResponse, errorResponse } = require('../utils/apiResponse');
 
 const notificationService = new NotificationService();
 
+function runQuoteDistribution(result) {
+  const task = notificationService.notifyQuoteCreated(result).catch((error) => {
+    console.error(`Unexpected notification error for ${result.quote.enquiryNumber}.`, error);
+  });
+
+  if (typeof globalThis.waitUntil === 'function') {
+    globalThis.waitUntil(task);
+    return;
+  }
+
+  setImmediate(() => {
+    task.catch(() => {});
+  });
+}
+
 async function createQuote(req, res, next) {
   try {
     if (!req.body || Object.keys(req.body).length === 0) {
@@ -33,15 +48,7 @@ async function createQuote(req, res, next) {
       console.error(`Could not generate immediate quotation PDF for ${result.quote.enquiryNumber}.`, error);
     }
 
-    const pipelineResult = await notificationService.notifyQuoteCreated(result).catch((error) => {
-      console.error(`Unexpected notification error for ${result.quote.enquiryNumber}.`, error);
-      return {
-        pdf: pdf ? { status: 'SUCCESS', pdfUrl: pdf.pdfUrl, fileName: pdf.fileName } : null,
-        googleSheet: { status: 'FAILED', errorMessage: 'Unexpected notification error.' },
-        email: { status: 'FAILED', errorMessage: 'Unexpected notification error.' },
-        whatsapp: { status: 'FAILED', errorMessage: 'Unexpected notification error.' },
-      };
-    });
+    runQuoteDistribution(result);
 
     return successResponse(res, 201, 'Quotation submitted successfully.', {
       enquiryNumber: result.quote.enquiryNumber,
@@ -51,10 +58,10 @@ async function createQuote(req, res, next) {
       pdfUrl: pdf?.pdfUrl || result.quote.pdfUrl || null,
       pdfReady: Boolean(pdf),
       distribution: {
-        pdf: pipelineResult?.pdf?.status || (pdf ? 'SUCCESS' : 'FAILED'),
-        googleSheet: pipelineResult?.googleSheet?.status || 'FAILED',
-        email: pipelineResult?.email?.status || 'FAILED',
-        whatsapp: pipelineResult?.whatsapp?.status || 'FAILED',
+        pdf: pdf ? 'SUCCESS' : 'FAILED',
+        googleSheet: 'QUEUED',
+        email: 'QUEUED',
+        whatsapp: 'QUEUED',
       },
     });
   } catch (error) {
