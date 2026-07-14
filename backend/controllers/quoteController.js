@@ -1,3 +1,4 @@
+const { waitUntil } = require('@vercel/functions');
 const { quoteRequestSchema, formatZodErrors } = require('../validators/quoteValidator');
 const quoteService = require('../services/quoteService');
 const { NotificationService } = require('../services/notificationService');
@@ -11,8 +12,8 @@ function runQuoteDistribution(result) {
     console.error(`Unexpected notification error for ${result.quote.enquiryNumber}.`, error);
   });
 
-  if (typeof globalThis.waitUntil === 'function') {
-    globalThis.waitUntil(task);
+  if (process.env.VERCEL) {
+    waitUntil(task);
     return;
   }
 

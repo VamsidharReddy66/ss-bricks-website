@@ -84,6 +84,7 @@ class NotificationService {
     } catch (error) {
       const failure = errorMessage(error);
       result.pdf = { status: 'FAILED', errorMessage: failure };
+      this.logger.error(`Quote PDF pipeline failed for ${data.quote.enquiryNumber}: ${failure}`);
       await this.logNotification(data.quote.id, 'PDF', 'INTERNAL', 'FAILED', failure);
       await this.addActivity(data.quote.id, `PDF generation failed: ${failure}`);
     }
@@ -98,6 +99,7 @@ class NotificationService {
     } catch (error) {
       const failure = errorMessage(error);
       result.email = { status: 'FAILED', errorMessage: failure };
+      this.logger.error(`Quote email failed for ${data.quote.enquiryNumber}: ${failure}`);
       await this.logNotification(data.quote.id, 'EMAIL', recipient, 'FAILED', failure);
       await this.addActivity(data.quote.id, `Email failed: ${failure}`);
     }
@@ -118,6 +120,7 @@ class NotificationService {
     } catch (error) {
       const failure = errorMessage(error);
       result.whatsapp = { status: 'FAILED', errorMessage: failure };
+      this.logger.error(`Quote WhatsApp delivery failed for ${data.quote.enquiryNumber}: ${failure}`);
       await this.logNotification(data.quote.id, 'WHATSAPP', 'WhatsApp', 'FAILED', failure);
       await this.addActivity(data.quote.id, `WhatsApp failed: ${failure}`);
     }
@@ -131,6 +134,7 @@ class NotificationService {
     } catch (error) {
       const failure = errorMessage(error);
       result.googleSheet = { status: 'FAILED', errorMessage: failure };
+      this.logger.error(`Google Sheets sync failed for ${data.quote.enquiryNumber}: ${failure}`);
       await this.logNotification(data.quote.id, 'GOOGLE_SHEET', 'Google Sheet', 'FAILED', failure);
       await this.addActivity(data.quote.id, `Sheet sync failed: ${failure}`);
     }
