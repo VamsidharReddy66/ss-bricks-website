@@ -480,12 +480,41 @@
     firstInvalid?.focus();
   }
 
-  function buildWhatsAppUrl(payload, enquiryNumber) {
+  function absoluteApiUrl(path) {
+    if (!path) return '';
+    return new URL(path, API_BASE_URL || window.location.origin).href;
+  }
+
+  function buildWhatsAppUrl(payload, enquiryNumber, pdfUrl) {
+    const pdfLine = pdfUrl ? `\nQuotation PDF: ${pdfUrl}` : '';
     const msg = encodeURIComponent(
-      `New Enquiry from SS Bricks Website\nEnquiry No: ${enquiryNumber}\nName: ${payload.name}\nMobile: ${payload.phone}\nProduct: ${payload.product}\nQuantity: ${payload.quantity}\nLocation: ${payload.location}\nDelivery Date: ${payload.deliveryDate}\nMessage: ${payload.message || 'N/A'}`
+      `New Enquiry from SS Bricks Website\nEnquiry No: ${enquiryNumber}\nName: ${payload.name}\nMobile: ${payload.phone}\nProduct: ${payload.product}\nQuantity: ${payload.quantity}\nLocation: ${payload.location}\nDelivery Date: ${payload.deliveryDate}\nMessage: ${payload.message || 'N/A'}${pdfLine}`
     );
 
     return `https://wa.me/${WHATSAPP_PHONE}?text=${msg}`;
+  }
+
+  async function shareQuotePdfFile(pdfUrl, enquiryNumber) {
+    if (!pdfUrl || !navigator.share || !window.File) return false;
+
+    try {
+      const response = await fetch(pdfUrl, { cache: 'no-store' });
+      if (!response.ok) return false;
+
+      const blob = await response.blob();
+      const file = new File([blob], `${enquiryNumber}.pdf`, { type: 'application/pdf' });
+      if (!navigator.canShare || !navigator.canShare({ files: [file] })) return false;
+
+      await navigator.share({
+        files: [file],
+        title: `SS Bricks Quote ${enquiryNumber}`,
+        text: 'Please send this quotation PDF to SS Bricks on WhatsApp.',
+      });
+
+      return true;
+    } catch (_error) {
+      return false;
+    }
   }
 
   document.querySelectorAll('.quote-form').forEach(form => {
@@ -534,7 +563,11 @@
         }
 
         const enquiryNumber = result.data?.enquiryNumber || 'Stored';
-        window.open(buildWhatsAppUrl(payload, enquiryNumber), '_blank', 'noopener');
+        const pdfUrl = absoluteApiUrl(result.data?.pdfUrl);
+        const sharedPdf = await shareQuotePdfFile(pdfUrl, enquiryNumber);
+        if (!sharedPdf) {
+          window.open(buildWhatsAppUrl(payload, enquiryNumber, pdfUrl), '_blank', 'noopener');
+        }
         showStatus(form, `Quotation stored successfully. Enquiry number: ${enquiryNumber}`);
         form.reset();
       } catch (_error) {

@@ -55,6 +55,17 @@ module.exports = {
     name: process.env.ADMIN_NAME || 'SS Bricks Admin',
   },
   whatsappPhone: process.env.WHATSAPP_PHONE || '919876543210',
+  whatsapp: {
+    providerUrl: process.env.WHATSAPP_PROVIDER_URL || '',
+    accessToken: process.env.WHATSAPP_ACCESS_TOKEN || '',
+  },
+  googleSheets: {
+    enabled: process.env.GOOGLE_SHEETS_ENABLED === 'true',
+    spreadsheetId: process.env.GOOGLE_SHEET_ID || '',
+    sheetName: process.env.GOOGLE_SHEET_NAME || 'Quotes',
+    clientEmail: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || '',
+    privateKey: (process.env.GOOGLE_PRIVATE_KEY || '').replace(/\\n/g, '\n'),
+  },
   smtp: {
     host: process.env.SMTP_HOST || '',
     port: Number(process.env.SMTP_PORT || 587),

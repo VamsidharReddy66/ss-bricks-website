@@ -30,6 +30,13 @@ class EmailService {
       subject: template.subject,
       text: template.text,
       html: template.html,
+      attachments: data.pdf ? [
+        {
+          filename: data.pdf.fileName,
+          content: data.pdf.content,
+          contentType: data.pdf.contentType,
+        },
+      ] : [],
     });
   }
 }

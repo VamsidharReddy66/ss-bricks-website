@@ -48,9 +48,10 @@ function quoteFields({ quote, customer }) {
 
 function createQuoteEmailTemplate(data) {
   const fields = quoteFields(data);
-  const subject = `New Quote Request | ${data.quote.enquiryNumber}`;
+  const subject = `New Quote Request - ${data.quote.enquiryNumber}`;
   const text = [
     'A new quotation request has been received from the website.',
+    data.pdf ? 'The generated quotation PDF is attached.' : '',
     '',
     ...fields.flatMap(([label, value]) => [label, displayValue(value), '']),
   ].join('\n');
@@ -74,7 +75,7 @@ function createQuoteEmailTemplate(data) {
             <h1 style="margin:0;font-size:22px">New Quote Request</h1>
           </div>
           <div style="padding:24px">
-            <p style="margin:0 0 18px">A new quotation request has been received from the website.</p>
+            <p style="margin:0 0 18px">A new quotation request has been received from the website.${data.pdf ? ' The generated quotation PDF is attached.' : ''}</p>
             <table role="presentation" style="width:100%;border-collapse:collapse;font-size:14px">
               ${rows}
             </table>

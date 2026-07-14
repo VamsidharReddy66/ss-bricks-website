@@ -45,6 +45,9 @@ function createHarness(sendQuoteNotification) {
         return data;
       },
     },
+    leadActivity: {
+      create: async () => ({}),
+    },
     quoteRequest: {
       delete: async () => {
         calls.quoteDeletes += 1;
@@ -59,11 +62,30 @@ function createHarness(sendQuoteNotification) {
     getRecipient: () => completeConfig.recipient,
     sendQuoteNotification,
   };
+  const pdfGenerator = async () => ({
+    fileName: `${quoteData.quote.enquiryNumber}.pdf`,
+    content: Buffer.from('%PDF-1.4 test'),
+    contentType: 'application/pdf',
+    pdfUrl: `/api/quotes/${quoteData.quote.enquiryNumber}/pdf`,
+  });
+  const googleSheetsService = {
+    appendQuote: async () => ({ status: 'SUCCESS' }),
+  };
+  const whatsappService = {
+    sendQuoteDocument: async () => ({ status: 'SUCCESS' }),
+  };
 
   return {
     logs,
     calls,
-    service: new NotificationService({ prismaClient, emailService, logger }),
+    service: new NotificationService({
+      prismaClient,
+      emailService,
+      googleSheetsService,
+      logger,
+      pdfGenerator,
+      whatsappService,
+    }),
   };
 }
 
@@ -72,15 +94,13 @@ test('sends an email and records a successful NotificationLog', async () => {
 
   const result = await harness.service.notifyQuoteCreated(quoteData);
 
-  assert.equal(result.status, 'SUCCESS');
-  assert.deepEqual(harness.logs, [
-    {
-      quoteRequestId: 42,
-      type: 'EMAIL',
-      recipient: completeConfig.recipient,
-      status: 'SUCCESS',
-    },
-  ]);
+  assert.equal(result.email.status, 'SUCCESS');
+  assert.deepEqual(harness.logs.find((log) => log.type === 'EMAIL'), {
+    quoteRequestId: 42,
+    type: 'EMAIL',
+    recipient: completeConfig.recipient,
+    status: 'SUCCESS',
+  });
 });
 
 for (const scenario of [
@@ -98,10 +118,10 @@ for (const scenario of [
 
     const result = await harness.service.notifyQuoteCreated(quoteData);
 
-    assert.equal(result.status, 'FAILED');
-    assert.equal(harness.logs.length, 1);
-    assert.equal(harness.logs[0].status, 'FAILED');
-    assert.equal(harness.logs[0].errorMessage, scenario[2]);
+    assert.equal(result.email.status, 'FAILED');
+    const emailLog = harness.logs.find((log) => log.type === 'EMAIL');
+    assert.equal(emailLog.status, 'FAILED');
+    assert.equal(emailLog.errorMessage, scenario[2]);
     assert.equal(harness.calls.quoteDeletes, 0);
   });
 }
@@ -143,7 +163,7 @@ test('EmailService sends text and professional HTML content to the configured re
   await service.sendQuoteNotification(quoteData);
 
   assert.equal(mail.to, completeConfig.recipient);
-  assert.equal(mail.subject, 'New Quote Request | SSB-20260703-0008');
+  assert.equal(mail.subject, 'New Quote Request - SSB-20260703-0008');
   assert.match(mail.text, /Phone Number\n9876543210/);
   assert.match(mail.html, /<table/);
   assert.match(mail.html, /Need delivery before weekend\./);

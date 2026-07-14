@@ -66,6 +66,9 @@ async function persistQuote(payload, attempt = 0) {
         quantity: true,
         deliveryDate: true,
         status: true,
+        source: true,
+        assignedTo: true,
+        pdfUrl: true,
         createdAt: true,
       },
     });
@@ -168,8 +171,28 @@ async function listRecentQuotes(limit = 25) {
   }));
 }
 
+async function getQuoteDocument(enquiryNumber) {
+  const quote = await prisma.quoteRequest.findUnique({
+    where: {
+      enquiryNumber,
+    },
+    include: {
+      document: true,
+    },
+  });
+
+  if (!quote?.document) {
+    const error = new Error('Quotation PDF not found.');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  return quote.document;
+}
+
 module.exports = {
   createQuote,
+  getQuoteDocument,
   getQuoteStats,
   listRecentQuotes,
 };

@@ -46,11 +46,13 @@ model QuoteRequest {
   assignedTo       String?           @db.VarChar(100)
   nextFollowUpDate DateTime?
   crmNotes         String?           @db.VarChar(1000)
+  pdfUrl           String?           @db.VarChar(255)
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
   customer         Customer          @relation(fields: [customerId], references: [id], onDelete: Restrict)
   notificationLogs NotificationLog[]
   activities       LeadActivity[]
+  document         QuoteDocument?
 
   @@index([customerId])
   @@index([enquiryNumber])
@@ -130,11 +132,27 @@ model NotificationLog {
 
 enum NotificationType {
   EMAIL
+  PDF
+  GOOGLE_SHEET
+  WHATSAPP
 }
 
 enum NotificationStatus {
   SUCCESS
   FAILED
+}
+
+model QuoteDocument {
+  id             Int          @id @default(autoincrement())
+  quoteRequestId Int          @unique
+  fileName       String       @db.VarChar(80)
+  contentType    String       @db.VarChar(80)
+  content        Bytes
+  createdAt      DateTime     @default(now())
+  quoteRequest   QuoteRequest @relation(fields: [quoteRequestId], references: [id], onDelete: Cascade)
+
+  @@index([quoteRequestId])
+  @@index([createdAt])
 }
 
 model Product {
