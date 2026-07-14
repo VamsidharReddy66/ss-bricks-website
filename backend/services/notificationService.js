@@ -88,19 +88,6 @@ class NotificationService {
       await this.addActivity(data.quote.id, `PDF generation failed: ${failure}`);
     }
 
-    try {
-      await this.googleSheetsService.appendQuote(data, pipeline);
-      result.googleSheet = { status: 'SUCCESS' };
-      pipeline.sheetUpdated = true;
-      await this.logNotification(data.quote.id, 'GOOGLE_SHEET', 'Google Sheet', 'SUCCESS');
-      await this.addActivity(data.quote.id, 'Google Sheet updated.');
-    } catch (error) {
-      const failure = errorMessage(error);
-      result.googleSheet = { status: 'FAILED', errorMessage: failure };
-      await this.logNotification(data.quote.id, 'GOOGLE_SHEET', 'Google Sheet', 'FAILED', failure);
-      await this.addActivity(data.quote.id, `Sheet sync failed: ${failure}`);
-    }
-
     const recipient = this.emailService.getRecipient();
     try {
       await this.emailService.sendQuoteNotification(data);
@@ -133,6 +120,19 @@ class NotificationService {
       result.whatsapp = { status: 'FAILED', errorMessage: failure };
       await this.logNotification(data.quote.id, 'WHATSAPP', 'WhatsApp', 'FAILED', failure);
       await this.addActivity(data.quote.id, `WhatsApp failed: ${failure}`);
+    }
+
+    try {
+      await this.googleSheetsService.appendQuote(data, pipeline);
+      result.googleSheet = { status: 'SUCCESS' };
+      pipeline.sheetUpdated = true;
+      await this.logNotification(data.quote.id, 'GOOGLE_SHEET', 'Google Sheet', 'SUCCESS');
+      await this.addActivity(data.quote.id, 'Google Sheet updated.');
+    } catch (error) {
+      const failure = errorMessage(error);
+      result.googleSheet = { status: 'FAILED', errorMessage: failure };
+      await this.logNotification(data.quote.id, 'GOOGLE_SHEET', 'Google Sheet', 'FAILED', failure);
+      await this.addActivity(data.quote.id, `Sheet sync failed: ${failure}`);
     }
 
     this.logger.info(`Quote distribution pipeline completed for ${data.quote.enquiryNumber}.`);

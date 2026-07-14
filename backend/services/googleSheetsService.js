@@ -181,6 +181,27 @@ class GoogleSheetsService {
     return result;
   }
 
+  async ensureSheetExists() {
+    const result = await this.request('?fields=sheets.properties.title');
+    const titles = result.sheets?.map((sheet) => sheet.properties?.title).filter(Boolean) || [];
+    if (titles.includes(this.config.sheetName)) return;
+
+    await this.request(':batchUpdate', {
+      method: 'POST',
+      body: JSON.stringify({
+        requests: [
+          {
+            addSheet: {
+              properties: {
+                title: this.config.sheetName,
+              },
+            },
+          },
+        ],
+      }),
+    });
+  }
+
   async getHeaders() {
     const range = encodeURIComponent(`${this.config.sheetName}!1:1`);
     const result = await this.request(`/values/${range}`);
@@ -209,6 +230,7 @@ class GoogleSheetsService {
       throw error;
     }
 
+    await this.ensureSheetExists();
     const headers = await this.ensureHeaders();
     const values = quoteValues(data, pipeline);
     const row = headers.map((header) => {

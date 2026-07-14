@@ -7,6 +7,17 @@ const port = Number(process.env.PORT || 3000);
 const corsOrigin = process.env.CORS_ORIGIN || 'http://localhost:3000';
 const jwtSecret = process.env.JWT_SECRET;
 
+function normalizePrivateKey(value) {
+  const trimmed = (value || '').trim();
+  const unquoted = (
+    (trimmed.startsWith('"') && trimmed.endsWith('"'))
+    || (trimmed.startsWith("'") && trimmed.endsWith("'"))
+  )
+    ? trimmed.slice(1, -1)
+    : trimmed;
+  return unquoted.replace(/\\n/g, '\n');
+}
+
 const required = ['DATABASE_URL', 'JWT_SECRET'];
 
 for (const key of required) {
@@ -64,7 +75,7 @@ module.exports = {
     spreadsheetId: process.env.GOOGLE_SHEET_ID || '',
     sheetName: process.env.GOOGLE_SHEET_NAME || 'Quotes',
     clientEmail: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || '',
-    privateKey: (process.env.GOOGLE_PRIVATE_KEY || '').replace(/\\n/g, '\n'),
+    privateKey: normalizePrivateKey(process.env.GOOGLE_PRIVATE_KEY),
   },
   smtp: {
     host: process.env.SMTP_HOST || '',

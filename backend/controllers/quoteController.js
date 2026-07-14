@@ -33,22 +33,30 @@ async function createQuote(req, res, next) {
       console.error(`Could not generate immediate quotation PDF for ${result.quote.enquiryNumber}.`, error);
     }
 
-    const response = successResponse(res, 201, 'Quotation submitted successfully.', {
+    const pipelineResult = await notificationService.notifyQuoteCreated(result).catch((error) => {
+      console.error(`Unexpected notification error for ${result.quote.enquiryNumber}.`, error);
+      return {
+        pdf: pdf ? { status: 'SUCCESS', pdfUrl: pdf.pdfUrl, fileName: pdf.fileName } : null,
+        googleSheet: { status: 'FAILED', errorMessage: 'Unexpected notification error.' },
+        email: { status: 'FAILED', errorMessage: 'Unexpected notification error.' },
+        whatsapp: { status: 'FAILED', errorMessage: 'Unexpected notification error.' },
+      };
+    });
+
+    return successResponse(res, 201, 'Quotation submitted successfully.', {
       enquiryNumber: result.quote.enquiryNumber,
       quoteId: result.quote.id,
       status: result.quote.status,
       createdAt: result.quote.createdAt,
-      pdfUrl: pdf?.pdfUrl || `/api/quotes/${encodeURIComponent(result.quote.enquiryNumber)}/pdf`,
+      pdfUrl: pdf?.pdfUrl || result.quote.pdfUrl || null,
       pdfReady: Boolean(pdf),
+      distribution: {
+        pdf: pipelineResult?.pdf?.status || (pdf ? 'SUCCESS' : 'FAILED'),
+        googleSheet: pipelineResult?.googleSheet?.status || 'FAILED',
+        email: pipelineResult?.email?.status || 'FAILED',
+        whatsapp: pipelineResult?.whatsapp?.status || 'FAILED',
+      },
     });
-
-    setImmediate(() => {
-      notificationService.notifyQuoteCreated(result).catch((error) => {
-        console.error(`Unexpected notification error for ${result.quote.enquiryNumber}.`, error);
-      });
-    });
-
-    return response;
   } catch (error) {
     if (error.statusCode === 400) {
       return errorResponse(res, 400, 'Validation failed.', error.errors || [

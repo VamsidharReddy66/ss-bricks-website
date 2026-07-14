@@ -563,7 +563,7 @@
         }
 
         const enquiryNumber = result.data?.enquiryNumber || 'Stored';
-        const pdfUrl = absoluteApiUrl(result.data?.pdfUrl);
+        const pdfUrl = result.data?.pdfReady ? absoluteApiUrl(result.data?.pdfUrl) : '';
         const sharedPdf = await shareQuotePdfFile(pdfUrl, enquiryNumber);
         if (!sharedPdf) {
           window.open(buildWhatsAppUrl(payload, enquiryNumber, pdfUrl), '_blank', 'noopener');
