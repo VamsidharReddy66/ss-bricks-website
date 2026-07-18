@@ -78,3 +78,43 @@ Validation error response:
 - `quantity`: required, whole positive number, maximum 100000.
 - `deliveryDate`: required, `YYYY-MM-DD`, cannot be in the past.
 - `message`: optional, maximum 500 characters.
+
+## Material Calculator Configuration
+
+```http
+GET /api/calculator/config
+```
+
+Returns all four database-managed products, their current standard prices, units and
+availability, plus wall-thickness options. Product prices and thickness values are not
+hardcoded in the browser. Physical dimensions are included in calculations only when a
+verified matching calculator configuration exists.
+
+## Calculate Material Estimate
+
+```http
+POST /api/calculator/calculate
+Content-Type: application/json
+```
+
+Request:
+
+```json
+{
+  "height": 10,
+  "heightUnit": "ft",
+  "width": 12,
+  "widthUnit": "ft",
+  "thicknessId": 2,
+  "productId": 1,
+  "quantity": 10000
+}
+```
+
+Response data includes wall area in square feet, wall volume in cubic feet, selected product
+details, entered quantity, current unit price, and estimated cost for that quantity. The
+dimension-based unit estimate is `null` when verified product dimensions are not configured.
+
+Calculator validation rejects non-positive wall dimensions, unsupported wall units, inactive
+or incomplete configuration records, missing prices, and quantities that are not positive
+whole numbers.

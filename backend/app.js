@@ -7,6 +7,7 @@ const env = require('./config/env');
 const sanitizeRequest = require('./middleware/sanitizeRequest');
 const quoteRoutes = require('./routes/quoteRoutes');
 const productRoutes = require('./routes/productRoutes');
+const calculatorRoutes = require('./routes/calculatorRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const notFound = require('./middleware/notFound');
 const errorHandler = require('./middleware/errorHandler');
@@ -74,6 +75,7 @@ app.use('/api/admin/login', adminLoginLimiter);
 app.use('/api', apiLimiter);
 app.use('/api/quotes', quoteRoutes);
 app.use('/api/products', productRoutes);
+app.use('/api/calculator', calculatorRoutes);
 app.use('/api/admin', adminRoutes);
 app.use(express.static(publicRoot));
 

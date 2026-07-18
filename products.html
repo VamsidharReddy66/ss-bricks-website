@@ -390,29 +390,67 @@
   <div class="container">
     <div class="section-head fade-up">
       <span class="label label-center">Cost Estimator</span>
-      <h2 class="h-xl" id="prod-calc-title">Calculate Approximate Material Cost</h2>
-      <p class="body-md">Select a product and enter quantity to get an instant estimated cost.</p>
+      <h2 class="h-xl" id="prod-calc-title">Calculate Wall Material Requirements</h2>
+      <p class="body-md">Enter your wall dimensions to estimate bricks and material cost.</p>
     </div>
 
     <div class="calc-wrap fade-up">
       <div class="calc-grid">
         <div class="form-field">
-          <label class="form-label" for="prod-product-select">Product Type</label>
-          <select class="form-select" id="prod-product-select" aria-label="Select product">
-            <option value="">— Select Product —</option>
-            <option value="">Loading products...</option>
+          <label class="form-label" for="prod-height-input">Wall Height</label>
+          <div class="calc-measure">
+            <input class="form-input" id="prod-height-input" type="number" min="0" step="any" inputmode="decimal" placeholder="Enter height" />
+            <select class="form-select" id="prod-height-unit" aria-label="Wall height unit">
+              <option value="ft">Feet</option>
+              <option value="m">Meters</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-field">
+          <label class="form-label" for="prod-width-input">Wall Width</label>
+          <div class="calc-measure">
+            <input class="form-input" id="prod-width-input" type="number" min="0" step="any" inputmode="decimal" placeholder="Enter width" />
+            <select class="form-select" id="prod-width-unit" aria-label="Wall width unit">
+              <option value="ft">Feet</option>
+              <option value="m">Meters</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-field">
+          <label class="form-label" for="prod-thickness-select">Wall Thickness</label>
+          <select class="form-select" id="prod-thickness-select">
+            <option value="">Loading options...</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label class="form-label" for="prod-brick-type-select">Product Type</label>
+          <select class="form-select" id="prod-brick-type-select">
+            <option value="">Loading brick types...</option>
           </select>
         </div>
         <div class="form-field">
           <label class="form-label" for="prod-quantity-input">Quantity</label>
-          <input class="form-input" id="prod-quantity-input" type="number" min="0" value="0" placeholder="Enter quantity" aria-label="Enter quantity" />
+          <div class="calc-suffix-input">
+            <input class="form-input" id="prod-quantity-input" type="number" min="0" step="1" inputmode="numeric" value="0" placeholder="e.g. 10000" />
+            <span id="prod-quantity-unit" aria-hidden="true">bricks</span>
+          </div>
         </div>
       </div>
 
-      <div class="calc-result" role="status" aria-live="polite">
+      <div class="calc-feedback" id="prod-calc-feedback" role="alert" hidden></div>
+
+      <div class="calc-result" role="status" aria-live="polite" aria-label="Material estimate">
         <div class="calc-result-label">Estimated Cost</div>
-        <div class="calc-result-price" id="prod-calc-result">₹0</div>
+        <div class="calc-result-price" id="prod-result-cost">₹0</div>
         <div class="calc-result-note">Approximate estimate based on standard pricing</div>
+        <dl class="calc-result-grid">
+          <div><dt>Product Type</dt><dd id="prod-result-brick">—</dd></div>
+          <div><dt>Product Size</dt><dd id="prod-result-size">—</dd></div>
+          <div><dt>Wall Area</dt><dd id="prod-result-area">—</dd></div>
+          <div><dt>Wall Volume</dt><dd id="prod-result-volume">—</dd></div>
+          <div><dt>Estimated Units</dt><dd id="prod-result-bricks">—</dd></div>
+          <div><dt>Quantity</dt><dd id="prod-result-quantity">—</dd></div>
+        </dl>
       </div>
 
       <div class="calc-disclaimer">

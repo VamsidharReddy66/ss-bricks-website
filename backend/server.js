@@ -4,12 +4,14 @@ const { validateSmtpConfig } = require('./config/smtp');
 const { connectDatabase, disconnectDatabase } = require('./config/database');
 const { ensureBootstrapAdmin } = require('./services/adminService');
 const { ensureDefaultProducts } = require('./services/productService');
+const { ensureDefaultCalculatorConfig } = require('./services/calculatorService');
 
 let server;
 
 async function startServer() {
   await connectDatabase();
   await ensureDefaultProducts();
+  await ensureDefaultCalculatorConfig();
   await ensureBootstrapAdmin();
 
   const smtpValidation = validateSmtpConfig();

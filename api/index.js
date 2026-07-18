@@ -3,12 +3,14 @@ const { connectDatabase } = require('../backend/config/database');
 const { validateSmtpConfig } = require('../backend/config/smtp');
 const { ensureBootstrapAdmin } = require('../backend/services/adminService');
 const { ensureDefaultProducts } = require('../backend/services/productService');
+const { ensureDefaultCalculatorConfig } = require('../backend/services/calculatorService');
 
 let ready;
 
 async function prepareServerlessApp() {
   await connectDatabase();
   await ensureDefaultProducts();
+  await ensureDefaultCalculatorConfig();
   await ensureBootstrapAdmin();
 
   const smtpValidation = validateSmtpConfig();

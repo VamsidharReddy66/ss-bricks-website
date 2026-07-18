@@ -9,6 +9,7 @@
   let productCatalog = [];
   let productBySlug = new Map();
   let validProductNames = [];
+  let calculatorConfigPromise = null;
 
   function slugFromName(value) {
     return (value || '')
@@ -141,58 +142,232 @@
   });
 
   /* ── CALCULATOR ────────────────────────────────── */
+  async function loadCalculatorConfig() {
+    if (!calculatorConfigPromise) {
+      calculatorConfigPromise = fetch(`${API_BASE_URL}/api/calculator/config`)
+        .then(async response => {
+          const result = await response.json().catch(() => ({}));
+          if (!response.ok || !result.success) {
+            throw new Error(result.message || 'Unable to load calculator options.');
+          }
+          return result.data;
+        })
+        .catch(error => {
+          calculatorConfigPromise = null;
+          throw error;
+        });
+    }
+
+    return calculatorConfigPromise;
+  }
+
+  function formatEstimateValue(value, maximumFractionDigits = 2) {
+    return Number(value).toLocaleString('en-IN', { maximumFractionDigits });
+  }
+
+  function calculatorUnitLabel(unit, quantity = 2) {
+    if (unit === 'sq.ft') return unit;
+    return Number(quantity) === 1 ? unit : `${unit}s`;
+  }
+
   function initCalculator(prefix) {
-    const sel = document.getElementById(prefix + 'product-select');
-    const qty = document.getElementById(prefix + 'quantity-input');
-    const resultEl = document.getElementById(prefix + 'calc-result');
+    const height = document.getElementById(prefix + 'height-input');
+    const heightUnit = document.getElementById(prefix + 'height-unit');
+    const width = document.getElementById(prefix + 'width-input');
+    const widthUnit = document.getElementById(prefix + 'width-unit');
+    const thickness = document.getElementById(prefix + 'thickness-select');
+    const productType = document.getElementById(prefix + 'brick-type-select');
+    const quantity = document.getElementById(prefix + 'quantity-input');
+    const quantityUnit = document.getElementById(prefix + 'quantity-unit');
+    const feedback = document.getElementById(prefix + 'calc-feedback');
     const waBtn = document.getElementById(prefix + 'calc-wa-btn');
+    const output = {
+      cost: document.getElementById(prefix + 'result-cost'),
+      brick: document.getElementById(prefix + 'result-brick'),
+      size: document.getElementById(prefix + 'result-size'),
+      area: document.getElementById(prefix + 'result-area'),
+      volume: document.getElementById(prefix + 'result-volume'),
+      bricks: document.getElementById(prefix + 'result-bricks'),
+      quantity: document.getElementById(prefix + 'result-quantity'),
+    };
 
-    if (!sel || !qty || !resultEl) return;
+    if (!height || !heightUnit || !width || !widthUnit || !thickness || !productType || !quantity || !output.cost) {
+      return;
+    }
 
-    function compute() {
-      const key = sel.value;
-      const q = parseFloat(qty.value) || 0;
-      if (!key || !q || q <= 0) {
-        resultEl.textContent = '₹0';
+    let config = { products: [], thicknessOptions: [] };
+    let debounceTimer = null;
+    let activeRequest = null;
+
+    function showFeedback(message = '') {
+      if (!feedback) return;
+      feedback.textContent = message;
+      feedback.hidden = !message;
+    }
+
+    function setWhatsAppEstimate(data = null) {
+      if (!waBtn) return;
+      if (!data) {
+        waBtn.href = '#';
+        waBtn.setAttribute('aria-disabled', 'true');
         return;
       }
-      const info = productBySlug.get(key);
-      if (!info) {
-        resultEl.textContent = '\u20b90';
+
+      const selectedThickness = thickness.options[thickness.selectedIndex]?.textContent || '';
+      const estimatedUnits = data.estimatedBricks === null
+        ? 'Not available (dimensions not configured)'
+        : formatEstimateValue(data.estimatedBricks, 0);
+      const message = encodeURIComponent(
+        `Hello SS Bricks! I used your wall material calculator.\nProduct: ${data.brickType}\nWall: ${height.value} ${heightUnit.value} x ${width.value} ${widthUnit.value}\nThickness: ${selectedThickness}\nEstimated Units: ${estimatedUnits}\nQuantity: ${formatEstimateValue(data.quantity, 0)} ${calculatorUnitLabel(data.quantityUnit, data.quantity)}\nEstimated Cost: ${formatMoney(data.estimatedCost)}\nPlease share the final quotation.`
+      );
+      waBtn.href = `https://wa.me/919876543210?text=${message}`;
+      waBtn.removeAttribute('aria-disabled');
+    }
+
+    function resetResult() {
+      output.cost.textContent = '\u20b90';
+      ['brick', 'size', 'area', 'volume', 'bricks', 'quantity'].forEach(key => {
+        if (output[key]) output[key].textContent = '\u2014';
+      });
+      setWhatsAppEstimate();
+    }
+
+    function renderResult(data) {
+      output.cost.textContent = formatMoney(data.estimatedCost);
+      output.brick.textContent = data.brickType;
+      output.size.textContent = data.brickSize || 'Not configured';
+      output.area.textContent = `${formatEstimateValue(data.wallArea)} ${data.wallAreaUnit}`;
+      output.volume.textContent = `${formatEstimateValue(data.wallVolume)} ${data.wallVolumeUnit}`;
+      output.bricks.textContent = data.estimatedBricks === null
+        ? 'Not available'
+        : formatEstimateValue(data.estimatedBricks, 0);
+      output.quantity.textContent = `${formatEstimateValue(data.quantity, 0)} ${calculatorUnitLabel(data.quantityUnit, data.quantity)}`;
+      setWhatsAppEstimate(data);
+    }
+
+    function payloadOrMessage() {
+      const heightValue = Number(height.value);
+      const widthValue = Number(width.value);
+      const quantityValue = Number(quantity.value);
+
+      if (!height.value && !width.value) return { payload: null, message: '' };
+      if (!Number.isFinite(heightValue) || heightValue <= 0) {
+        return { payload: null, message: 'Wall height must be greater than zero.' };
+      }
+      if (!Number.isFinite(widthValue) || widthValue <= 0) {
+        return { payload: null, message: 'Wall width must be greater than zero.' };
+      }
+      if (!thickness.value) return { payload: null, message: 'Select a wall thickness.' };
+      if (!productType.value) return { payload: null, message: 'Select a product type.' };
+      if (!Number.isInteger(quantityValue) || quantityValue <= 0) {
+        return { payload: null, message: 'Quantity must be a whole number greater than zero.' };
+      }
+
+      return {
+        payload: {
+          height: heightValue,
+          heightUnit: heightUnit.value,
+          width: widthValue,
+          widthUnit: widthUnit.value,
+          thicknessId: Number(thickness.value),
+          productId: Number(productType.value),
+          quantity: quantityValue,
+        },
+        message: '',
+      };
+    }
+
+    async function compute() {
+      const state = payloadOrMessage();
+      if (!state.payload) {
+        activeRequest?.abort();
+        activeRequest = null;
+        resetResult();
+        showFeedback(state.message);
         return;
       }
-      info.label = info.name;
-      info.unit = pluralUnit(info);
 
-      const total = info.standardPrice * q;
-      resultEl.textContent = '₹' + total.toLocaleString('en-IN', { maximumFractionDigits: 0 });
+      activeRequest?.abort();
+      activeRequest = new AbortController();
+      showFeedback();
 
-      if (waBtn) {
-        const msg = encodeURIComponent(
-          `Hello SS Bricks! I used your cost calculator.\nProduct: ${info.label}\nQuantity: ${q} ${info.unit}\nEstimated Cost: ₹${total.toLocaleString('en-IN', { maximumFractionDigits: 0 })}\nPlease share the final quotation.`
-        );
-        waBtn.href = `https://wa.me/919876543210?text=${msg}`;
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/calculator/calculate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(state.payload),
+          signal: activeRequest.signal,
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok || !result.success) {
+          throw new Error(result.errors?.[0]?.message || result.message || 'Unable to calculate estimate.');
+        }
+        renderResult(result.data);
+      } catch (error) {
+        if (error.name === 'AbortError') return;
+        resetResult();
+        showFeedback(error.message || 'Unable to calculate estimate.');
       }
     }
 
-    sel.addEventListener('change', compute);
-    qty.addEventListener('input', compute);
+    function scheduleCalculation() {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(compute, 250);
+    }
+
+    [height, width].forEach(input => input.addEventListener('input', scheduleCalculation));
+    quantity.addEventListener('input', updateQuantityUnit);
+    function updateQuantityUnit() {
+      const selected = config.products.find(item => String(item.id) === productType.value);
+      if (quantityUnit) quantityUnit.textContent = selected
+        ? calculatorUnitLabel(selected.unit, quantity.value)
+        : 'units';
+      scheduleCalculation();
+    }
+
+    [heightUnit, widthUnit, thickness].forEach(select => select.addEventListener('change', scheduleCalculation));
+    productType.addEventListener('change', updateQuantityUnit);
+
+    resetResult();
+
+    loadCalculatorConfig().then(data => {
+      config = data;
+      thickness.innerHTML = '<option value="">Select Thickness</option>';
+      data.thicknessOptions.forEach(item => {
+        const option = document.createElement('option');
+        option.value = item.id;
+        option.textContent = item.displayName;
+        thickness.appendChild(option);
+      });
+
+      productType.innerHTML = '<option value="">Select Product Type</option>';
+      data.products.forEach(item => {
+        const option = document.createElement('option');
+        option.value = item.id;
+        option.textContent = item.availability === 'IN_STOCK'
+          ? `${item.name} (${formatMoney(item.pricePerUnit)} / ${item.unit})`
+          : `${item.name} (${formatMoney(item.pricePerUnit)} / ${item.unit}) - Out of Stock`;
+        option.disabled = item.availability !== 'IN_STOCK';
+        productType.appendChild(option);
+      });
+
+      const availableProducts = data.products.filter(item => item.availability === 'IN_STOCK');
+      if (availableProducts.length === 1) {
+        productType.value = String(availableProducts[0].id);
+      }
+      updateQuantityUnit();
+
+      if (!availableProducts.length || !data.thicknessOptions.length) {
+        showFeedback('Calculator configuration is not available. Please contact SS Bricks.');
+      }
+    }).catch(error => {
+      thickness.innerHTML = '<option value="">Unavailable</option>';
+      productType.innerHTML = '<option value="">Unavailable</option>';
+      showFeedback(error.message || 'Unable to load calculator configuration.');
+    });
   }
 
   function refreshProductSelects() {
-    document.querySelectorAll('#home-product-select, #prod-product-select').forEach(select => {
-      const current = select.value;
-      select.innerHTML = '<option value="">Select Product</option>';
-      productCatalog.forEach(product => {
-        const option = document.createElement('option');
-        option.value = product.slug;
-        option.textContent = `${product.name} (${productPriceText(product)})`;
-        select.appendChild(option);
-      });
-      if (current && productBySlug.has(current)) select.value = current;
-      select.dispatchEvent(new Event('change'));
-    });
-
     document.querySelectorAll('.quote-form select[name="product"]').forEach(select => {
       const current = select.value;
       select.innerHTML = '<option value="">Select Product</option>';

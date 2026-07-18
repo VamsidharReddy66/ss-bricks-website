@@ -362,6 +362,20 @@ h1,h2,h3,h4,h5 { font-family: var(--font-h); line-height: 1.15; color: var(--cha
   border-radius: var(--r-lg); padding: 2.5rem; box-shadow: var(--sh-md);
 }
 .calc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-bottom: 1.5rem; }
+.calc-measure { display: grid; grid-template-columns: minmax(0, 1fr) 96px; gap: 0.5rem; }
+.calc-measure .form-input, .calc-measure .form-select { width: 100%; min-width: 0; }
+.calc-suffix-input { position: relative; }
+.calc-suffix-input .form-input { width: 100%; padding-right: 4.75rem; }
+.calc-suffix-input span {
+  position: absolute; right: 1rem; top: 50%; transform: translateY(-50%);
+  color: var(--taupe); font-weight: 700; pointer-events: none;
+}
+.calc-feedback {
+  margin: -0.25rem 0 1rem; padding: 0.8rem 1rem;
+  border: 1px solid rgba(167,47,34,0.28); border-radius: var(--r-sm);
+  background: rgba(167,47,34,0.08); color: var(--red);
+  font-size: 0.78rem; font-weight: 600;
+}
 .form-field { display: flex; flex-direction: column; gap: 0.45rem; }
 .form-label { font-size: 0.78rem; font-weight: 700; color: var(--charcoal); letter-spacing: 0.02em; }
 .form-input, .form-select {
@@ -381,6 +395,23 @@ h1,h2,h3,h4,h5 { font-family: var(--font-h); line-height: 1.15; color: var(--cha
 .calc-result-label { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--taupe); margin-bottom: 0.4rem; }
 .calc-result-price { font-family: var(--font-h); font-size: 2.8rem; font-weight: 800; color: var(--maroon); letter-spacing: -0.03em; }
 .calc-result-note { font-size: 0.78rem; color: var(--taupe); margin-top: 0.5rem; }
+.calc-result-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 0;
+  margin-top: 1.25rem; padding-top: 0.25rem; text-align: left;
+  border-top: 1px solid var(--border);
+}
+.calc-result-grid > div { min-width: 0; padding: 0.85rem 0; border-bottom: 1px solid var(--border); }
+.calc-result-grid > div:nth-child(odd) { padding-right: 1rem; }
+.calc-result-grid > div:nth-child(even) { padding-left: 1rem; border-left: 1px solid var(--border); }
+.calc-result-grid dt {
+  margin-bottom: 0.2rem; color: var(--taupe);
+  font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+}
+.calc-result-grid dd {
+  margin: 0; color: var(--charcoal); font-size: 0.88rem; font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.calc-cta .btn[aria-disabled="true"] { opacity: 0.55; pointer-events: none; }
 .calc-disclaimer { font-size: 0.78rem; color: var(--taupe); text-align: center; padding: 0.9rem; background: rgba(107,23,19,0.04); border-radius: var(--r-sm); margin-bottom: 1rem; }
 .calc-cta { display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap; }
 
@@ -643,6 +674,7 @@ h1,h2,h3,h4,h5 { font-family: var(--font-h); line-height: 1.15; color: var(--cha
   .why-grid { grid-template-columns: 1fr; }
   .footer-top { grid-template-columns: 1fr; gap: 2rem; }
   .calc-grid { grid-template-columns: 1fr; }
+  .calc-wrap { padding: 1.5rem; }
   .form-grid { grid-template-columns: 1fr; }
   .step-item { flex: 0 0 100%; }
   .footer-bottom { flex-direction: column; text-align: center; }
@@ -650,6 +682,13 @@ h1,h2,h3,h4,h5 { font-family: var(--font-h); line-height: 1.15; color: var(--cha
   .hero-btns { flex-direction: column; }
   .hero-btns .btn { width: 100%; justify-content: center; }
   .final-cta-btns .btn { width: 100%; }
+}
+@media (max-width: 420px) {
+  .calc-measure { grid-template-columns: minmax(0, 1fr) 88px; }
+  .calc-result-grid { grid-template-columns: 1fr; }
+  .calc-result-grid > div:nth-child(odd), .calc-result-grid > div:nth-child(even) {
+    padding: 0.75rem 0; border-left: 0;
+  }
 }
 
 /* Sticky WhatsApp floating button */
