@@ -37,7 +37,7 @@ function errorHandler(error, _req, res, _next) {
     ]);
   }
 
-  if (error.statusCode && error.statusCode >= 400 && error.statusCode < 500) {
+  if (error.statusCode && error.statusCode >= 400 && error.statusCode < 600) {
     return errorResponse(res, error.statusCode, error.message || 'Request failed.', [
       {
         field: error.field || 'request',

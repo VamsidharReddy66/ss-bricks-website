@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Buy a fixed-price SS Bricks retail pack through secure online checkout." />
+  <title>Quick Buy Checkout | SS Bricks</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body class="payment-page">
+  <main class="payment-shell retail-checkout-shell">
+    <a class="payment-brand" href="index.html" aria-label="SS Bricks home">
+      <span class="payment-brand-mark" aria-hidden="true">
+        <span></span><span></span><span></span><span></span>
+      </span>
+      <span><strong>SS Bricks</strong><small>Tirupati, Andhra Pradesh</small></span>
+    </a>
+
+    <section class="payment-card retail-checkout-card" aria-labelledby="checkout-title">
+      <div class="payment-mode">Fixed Price Pack</div>
+      <h1 class="h-lg" id="checkout-title">Quick Buy Checkout</h1>
+      <p class="body-sm">Confirm your pack and delivery details before continuing to Razorpay.</p>
+
+      <div class="payment-loading" id="checkout-loading" role="status">Loading pack details...</div>
+
+      <div id="checkout-content" hidden>
+        <dl class="payment-details retail-pack-summary">
+          <div><dt>Product</dt><dd id="checkout-product">-</dd></div>
+          <div><dt>Pack</dt><dd id="checkout-pack">-</dd></div>
+          <div><dt>Fixed Pack Price</dt><dd id="checkout-total">-</dd></div>
+        </dl>
+
+        <form class="retail-checkout-form" id="retail-checkout-form" novalidate>
+          <div class="form-field">
+            <label for="checkout-name">Your Name *</label>
+            <input id="checkout-name" name="name" type="text" autocomplete="name" maxlength="100" required />
+          </div>
+          <div class="form-field">
+            <label for="checkout-phone">Mobile Number *</label>
+            <input id="checkout-phone" name="phone" type="tel" inputmode="numeric" autocomplete="tel" maxlength="14" required />
+          </div>
+          <div class="form-field">
+            <label for="checkout-email">Email (Optional)</label>
+            <input id="checkout-email" name="email" type="email" autocomplete="email" maxlength="255" />
+          </div>
+          <div class="form-field">
+            <label for="checkout-location">Delivery Location *</label>
+            <input id="checkout-location" name="location" type="text" autocomplete="street-address" maxlength="100" required />
+          </div>
+          <div class="form-field retail-date-field">
+            <label for="checkout-delivery-date">Required Delivery Date *</label>
+            <input id="checkout-delivery-date" name="deliveryDate" type="date" required />
+          </div>
+
+          <div class="form-success payment-message retail-checkout-message" id="checkout-message" role="alert" aria-live="polite"></div>
+          <button class="btn btn-maroon btn-full btn-lg" id="checkout-submit" type="submit">
+            Continue to Secure Payment
+          </button>
+        </form>
+      </div>
+    </section>
+
+    <a class="retail-checkout-back" href="index.html">Back to SS Bricks</a>
+  </main>
+
+  <script src="js/checkout.js"></script>
+</body>
+</html>

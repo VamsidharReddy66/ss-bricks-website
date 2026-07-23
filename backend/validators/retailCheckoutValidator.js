@@ -1,23 +1,8 @@
 const { z } = require('zod');
-
-function normalizePhone(value) {
-  if (typeof value !== 'string') return value;
-
-  let phone = value.replace(/[\s-]/g, '').trim();
-  if (phone.startsWith('+91')) phone = phone.slice(3);
-  if (phone.startsWith('91') && phone.length === 12) phone = phone.slice(2);
-  return phone;
-}
-
-function normalizeQuantity(value) {
-  if (typeof value === 'number') return value;
-  if (typeof value !== 'string') return value;
-
-  const cleaned = value.replace(/,/g, '').trim();
-  if (cleaned === '') return 0;
-  if (!/^\d+$/.test(cleaned)) return Number.NaN;
-  return Number(cleaned);
-}
+const {
+  normalizePhone,
+  normalizeQuantity,
+} = require('./quoteValidator');
 
 function isTodayOrFuture(value) {
   const deliveryDate = new Date(`${value}T00:00:00.000Z`);
@@ -28,7 +13,22 @@ function isTodayOrFuture(value) {
   return deliveryDate >= todayUtc;
 }
 
-const quoteRequestSchema = z.object({
+const retailCheckoutSchema = z.object({
+  productSlug: z
+    .string({ required_error: 'Product is required.' })
+    .trim()
+    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Product is invalid.')
+    .max(80, 'Product is invalid.'),
+
+  quantity: z.preprocess(
+    normalizeQuantity,
+    z
+      .number({ required_error: 'Pack quantity is required.', invalid_type_error: 'Pack quantity is invalid.' })
+      .int('Pack quantity must be a whole number.')
+      .positive('Pack quantity must be greater than zero.')
+      .max(100000, 'Pack quantity cannot exceed 100000.')
+  ),
+
   name: z
     .string({ required_error: 'Name is required.' })
     .trim()
@@ -59,44 +59,12 @@ const quoteRequestSchema = z.object({
     .min(2, 'Location must be at least 2 characters.')
     .max(100, 'Location must be 100 characters or fewer.'),
 
-  product: z
-    .string({ required_error: 'Product is required.', invalid_type_error: 'Product is required.' })
-    .trim()
-    .min(2, 'Product is required.')
-    .max(100, 'Product must be 100 characters or fewer.'),
-
-  quantity: z.preprocess(
-    normalizeQuantity,
-    z
-      .number({ required_error: 'Quantity is required.', invalid_type_error: 'Quantity must be zero or more.' })
-      .int('Quantity must be a whole number.')
-      .min(0, 'Quantity must be zero or more.')
-      .max(100000, 'Quantity cannot exceed 100000.')
-  ),
-
   deliveryDate: z
     .string({ required_error: 'Delivery date is required.' })
     .regex(/^\d{4}-\d{2}-\d{2}$/, 'Delivery date must use YYYY-MM-DD format.')
     .refine(isTodayOrFuture, 'Delivery date cannot be in the past.'),
-
-  message: z
-    .string()
-    .trim()
-    .max(500, 'Message must be 500 characters or fewer.')
-    .optional()
-    .transform((value) => value || null),
 }).strict();
 
-function formatZodErrors(error) {
-  return error.errors.map((issue) => ({
-    field: issue.path.join('.') || 'request',
-    message: issue.message,
-  }));
-}
-
 module.exports = {
-  quoteRequestSchema,
-  formatZodErrors,
-  normalizePhone,
-  normalizeQuantity,
+  retailCheckoutSchema,
 };

@@ -70,6 +70,11 @@ module.exports = {
     providerUrl: process.env.WHATSAPP_PROVIDER_URL || '',
     accessToken: process.env.WHATSAPP_ACCESS_TOKEN || '',
   },
+  razorpay: {
+    keyId: process.env.RAZORPAY_KEY_ID || '',
+    secret: process.env.RAZORPAY_SECRET || '',
+    webhookSecret: process.env.RAZORPAY_WEBHOOK_SECRET || '',
+  },
   googleSheets: {
     enabled: process.env.GOOGLE_SHEETS_ENABLED === 'true',
     spreadsheetId: process.env.GOOGLE_SHEET_ID || '',

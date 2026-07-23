@@ -219,6 +219,10 @@
           <input class="form-input" type="tel" id="lead-phone" required />
         </div>
         <div class="form-field">
+          <label class="form-label" for="lead-email">Email</label>
+          <input class="form-input" type="email" id="lead-email" />
+        </div>
+        <div class="form-field">
           <label class="form-label" for="lead-location">Location</label>
           <input class="form-input" type="text" id="lead-location" required />
         </div>
@@ -340,6 +344,10 @@
           <input class="form-input" type="tel" id="edit-lead-phone" required />
         </div>
         <div class="form-field">
+          <label class="form-label" for="edit-lead-email">Email</label>
+          <input class="form-input" type="email" id="edit-lead-email" />
+        </div>
+        <div class="form-field">
           <label class="form-label" for="edit-lead-location">Location</label>
           <input class="form-input" type="text" id="edit-lead-location" required />
         </div>
@@ -403,6 +411,33 @@
       <div class="form-success" id="admin-lead-edit-status" role="alert" aria-live="polite"></div>
       <div class="admin-modal-actions">
         <button class="btn btn-maroon" type="submit" data-label="Save Lead Changes">Save Lead Changes</button>
+      </div>
+    </form>
+
+    <form id="admin-payment-form" class="admin-payment-panel" novalidate>
+      <div class="admin-section-head">
+        <div>
+          <h3 class="h-sm">Payment Information</h3>
+          <p class="body-sm text-muted">Set the confirmed amount before sharing the Razorpay Test Mode payment link.</p>
+        </div>
+      </div>
+      <div class="admin-modal-grid">
+        <div class="form-field">
+          <label class="form-label" for="admin-payment-amount">Final Amount (INR)</label>
+          <input class="form-input" type="number" id="admin-payment-amount" min="0.01" step="0.01" placeholder="Enter confirmed amount" />
+        </div>
+        <div class="form-field">
+          <label class="form-label" for="admin-payment-link">Customer Payment Link</label>
+          <input class="form-input" type="url" id="admin-payment-link" readonly placeholder="Save an amount to generate the link" />
+        </div>
+      </div>
+      <div class="admin-detail-grid admin-payment-summary" id="admin-payment-summary"></div>
+      <div class="form-success" id="admin-payment-status" role="alert" aria-live="polite"></div>
+      <div class="admin-modal-actions">
+        <button class="btn btn-outline" type="button" id="admin-copy-payment-link" disabled>Copy Payment Link</button>
+        <a class="btn btn-outline" id="admin-open-payment-link" href="#" target="_blank" rel="noopener" aria-disabled="true">Open Payment Page</a>
+        <a class="btn btn-outline" id="admin-payment-receipt" href="#" target="_blank" rel="noopener" hidden>Download Receipt</a>
+        <button class="btn btn-maroon" type="submit" data-label="Save Payment Amount">Save Payment Amount</button>
       </div>
     </form>
 

@@ -118,3 +118,38 @@ dimension-based unit estimate is `null` when verified product dimensions are not
 Calculator validation rejects non-positive wall dimensions, unsupported wall units, inactive
 or incomplete configuration records, missing prices, and quantities that are not positive
 whole numbers.
+
+## Razorpay Test Payments
+
+Payments use an admin-confirmed quotation amount. The browser never submits or overrides the
+amount used to create a Razorpay order. Only `rzp_test_` API keys are accepted.
+
+```http
+PUT /api/admin/leads/:id/payment
+Authorization: Bearer <admin-token>
+Content-Type: application/json
+
+{ "finalAmount": 12500.50 }
+```
+
+Returns a random customer payment URL. Share that URL only with the relevant customer.
+
+```http
+GET /api/payment/quote/:paymentToken
+POST /api/payment/create-order
+POST /api/payment/verify
+GET /api/payment/quote/:paymentToken/receipt
+```
+
+Order creation uses the amount stored on the quotation. Verification checks the HMAC
+signature, fetches the payment from Razorpay, validates order, amount and currency, and marks
+the payment successful only when Razorpay reports it as captured. The receipt endpoint returns
+the database-backed PDF for the successful test payment.
+
+```http
+POST /api/payment/webhook
+X-Razorpay-Signature: <signature>
+```
+
+This endpoint validates the signature against the raw request body. Event reconciliation is
+intentionally left as future work and is not executed by this verification-only endpoint.

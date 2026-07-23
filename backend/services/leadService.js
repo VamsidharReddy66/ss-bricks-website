@@ -45,6 +45,12 @@ function compactNote(note) {
 function leadInclude(activityTake) {
   return {
     customer: true,
+    payments: {
+      take: 10,
+      orderBy: {
+        createdAt: 'desc',
+      },
+    },
     activities: {
       ...(activityTake ? { take: activityTake } : {}),
       orderBy: {
@@ -88,6 +94,7 @@ function serializeLead(lead) {
     enquiryNumber: lead.enquiryNumber,
     customerName: lead.customer.name,
     phone: lead.customer.phone,
+    email: lead.customer.email,
     company: lead.company,
     location: lead.customer.location,
     product: lead.product,
@@ -99,6 +106,23 @@ function serializeLead(lead) {
     assignedTo: lead.assignedTo,
     nextFollowUpDate: lead.nextFollowUpDate,
     crmNotes: lead.crmNotes,
+    finalAmount: lead.finalAmount === null ? null : Number(lead.finalAmount),
+    paymentUrl: lead.paymentToken ? `/payment.html?token=${lead.paymentToken}` : null,
+    paymentStatus: lead.payments?.find((payment) => payment.status === 'SUCCESS')?.status
+      || lead.payments?.[0]?.status
+      || 'NOT_CONFIGURED',
+    payments: lead.payments?.map((payment) => ({
+      id: payment.id,
+      amount: Number(payment.amount),
+      currency: payment.currency,
+      status: payment.status,
+      paymentMethod: payment.paymentMethod,
+      paymentId: payment.razorpayPaymentId,
+      orderId: payment.razorpayOrderId,
+      receiptUrl: payment.receiptUrl,
+      createdAt: payment.createdAt,
+      updatedAt: payment.updatedAt,
+    })) || [],
     createdAt: lead.createdAt,
     updatedAt: lead.updatedAt,
     activities: lead.activities?.map((activity) => ({
@@ -119,11 +143,13 @@ async function persistLead(payload, adminId, attempt = 0) {
       },
       update: {
         name: payload.name,
+        email: payload.email,
         location: payload.location,
       },
       create: {
         name: payload.name,
         phone: payload.phone,
+        email: payload.email,
         location: payload.location,
       },
     });
@@ -480,11 +506,13 @@ async function updateLead(leadId, payload, adminId) {
       },
       update: {
         name: payload.name,
+        email: payload.email,
         location: payload.location,
       },
       create: {
         name: payload.name,
         phone: payload.phone,
+        email: payload.email,
         location: payload.location,
       },
     });
@@ -533,6 +561,7 @@ async function updateLead(leadId, payload, adminId) {
 
     const coreChanged = existing.customer.name !== payload.name
       || existing.customer.phone !== payload.phone
+      || (existing.customer.email || '') !== (payload.email || '')
       || existing.customer.location !== payload.location
       || (existing.company || '') !== (payload.company || '')
       || existing.product !== payload.product

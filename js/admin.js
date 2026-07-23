@@ -16,12 +16,14 @@
   const leadEditForm = document.getElementById('admin-lead-edit-form');
   const leadNotesForm = document.getElementById('admin-lead-notes-form');
   const leadNoteForm = document.getElementById('admin-lead-note-form');
+  const paymentForm = document.getElementById('admin-payment-form');
   const importForm = document.getElementById('admin-import-form');
   const productStatus = document.getElementById('admin-product-status');
   const leadStatus = document.getElementById('admin-lead-status');
   const leadEditStatus = document.getElementById('admin-lead-edit-status');
   const leadNotesStatus = document.getElementById('admin-lead-notes-status');
   const leadNoteStatus = document.getElementById('admin-lead-note-status');
+  const paymentStatus = document.getElementById('admin-payment-status');
   const importStatus = document.getElementById('admin-import-status');
   const importPreview = document.getElementById('admin-import-preview');
   const pageTitle = document.getElementById('admin-page-title');
@@ -459,6 +461,7 @@
     hideStatus(leadStatus);
     leadForm.reset();
     document.getElementById('lead-quantity').value = 0;
+    document.getElementById('lead-email').value = '';
     document.getElementById('lead-source').value = 'PHONE';
     document.getElementById('lead-priority').value = 'MEDIUM';
     leadModal.hidden = false;
@@ -516,6 +519,7 @@
     document.getElementById('edit-lead-id').value = lead.id;
     document.getElementById('edit-lead-name').value = lead.customerName || '';
     document.getElementById('edit-lead-phone').value = lead.phone || '';
+    document.getElementById('edit-lead-email').value = lead.email || '';
     document.getElementById('edit-lead-location').value = lead.location || '';
     document.getElementById('edit-lead-company').value = lead.company || '';
     document.getElementById('edit-lead-product').value = lead.product || '';
@@ -530,11 +534,13 @@
     hideStatus(leadEditStatus);
     hideStatus(leadNotesStatus);
     hideStatus(leadNoteStatus);
+    hideStatus(paymentStatus);
 
     document.getElementById('admin-lead-detail-grid').innerHTML = [
       detailItem('Customer Details', lead.customerName),
       detailItem('Lead Number', lead.enquiryNumber),
       detailItem('Phone', lead.phone),
+      detailItem('Email', lead.email),
       detailItem('Company', lead.company),
       detailItem('Location', lead.location),
       detailItem('Lead Information', `${label(lead.status)} - ${label(lead.priority)}`),
@@ -546,6 +552,34 @@
       detailItem('Next Follow-up', dateOnly(lead.nextFollowUpDate)),
       detailItem('Assigned To', lead.assignedTo),
       detailItem('CRM Notes', lead.crmNotes),
+    ].join('');
+
+    const amountInput = document.getElementById('admin-payment-amount');
+    const linkInput = document.getElementById('admin-payment-link');
+    const copyLinkButton = document.getElementById('admin-copy-payment-link');
+    const openLink = document.getElementById('admin-open-payment-link');
+    const receiptLink = document.getElementById('admin-payment-receipt');
+    const paymentSaveButton = paymentForm.querySelector('[type="submit"]');
+    const paymentLink = lead.paymentUrl ? new URL(lead.paymentUrl, window.location.origin).href : '';
+    const successfulPayment = (lead.payments || []).find((payment) => payment.status === 'SUCCESS');
+    const latestPayment = successfulPayment || lead.payments?.[0] || null;
+
+    amountInput.value = lead.finalAmount ?? '';
+    amountInput.readOnly = Boolean(successfulPayment);
+    paymentSaveButton.disabled = Boolean(successfulPayment);
+    linkInput.value = paymentLink;
+    copyLinkButton.disabled = !paymentLink;
+    openLink.href = paymentLink || '#';
+    openLink.setAttribute('aria-disabled', paymentLink ? 'false' : 'true');
+    receiptLink.hidden = !successfulPayment?.receiptUrl;
+    receiptLink.href = successfulPayment?.receiptUrl || '#';
+    document.getElementById('admin-payment-summary').innerHTML = [
+      detailItem('Final Amount', lead.finalAmount ? money(lead.finalAmount) : 'Not configured'),
+      detailItem('Payment Status', label(lead.paymentStatus)),
+      detailItem('Payment Date', latestPayment ? dateTime(latestPayment.updatedAt) : '-'),
+      detailItem('Payment ID', latestPayment?.paymentId),
+      detailItem('Order ID', latestPayment?.orderId),
+      detailItem('Payment Method', latestPayment?.paymentMethod ? label(latestPayment.paymentMethod) : '-'),
     ].join('');
 
     activeLead = lead;
@@ -624,6 +658,7 @@
     return {
       name: document.getElementById('lead-name').value.trim(),
       phone: document.getElementById('lead-phone').value.trim(),
+      email: document.getElementById('lead-email').value.trim(),
       location: document.getElementById('lead-location').value.trim(),
       company: document.getElementById('lead-company').value.trim(),
       product: document.getElementById('lead-product').value,
@@ -639,6 +674,7 @@
     return {
       name: document.getElementById('edit-lead-name').value.trim(),
       phone: document.getElementById('edit-lead-phone').value.trim(),
+      email: document.getElementById('edit-lead-email').value.trim(),
       location: document.getElementById('edit-lead-location').value.trim(),
       company: document.getElementById('edit-lead-company').value.trim(),
       product: document.getElementById('edit-lead-product').value,
@@ -657,6 +693,9 @@
     }
     if (!Number.isInteger(payload.quantity) || payload.quantity < 0) {
       return 'Quantity must be zero or more.';
+    }
+    if (payload.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payload.email)) {
+      return 'Enter a valid email address.';
     }
     return null;
   }
@@ -908,6 +947,54 @@
       button.disabled = false;
       button.textContent = button.dataset.label || 'Save Lead Changes';
     }
+  });
+
+  paymentForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    hideStatus(paymentStatus);
+    const leadId = document.getElementById('edit-lead-id').value;
+    const amount = Number(document.getElementById('admin-payment-amount').value);
+    const button = paymentForm.querySelector('[type="submit"]');
+    if (!Number.isFinite(amount) || amount <= 0 || Math.abs(amount * 100 - Math.round(amount * 100)) >= 1e-7) {
+      showStatus(paymentStatus, 'Enter a final amount greater than zero with at most two decimal places.', true);
+      return;
+    }
+
+    button.disabled = true;
+    button.textContent = 'Saving...';
+    try {
+      await api(`/api/admin/leads/${leadId}/payment`, {
+        method: 'PUT',
+        body: JSON.stringify({ finalAmount: amount }),
+      });
+      const data = await api(`/api/admin/leads/${leadId}`);
+      renderLeadDetail(data.lead);
+      showStatus(paymentStatus, 'Payment amount and customer link are ready.');
+      showToast('Payment link ready');
+    } catch (error) {
+      const firstError = error.errors?.[0]?.message;
+      showStatus(paymentStatus, firstError || error.message, true);
+    } finally {
+      button.disabled = Boolean(activeLead?.paymentStatus === 'SUCCESS');
+      button.textContent = button.dataset.label || 'Save Payment Amount';
+    }
+  });
+
+  document.getElementById('admin-copy-payment-link').addEventListener('click', async () => {
+    const input = document.getElementById('admin-payment-link');
+    if (!input.value) return;
+    try {
+      await navigator.clipboard.writeText(input.value);
+      showToast('Payment link copied');
+    } catch (_error) {
+      input.select();
+      document.execCommand('copy');
+      showToast('Payment link copied');
+    }
+  });
+
+  document.getElementById('admin-open-payment-link').addEventListener('click', (event) => {
+    if (event.currentTarget.getAttribute('aria-disabled') === 'true') event.preventDefault();
   });
 
   leadNotesForm.addEventListener('submit', async (event) => {

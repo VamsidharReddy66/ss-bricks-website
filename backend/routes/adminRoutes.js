@@ -2,6 +2,7 @@ const express = require('express');
 const multer = require('multer');
 const path = require('path');
 const adminController = require('../controllers/adminController');
+const paymentController = require('../controllers/paymentController');
 const requireAdminAuth = require('../middleware/requireAdminAuth');
 
 const router = express.Router();
@@ -34,6 +35,7 @@ router.get('/dashboard', adminController.dashboard);
 router.get('/leads', adminController.listQuotes);
 router.post('/leads', adminController.createLead);
 router.get('/leads/:id', adminController.getLead);
+router.put('/leads/:id/payment', paymentController.configureQuotation);
 router.put('/leads/:id', adminController.updateLead);
 router.post('/leads/:id/activities', adminController.addLeadActivity);
 router.put('/leads/:id/notes', adminController.updateLeadNotes);
@@ -47,5 +49,6 @@ router.get('/products', adminController.listProducts);
 router.put('/products/:id', adminController.updateProduct);
 router.get('/price-history', adminController.listPriceHistory);
 router.get('/quotes', adminController.listQuotes);
+router.get('/payments', paymentController.listPayments);
 
 module.exports = router;

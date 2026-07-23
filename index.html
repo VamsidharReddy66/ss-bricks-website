@@ -123,6 +123,25 @@
           Loading current bulk price
         </p>
 
+        <div class="hpc-quick-buy" aria-labelledby="quick-buy-title">
+          <div class="hpc-quick-buy-head">
+            <p class="hpc-label" id="quick-buy-title">Quick Buy Packs</p>
+            <span>Fixed quantity and price</span>
+          </div>
+          <label class="sr-only" for="quick-buy-product">Choose a product</label>
+          <select class="hpc-product-select" id="quick-buy-product">
+            <option value="">Loading products</option>
+          </select>
+          <div class="hpc-pack-options" id="quick-buy-packs" role="group" aria-label="Choose a pack size"></div>
+          <div class="hpc-pack-total">
+            <span>Pack total</span>
+            <strong id="quick-buy-total">-</strong>
+          </div>
+          <a class="btn btn-maroon btn-full hpc-buy-button" id="quick-buy-button" href="#" aria-disabled="true">
+            Buy Now
+          </a>
+        </div>
+
         <div class="hpc-items">
           <div class="hpc-item"><span class="hpc-item-dot" aria-hidden="true"></span> Bulk orders available</div>
           <div class="hpc-item"><span class="hpc-item-dot" aria-hidden="true"></span> Fast delivery in and around Tirupati</div>
@@ -585,6 +604,10 @@
               <input class="form-input" type="tel" id="mobile" name="mobile" placeholder="+91 98765 43210" required />
             </div>
             <div class="form-field">
+              <label class="form-label" for="email">Email (Optional)</label>
+              <input class="form-input" type="email" id="email" name="email" placeholder="you@example.com" />
+            </div>
+            <div class="form-field">
               <label class="form-label" for="location">Your Location</label>
               <input class="form-input" type="text" id="location" name="location" placeholder="E.g. Tirupati, Renigunta" />
             </div>
@@ -657,6 +680,55 @@
         </div>
       </div>
 
+    </div>
+  </div>
+</section>
+
+<!-- CUSTOMER TESTIMONIALS -->
+<section id="testimonials" class="section" aria-labelledby="testimonials-title">
+  <div class="container">
+    <div class="section-head fade-up">
+      <span class="label label-center">Customer Feedback</span>
+      <h2 class="h-xl" id="testimonials-title">Trusted Across Andhra Pradesh</h2>
+      <p class="body-md">What customers say about ordering bricks and blocks from SS Bricks.</p>
+    </div>
+
+    <div class="testimonial-grid">
+      <article class="testimonial-card fade-up d1">
+        <div class="testimonial-stars" aria-label="5 out of 5 stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+        <blockquote>&ldquo;The bricks were uniform in size, and delivery reached our site on the promised date.&rdquo;</blockquote>
+        <div class="testimonial-customer">
+          <span class="testimonial-avatar" aria-hidden="true">RR</span>
+          <div><strong>Ramesh Reddy</strong><span>Tirupati, Andhra Pradesh</span></div>
+        </div>
+      </article>
+
+      <article class="testimonial-card fade-up d2">
+        <div class="testimonial-stars" aria-label="5 out of 5 stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+        <blockquote>&ldquo;Clear pricing and a quick response made ordering for our house construction simple.&rdquo;</blockquote>
+        <div class="testimonial-customer">
+          <span class="testimonial-avatar" aria-hidden="true">LN</span>
+          <div><strong>Lakshmi Narayana</strong><span>Chittoor, Andhra Pradesh</span></div>
+        </div>
+      </article>
+
+      <article class="testimonial-card fade-up d3">
+        <div class="testimonial-stars" aria-label="5 out of 5 stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+        <blockquote>&ldquo;Good quality fly ash bricks with careful unloading and helpful coordination.&rdquo;</blockquote>
+        <div class="testimonial-customer">
+          <span class="testimonial-avatar" aria-hidden="true">SB</span>
+          <div><strong>Suresh Babu</strong><span>Renigunta, Andhra Pradesh</span></div>
+        </div>
+      </article>
+
+      <article class="testimonial-card fade-up d4">
+        <div class="testimonial-stars" aria-label="5 out of 5 stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+        <blockquote>&ldquo;The team explained the quantity and price clearly before confirming our order.&rdquo;</blockquote>
+        <div class="testimonial-customer">
+          <span class="testimonial-avatar" aria-hidden="true">AD</span>
+          <div><strong>Anitha Devi</strong><span>Srikalahasti, Andhra Pradesh</span></div>
+        </div>
+      </article>
     </div>
   </div>
 </section>
@@ -756,6 +828,10 @@
 
 <!-- Floating WhatsApp Button -->
 <a href="https://wa.me/919876543210?text=Hello%20SS%20Bricks!%20I%20want%20to%20enquire%20about%20bricks." class="wa-float" id="wa-float" target="_blank" rel="noopener" aria-label="Chat with SS Bricks on WhatsApp">
+  <svg viewBox="0 0 24 24" aria-hidden="true">
+    <path class="wa-mark-bubble" d="M12 3a9 9 0 0 0-7.73 13.61L3 21l4.5-1.18A9 9 0 1 0 12 3Z"></path>
+    <path class="wa-mark-phone" d="M8.3 7.7c.18-.4.38-.41.66-.42h.55c.17 0 .36.06.45.35l.82 2c.1.25.08.48-.08.68l-.7.82c-.18.2-.1.47.02.7.57 1.12 1.46 2.01 2.58 2.58.25.13.5.18.69-.05l.91-1.08c.18-.22.4-.27.67-.16l1.97.92c.28.13.4.31.39.53-.03.6-.28 1.27-.72 1.72-.58.6-1.45.88-2.35.67-1.34-.31-2.98-1.04-4.55-2.57-1.39-1.36-2.27-2.88-2.65-4.24-.29-1.02.03-1.88.45-2.44Z"></path>
+  </svg>
   💬
 </a>
 

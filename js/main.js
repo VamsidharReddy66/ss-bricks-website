@@ -398,6 +398,73 @@
     }
   }
 
+  function initHeroQuickBuy() {
+    const productSelect = document.getElementById('quick-buy-product');
+    const packsContainer = document.getElementById('quick-buy-packs');
+    const total = document.getElementById('quick-buy-total');
+    const buyButton = document.getElementById('quick-buy-button');
+    if (!productSelect || !packsContainer || !total || !buyButton) return;
+
+    const packProducts = productCatalog.filter(product => (
+      Array.isArray(product.retailPacks) && product.retailPacks.length
+    ));
+    const availableProducts = packProducts.filter(product => product.availability === 'IN_STOCK');
+
+    const currentSlug = productSelect.value;
+    productSelect.innerHTML = '';
+    packProducts.forEach(product => {
+      const option = document.createElement('option');
+      option.value = product.slug;
+      option.textContent = product.availability === 'IN_STOCK'
+        ? product.name
+        : `${product.name} (Out of Stock)`;
+      option.disabled = product.availability !== 'IN_STOCK';
+      productSelect.appendChild(option);
+    });
+
+    if (availableProducts.some(product => product.slug === currentSlug)) {
+      productSelect.value = currentSlug;
+    } else if (availableProducts.length) {
+      productSelect.value = availableProducts[0].slug;
+    }
+
+    function selectPack(product, pack, button) {
+      packsContainer.querySelectorAll('.hpc-pack-option').forEach(item => {
+        item.classList.toggle('active', item === button);
+        item.setAttribute('aria-pressed', item === button ? 'true' : 'false');
+      });
+      total.textContent = formatMoney(pack.totalPrice);
+      buyButton.href = `checkout.html?product=${encodeURIComponent(product.slug)}&quantity=${pack.quantity}`;
+      buyButton.removeAttribute('aria-disabled');
+    }
+
+    function renderPacks() {
+      const product = productBySlug.get(productSelect.value);
+      packsContainer.innerHTML = '';
+      total.textContent = '-';
+      buyButton.href = '#';
+      buyButton.setAttribute('aria-disabled', 'true');
+      if (!product?.retailPacks?.length) return;
+
+      product.retailPacks.forEach((pack, index) => {
+        const button = document.createElement('button');
+        button.className = 'hpc-pack-option';
+        button.type = 'button';
+        button.setAttribute('aria-pressed', 'false');
+        const unit = product.unit === 'sq.ft'
+          ? product.unit
+          : Number(pack.quantity) === 1 ? product.unit : `${product.unit}s`;
+        button.innerHTML = `<strong>${Number(pack.quantity).toLocaleString('en-IN')}</strong><span>${escapeHtml(unit)} · ${escapeHtml(formatMoney(pack.totalPrice))}</span>`;
+        button.addEventListener('click', () => selectPack(product, pack, button));
+        packsContainer.appendChild(button);
+        if (index === 0) selectPack(product, pack, button);
+      });
+    }
+
+    productSelect.onchange = renderPacks;
+    renderPacks();
+  }
+
   function updatePriceCards() {
     document.querySelectorAll('.price-card').forEach(card => {
       const nameEl = card.querySelector('.pc-product');
@@ -487,6 +554,7 @@
 
   function renderPublicProducts() {
     updateHeroPrice();
+    initHeroQuickBuy();
     updatePriceCards();
     updateBulkOffers();
     updateProductPreview();
@@ -543,6 +611,7 @@
     return {
       name: normalizeSpaces(getField(form, 'name')?.value),
       phone: normalizePhone(getField(form, 'mobile')?.value),
+      email: normalizeSpaces(getField(form, 'email')?.value),
       location: normalizeSpaces(getField(form, 'location')?.value),
       product: normalizeSpaces(getField(form, 'product')?.value),
       quantity: normalizeQuantity(getField(form, 'quantity')?.value),
@@ -613,6 +682,10 @@
       errors.push({ field: 'phone', message: 'Enter a valid 10 digit Indian mobile number.' });
     }
 
+    if (payload.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payload.email)) {
+      errors.push({ field: 'email', message: 'Enter a valid email address.' });
+    }
+
     if (!payload.location) {
       errors.push({ field: 'location', message: 'Location is required.' });
     } else if (payload.location.length < 2 || payload.location.length > 100) {
@@ -663,7 +736,7 @@
   function buildWhatsAppUrl(payload, enquiryNumber, pdfUrl) {
     const pdfLine = pdfUrl ? `\nQuotation PDF: ${pdfUrl}` : '';
     const msg = encodeURIComponent(
-      `New Enquiry from SS Bricks Website\nEnquiry No: ${enquiryNumber}\nName: ${payload.name}\nMobile: ${payload.phone}\nProduct: ${payload.product}\nQuantity: ${payload.quantity}\nLocation: ${payload.location}\nDelivery Date: ${payload.deliveryDate}\nMessage: ${payload.message || 'N/A'}${pdfLine}`
+      `New Enquiry from SS Bricks Website\nEnquiry No: ${enquiryNumber}\nName: ${payload.name}\nMobile: ${payload.phone}\nEmail: ${payload.email || 'N/A'}\nProduct: ${payload.product}\nQuantity: ${payload.quantity}\nLocation: ${payload.location}\nDelivery Date: ${payload.deliveryDate}\nMessage: ${payload.message || 'N/A'}${pdfLine}`
     );
 
     return `https://wa.me/${WHATSAPP_PHONE}?text=${msg}`;

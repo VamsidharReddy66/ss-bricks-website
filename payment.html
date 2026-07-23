@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Test Payment | SS Bricks</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+</head>
+<body class="payment-page">
+  <main class="payment-shell">
+    <a class="payment-brand" href="index.html" aria-label="SS Bricks home">
+      <span class="payment-brand-mark" aria-hidden="true">
+        <span></span><span></span><span></span><span></span><span></span>
+      </span>
+      <span><strong>SS Bricks</strong><small>Tirupati, Andhra Pradesh</small></span>
+    </a>
+
+    <section class="payment-card" aria-labelledby="payment-title">
+      <div class="payment-mode">Razorpay Test Mode</div>
+      <h1 class="h-lg" id="payment-title">Complete Test Payment</h1>
+      <p class="body-sm text-muted">This is a simulated transaction. No real money will be charged.</p>
+
+      <div class="payment-loading" id="payment-loading" role="status">Loading quotation...</div>
+
+      <div id="payment-content" hidden>
+        <dl class="payment-details">
+          <div><dt>Quotation Number</dt><dd id="payment-quotation">-</dd></div>
+          <div><dt>Customer</dt><dd id="payment-customer">-</dd></div>
+          <div><dt>Product</dt><dd id="payment-product">-</dd></div>
+          <div><dt>Quantity</dt><dd id="payment-quantity">-</dd></div>
+        </dl>
+
+        <div class="payment-amount-band">
+          <span>Amount Payable</span>
+          <strong id="payment-amount">Rs.0</strong>
+        </div>
+
+        <div class="form-success payment-message" id="payment-message" role="alert" aria-live="polite"></div>
+
+        <div class="payment-success" id="payment-success" hidden>
+          <h2 class="h-sm">Payment Successful</h2>
+          <dl class="payment-details compact">
+            <div><dt>Payment ID</dt><dd id="payment-id">-</dd></div>
+            <div><dt>Transaction ID</dt><dd id="payment-order-id">-</dd></div>
+            <div><dt>Quotation Number</dt><dd id="payment-success-quotation">-</dd></div>
+          </dl>
+          <a class="btn btn-outline btn-full" id="payment-receipt" href="#">Download Receipt</a>
+        </div>
+
+        <button class="btn btn-maroon btn-full btn-lg" id="payment-pay-button" type="button" disabled>
+          Pay Now
+        </button>
+      </div>
+    </section>
+
+    <p class="payment-footer">Payments are processed by Razorpay Test Mode for integration testing only.</p>
+  </main>
+
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+  <script src="js/payment.js"></script>
+</body>
+</html>

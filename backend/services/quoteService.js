@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const { prisma } = require('../config/database');
 const { localDateKey, parseDateOnly } = require('../utils/date');
 const { isUniqueConstraintError } = require('../utils/prisma');
@@ -24,7 +25,7 @@ async function nextEnquiryNumber(tx, attempt = 0) {
   return `${prefix}${String(sequence).padStart(4, '0')}`;
 }
 
-async function persistQuote(payload, attempt = 0) {
+async function persistQuote(payload, attempt = 0, options = {}) {
   return prisma.$transaction(async (tx) => {
     const customer = await tx.customer.upsert({
       where: {
@@ -32,11 +33,13 @@ async function persistQuote(payload, attempt = 0) {
       },
       update: {
         name: payload.name,
+        email: payload.email,
         location: payload.location,
       },
       create: {
         name: payload.name,
         phone: payload.phone,
+        email: payload.email,
         location: payload.location,
       },
     });
@@ -52,10 +55,13 @@ async function persistQuote(payload, attempt = 0) {
         message: payload.message,
         source: 'WEBSITE',
         priority: 'MEDIUM',
+        finalAmount: options.finalAmount,
+        paymentToken: options.paymentToken,
+        paymentEnabledAt: options.paymentToken ? new Date() : undefined,
         activities: {
           create: {
             type: 'CREATED',
-            note: 'Lead created from website quote request.',
+            note: options.activityNote || 'Lead created from website quote request.',
           },
         },
       },
@@ -69,6 +75,8 @@ async function persistQuote(payload, attempt = 0) {
         source: true,
         assignedTo: true,
         pdfUrl: true,
+        finalAmount: true,
+        paymentToken: true,
         createdAt: true,
       },
     });
@@ -78,6 +86,7 @@ async function persistQuote(payload, attempt = 0) {
         id: customer.id,
         name: customer.name,
         phone: customer.phone,
+        email: customer.email,
         location: customer.location,
       },
       quote,
@@ -110,6 +119,55 @@ async function createQuote(payload) {
   }
 
   throw new Error('Unable to create a unique enquiry number.');
+}
+
+async function createRetailPackQuote(payload) {
+  const pack = await productService.getRetailPackBySlug(payload.productSlug, payload.quantity);
+  if (!pack) {
+    const error = new Error('Selected product is not available.');
+    error.statusCode = 400;
+    error.field = 'productSlug';
+    throw error;
+  }
+
+  const paymentToken = crypto.randomBytes(24).toString('hex');
+  const quotePayload = {
+    name: payload.name,
+    phone: payload.phone,
+    email: payload.email,
+    location: payload.location,
+    product: pack.product.name,
+    quantity: pack.quantity,
+    deliveryDate: payload.deliveryDate,
+    message: 'Fixed retail pack checkout.',
+  };
+
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    try {
+      const result = await persistQuote(quotePayload, attempt, {
+        activityNote: 'Lead created from website retail pack checkout.',
+        finalAmount: pack.totalPrice,
+        paymentToken,
+      });
+
+      return {
+        ...result,
+        paymentUrl: `/payment.html?token=${paymentToken}&autostart=1`,
+        retailPack: {
+          productSlug: pack.product.slug,
+          unit: pack.product.unit,
+          quantity: pack.quantity,
+          totalPrice: Number(pack.totalPrice),
+        },
+      };
+    } catch (error) {
+      if (!isUniqueConstraintError(error) || attempt === 4) {
+        throw error;
+      }
+    }
+  }
+
+  throw new Error('Unable to create a unique retail order.');
 }
 
 function startOfToday() {
@@ -192,6 +250,7 @@ async function getQuoteDocument(enquiryNumber) {
 
 module.exports = {
   createQuote,
+  createRetailPackQuote,
   getQuoteDocument,
   getQuoteStats,
   listRecentQuotes,

@@ -48,6 +48,18 @@ const optionalTrimmed = (max, label) => z.preprocess(
     .transform((value) => value || null),
 );
 
+const optionalEmail = z.preprocess(
+  (value) => value ?? '',
+  z
+    .string()
+    .trim()
+    .email('Enter a valid email address.')
+    .max(255, 'Email must be 255 characters or fewer.')
+    .optional()
+    .or(z.literal(''))
+    .transform((value) => value || null),
+);
+
 const followUpDateSchema = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, 'Next follow-up date must use YYYY-MM-DD format.')
@@ -68,6 +80,7 @@ const leadCreateSchema = z.object({
       .string({ required_error: 'Phone number is required.' })
       .regex(/^[6-9]\d{9}$/, 'Phone number must be a valid 10 digit Indian mobile number.'),
   ),
+  email: optionalEmail,
   company: optionalTrimmed(120, 'Company'),
   location: z
     .string({ required_error: 'Location is required.' })

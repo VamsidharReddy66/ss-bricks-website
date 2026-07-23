@@ -31,9 +31,14 @@ GOOGLE_SERVICE_ACCOUNT_EMAIL=
 GOOGLE_PRIVATE_KEY=
 WHATSAPP_PROVIDER_URL=
 WHATSAPP_ACCESS_TOKEN=
+RAZORPAY_KEY_ID=rzp_test_your_test_key_id
+RAZORPAY_SECRET=your_test_key_secret
+RAZORPAY_WEBHOOK_SECRET=your_separate_test_webhook_secret
 ```
 
 Do not use the local `.env` file or a personal password in Vercel. Use the provider-issued app password for SMTP.
+Razorpay keys must come from Dashboard Test Mode. This build rejects key IDs that do not start with `rzp_test_`.
+The webhook secret is configured separately in Razorpay Test Mode webhook settings; it is not the API key secret.
 
 ## Database
 
@@ -44,6 +49,8 @@ npm run prisma:deploy
 ```
 
 The Vercel build only generates the Prisma client. It does not run migrations automatically.
+The payment migration adds confirmed quotation amounts, customer email, secure payment tokens,
+payment records, and database-backed receipt storage.
 
 ## Deployment Validation
 
@@ -57,6 +64,8 @@ After deployment:
 6. Open the generated PDF URL from the quote record if needed.
 7. Import a small CSV and confirm preview, duplicate review, and import summary.
 8. Confirm Dashboard Total Leads equals all stored leads.
+9. Set a final payment amount on a test lead and open the generated payment link.
+10. Complete a Razorpay Test Mode payment and download its receipt.
 
 ## Google Sheets
 

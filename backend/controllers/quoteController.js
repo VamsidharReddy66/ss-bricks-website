@@ -22,6 +22,21 @@ function runQuoteDistribution(result) {
   });
 }
 
+async function prepareQuoteDistribution(result) {
+  let pdf = null;
+
+  try {
+    pdf = await generateAndStoreQuotePdf(result);
+    result.pdf = pdf;
+    result.quote.pdfUrl = pdf.pdfUrl;
+  } catch (error) {
+    console.error(`Could not generate immediate quotation PDF for ${result.quote.enquiryNumber}.`, error);
+  }
+
+  runQuoteDistribution(result);
+  return pdf;
+}
+
 async function createQuote(req, res, next) {
   try {
     if (!req.body || Object.keys(req.body).length === 0) {
@@ -39,17 +54,7 @@ async function createQuote(req, res, next) {
     }
 
     const result = await quoteService.createQuote(parsed.data);
-    let pdf = null;
-
-    try {
-      pdf = await generateAndStoreQuotePdf(result);
-      result.pdf = pdf;
-      result.quote.pdfUrl = pdf.pdfUrl;
-    } catch (error) {
-      console.error(`Could not generate immediate quotation PDF for ${result.quote.enquiryNumber}.`, error);
-    }
-
-    runQuoteDistribution(result);
+    const pdf = await prepareQuoteDistribution(result);
 
     return successResponse(res, 201, 'Quotation submitted successfully.', {
       enquiryNumber: result.quote.enquiryNumber,
@@ -101,4 +106,5 @@ async function getQuotePdf(req, res, next) {
 module.exports = {
   createQuote,
   getQuotePdf,
+  prepareQuoteDistribution,
 };

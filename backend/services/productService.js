@@ -1,5 +1,9 @@
 const { Prisma } = require('@prisma/client');
 const { prisma } = require('../config/database');
+const {
+  getRetailPackQuantities,
+  isRetailPackQuantity,
+} = require('../config/retailPacks');
 
 const defaultProducts = [
   {
@@ -49,17 +53,22 @@ function toMoney(value) {
 }
 
 function serializeProduct(product) {
+  const standardPrice = Number(product.standardPrice);
   return {
     id: product.id,
     name: product.name,
     slug: product.slug,
     description: product.description,
-    standardPrice: Number(product.standardPrice),
+    standardPrice,
     bulkPrice: Number(product.bulkPrice),
     bulkQuantity: product.bulkQuantity,
     unit: product.unit,
     image: product.image,
     availability: product.availability,
+    retailPacks: getRetailPackQuantities(product.slug).map((quantity) => ({
+      quantity,
+      totalPrice: Number((standardPrice * quantity).toFixed(2)),
+    })),
     updatedAt: product.updatedAt,
   };
 }
@@ -98,6 +107,35 @@ async function getProductBySlug(slug) {
   });
 
   return product ? serializeProduct(product) : null;
+}
+
+async function getRetailPackBySlug(slug, quantity) {
+  const product = await prisma.product.findUnique({
+    where: {
+      slug,
+    },
+  });
+
+  if (!product || product.availability !== 'IN_STOCK') {
+    return null;
+  }
+
+  if (!isRetailPackQuantity(product.slug, quantity)) {
+    const error = new Error('Selected retail pack is not available.');
+    error.statusCode = 400;
+    error.field = 'quantity';
+    throw error;
+  }
+
+  const totalPrice = new Prisma.Decimal(product.standardPrice)
+    .mul(quantity)
+    .toDecimalPlaces(2);
+
+  return {
+    product,
+    quantity: Number(quantity),
+    totalPrice,
+  };
 }
 
 async function ensureQuoteProductExists(productName) {
@@ -240,6 +278,7 @@ module.exports = {
   ensureDefaultProducts,
   ensureQuoteProductExists,
   getProductBySlug,
+  getRetailPackBySlug,
   getProductStats,
   listPriceHistory,
   listProducts,

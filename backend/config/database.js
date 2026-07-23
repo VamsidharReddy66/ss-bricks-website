@@ -35,7 +35,16 @@ async function getDatabaseReadiness() {
           AND column_name = 'pdfUrl'
       ) AS "quotePdfColumnExists",
       to_regclass(format('%I.%I', current_schema(), 'QuoteDocument')) IS NOT NULL
-        AS "quoteDocumentTableExists"
+        AS "quoteDocumentTableExists",
+      EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = current_schema()
+          AND table_name = 'QuoteRequest'
+          AND column_name = 'final_amount'
+      ) AS "quoteFinalAmountColumnExists",
+      to_regclass(format('%I.%I', current_schema(), 'payments')) IS NOT NULL
+        AS "paymentTableExists"
   `;
 
   return readiness;
@@ -51,6 +60,8 @@ async function connectDatabase() {
     runtimeSchema: readiness.schemaName,
     quotePdfColumnExists: readiness.quotePdfColumnExists,
     quoteDocumentTableExists: readiness.quoteDocumentTableExists,
+    quoteFinalAmountColumnExists: readiness.quoteFinalAmountColumnExists,
+    paymentTableExists: readiness.paymentTableExists,
     vercelCommit: process.env.VERCEL_GIT_COMMIT_SHA || 'local',
   });
 }

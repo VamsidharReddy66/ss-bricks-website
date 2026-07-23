@@ -60,11 +60,30 @@ SS_BRICKS_EMAIL=sales@ssbricks.com
 SMTP_CONNECTION_TIMEOUT_MS=10000
 SMTP_GREETING_TIMEOUT_MS=10000
 SMTP_SOCKET_TIMEOUT_MS=15000
+RAZORPAY_KEY_ID=
+RAZORPAY_SECRET=
+RAZORPAY_WEBHOOK_SECRET=
 ```
 
 ## SMTP Setup
 
-`SMTP_USER` is the authenticated sender account. `SS_BRICKS_EMAIL` is the only notification recipient. The quotation form does not collect customer email addresses and no customer email is sent.
+`SMTP_USER` is the authenticated sender account. `SS_BRICKS_EMAIL` is the only notification recipient. The quotation form can collect an optional customer email for Razorpay Checkout prefill, but no customer email is sent automatically.
+
+## Razorpay Test Mode
+
+The admin confirms a final quotation amount in the lead details and shares the generated
+customer payment link. The backend creates the Razorpay order from that stored amount,
+verifies the returned signature, confirms the payment status with Razorpay, and stores a PDF
+receipt in PostgreSQL. Live key IDs are rejected by this test-only build.
+
+```env
+RAZORPAY_KEY_ID=rzp_test_your_test_key_id
+RAZORPAY_SECRET=your_test_key_secret
+RAZORPAY_WEBHOOK_SECRET=your_separate_test_webhook_secret
+```
+
+For webhook testing, configure `https://your-domain/api/payment/webhook` in Razorpay Dashboard
+Test Mode. The webhook secret is separate from the API key secret.
 
 ### Gmail
 
