@@ -2,6 +2,8 @@ const express = require('express');
 const multer = require('multer');
 const path = require('path');
 const adminController = require('../controllers/adminController');
+const analyticsController = require('../controllers/analyticsController');
+const businessController = require('../controllers/businessController');
 const paymentController = require('../controllers/paymentController');
 const requireAdminAuth = require('../middleware/requireAdminAuth');
 
@@ -32,6 +34,19 @@ router.post('/login', adminController.login);
 router.use(requireAdminAuth);
 
 router.get('/dashboard', adminController.dashboard);
+router.get('/analytics', analyticsController.analytics);
+router.get('/business-imports', businessController.listImports);
+router.post('/business-import/preview', upload.single('file'), businessController.previewImport);
+router.post('/business-import/commit', upload.single('file'), businessController.commitImport);
+router.get('/business-records/:type', businessController.listRecords);
+router.post('/business-records/:type', businessController.createRecord);
+router.put('/business-records/:type/:id', businessController.updateRecord);
+router.delete('/business-records/:type/:id', businessController.voidRecord);
+router.get('/sales', analyticsController.listSales);
+router.post('/sales', analyticsController.createSale);
+router.put('/sales/grid', analyticsController.updateSalesGrid);
+router.put('/sales/:id', analyticsController.updateSale);
+router.delete('/sales/:id', analyticsController.deleteSale);
 router.get('/leads', adminController.listQuotes);
 router.post('/leads', adminController.createLead);
 router.get('/leads/:id', adminController.getLead);

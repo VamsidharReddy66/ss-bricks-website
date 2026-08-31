@@ -177,8 +177,6 @@
     const widthUnit = document.getElementById(prefix + 'width-unit');
     const thickness = document.getElementById(prefix + 'thickness-select');
     const productType = document.getElementById(prefix + 'brick-type-select');
-    const quantity = document.getElementById(prefix + 'quantity-input');
-    const quantityUnit = document.getElementById(prefix + 'quantity-unit');
     const feedback = document.getElementById(prefix + 'calc-feedback');
     const waBtn = document.getElementById(prefix + 'calc-wa-btn');
     const output = {
@@ -187,11 +185,11 @@
       size: document.getElementById(prefix + 'result-size'),
       area: document.getElementById(prefix + 'result-area'),
       volume: document.getElementById(prefix + 'result-volume'),
-      bricks: document.getElementById(prefix + 'result-bricks'),
       quantity: document.getElementById(prefix + 'result-quantity'),
+      unitPrice: document.getElementById(prefix + 'result-unit-price'),
     };
 
-    if (!height || !heightUnit || !width || !widthUnit || !thickness || !productType || !quantity || !output.cost) {
+    if (!height || !heightUnit || !width || !widthUnit || !thickness || !productType || !output.cost) {
       return;
     }
 
@@ -214,11 +212,9 @@
       }
 
       const selectedThickness = thickness.options[thickness.selectedIndex]?.textContent || '';
-      const estimatedUnits = data.estimatedBricks === null
-        ? 'Not available (dimensions not configured)'
-        : formatEstimateValue(data.estimatedBricks, 0);
+      const requiredQuantity = `${formatEstimateValue(data.quantity)} ${calculatorUnitLabel(data.quantityUnit, data.quantity)}`;
       const message = encodeURIComponent(
-        `Hello SS Bricks! I used your wall material calculator.\nProduct: ${data.brickType}\nWall: ${height.value} ${heightUnit.value} x ${width.value} ${widthUnit.value}\nThickness: ${selectedThickness}\nEstimated Units: ${estimatedUnits}\nQuantity: ${formatEstimateValue(data.quantity, 0)} ${calculatorUnitLabel(data.quantityUnit, data.quantity)}\nEstimated Cost: ${formatMoney(data.estimatedCost)}\nPlease share the final quotation.`
+        `Hello SS Bricks! I used your wall material calculator.\nProduct: ${data.brickType}\nProduct Size: ${data.brickSize}\nWall: ${height.value} ${heightUnit.value} x ${width.value} ${widthUnit.value}\nThickness: ${selectedThickness}\nRequired Quantity: ${requiredQuantity}\nEstimated Cost: ${formatMoney(data.estimatedCost)}\nPlease share the final quotation.`
       );
       waBtn.href = `https://wa.me/919876543210?text=${message}`;
       waBtn.removeAttribute('aria-disabled');
@@ -226,7 +222,7 @@
 
     function resetResult() {
       output.cost.textContent = '\u20b90';
-      ['brick', 'size', 'area', 'volume', 'bricks', 'quantity'].forEach(key => {
+      ['brick', 'size', 'area', 'volume', 'quantity', 'unitPrice'].forEach(key => {
         if (output[key]) output[key].textContent = '\u2014';
       });
       setWhatsAppEstimate();
@@ -238,17 +234,17 @@
       output.size.textContent = data.brickSize || 'Not configured';
       output.area.textContent = `${formatEstimateValue(data.wallArea)} ${data.wallAreaUnit}`;
       output.volume.textContent = `${formatEstimateValue(data.wallVolume)} ${data.wallVolumeUnit}`;
-      output.bricks.textContent = data.estimatedBricks === null
-        ? 'Not available'
-        : formatEstimateValue(data.estimatedBricks, 0);
-      output.quantity.textContent = `${formatEstimateValue(data.quantity, 0)} ${calculatorUnitLabel(data.quantityUnit, data.quantity)}`;
+      const physicalUnitNote = data.quantityUnit === 'sq.ft'
+        ? ` (approx. ${formatEstimateValue(data.estimatedPieces, 0)} pieces)`
+        : '';
+      output.quantity.textContent = `${formatEstimateValue(data.quantity)} ${calculatorUnitLabel(data.quantityUnit, data.quantity)}${physicalUnitNote}`;
+      output.unitPrice.textContent = `${formatMoney(data.pricePerUnit)} / ${data.quantityUnit}`;
       setWhatsAppEstimate(data);
     }
 
     function payloadOrMessage() {
       const heightValue = Number(height.value);
       const widthValue = Number(width.value);
-      const quantityValue = Number(quantity.value);
 
       if (!height.value && !width.value) return { payload: null, message: '' };
       if (!Number.isFinite(heightValue) || heightValue <= 0) {
@@ -259,9 +255,6 @@
       }
       if (!thickness.value) return { payload: null, message: 'Select a wall thickness.' };
       if (!productType.value) return { payload: null, message: 'Select a product type.' };
-      if (!Number.isInteger(quantityValue) || quantityValue <= 0) {
-        return { payload: null, message: 'Quantity must be a whole number greater than zero.' };
-      }
 
       return {
         payload: {
@@ -271,7 +264,6 @@
           widthUnit: widthUnit.value,
           thicknessId: Number(thickness.value),
           productId: Number(productType.value),
-          quantity: quantityValue,
         },
         message: '',
       };
@@ -316,17 +308,8 @@
     }
 
     [height, width].forEach(input => input.addEventListener('input', scheduleCalculation));
-    quantity.addEventListener('input', updateQuantityUnit);
-    function updateQuantityUnit() {
-      const selected = config.products.find(item => String(item.id) === productType.value);
-      if (quantityUnit) quantityUnit.textContent = selected
-        ? calculatorUnitLabel(selected.unit, quantity.value)
-        : 'units';
-      scheduleCalculation();
-    }
-
     [heightUnit, widthUnit, thickness].forEach(select => select.addEventListener('change', scheduleCalculation));
-    productType.addEventListener('change', updateQuantityUnit);
+    productType.addEventListener('change', scheduleCalculation);
 
     resetResult();
 
@@ -355,7 +338,7 @@
       if (availableProducts.length === 1) {
         productType.value = String(availableProducts[0].id);
       }
-      updateQuantityUnit();
+      scheduleCalculation();
 
       if (!availableProducts.length || !data.thicknessOptions.length) {
         showFeedback('Calculator configuration is not available. Please contact SS Bricks.');

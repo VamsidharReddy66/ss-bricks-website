@@ -73,6 +73,7 @@
 
     <nav class="admin-nav">
       <button class="admin-nav-item active" type="button" data-view="dashboard">Dashboard</button>
+      <button class="admin-nav-item" type="button" data-view="analytics">Analytics</button>
       <button class="admin-nav-item" type="button" data-view="leads">Leads</button>
       <button class="admin-nav-item" type="button" data-view="products">Products</button>
       <button class="admin-nav-item" type="button" data-view="settings">Settings</button>
@@ -116,6 +117,736 @@
         </div>
       </div>
       <div class="admin-product-grid" id="admin-dashboard-products"></div>
+    </section>
+
+    <section class="admin-view" id="admin-view-analytics">
+      <div class="admin-section-head admin-analytics-head">
+        <div>
+          <h2 class="h-md">Business Analytics</h2>
+          <p class="body-sm text-muted">KPIs and charts use imported workbook data only. Logs can also hold clearly identified manual admin entries; website and CSV leads remain excluded.</p>
+        </div>
+        <div class="admin-action-row compact admin-analytics-actions">
+          <button class="btn btn-outline btn-sm" type="button" data-open-business-import>Import Business XLSX</button>
+          <label class="form-field admin-range-field">
+            <span class="form-label">Period</span>
+            <select class="form-select" id="admin-analytics-range">
+              <option value="LAST_30_DAYS">Last 30 days</option>
+              <option value="LAST_90_DAYS">Last 90 days</option>
+              <option value="LAST_6_MONTHS" selected>Last 6 months</option>
+              <option value="THIS_YEAR">This year</option>
+              <option value="ALL">All time</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <div class="admin-analytics-tabs" role="tablist" aria-label="Analytics views">
+        <button class="admin-analytics-tab active" type="button" role="tab" aria-selected="true" data-analytics-tab="overview">Overview</button>
+        <button class="admin-analytics-tab" type="button" role="tab" aria-selected="false" data-analytics-tab="marketing" hidden>Marketing</button>
+        <button class="admin-analytics-tab" type="button" role="tab" aria-selected="false" data-analytics-tab="sales">Sales</button>
+        <button class="admin-analytics-tab" type="button" role="tab" aria-selected="false" data-analytics-tab="finance">Finance</button>
+        <button class="admin-analytics-tab" type="button" role="tab" aria-selected="false" data-analytics-tab="operations">Operations</button>
+        <button class="admin-analytics-tab" type="button" role="tab" aria-selected="false" data-analytics-tab="team">Labour</button>
+        <button class="admin-analytics-tab" type="button" role="tab" aria-selected="false" data-analytics-tab="insights">Insights</button>
+      </div>
+
+      <div class="admin-analytics-panel active" id="admin-analytics-overview" role="tabpanel">
+        <div class="admin-stats-grid admin-analytics-stats" id="admin-analytics-stats"></div>
+
+        <div class="admin-availability-note admin-import-trust" id="admin-business-import-trust"></div>
+
+        <section class="admin-attention-section" aria-labelledby="admin-attention-title">
+          <div class="admin-data-panel-head">
+            <div>
+              <h3 class="h-sm" id="admin-attention-title">Needs Attention</h3>
+              <p class="body-sm text-muted">Deterministic findings from workbook records and reconciliation checks.</p>
+            </div>
+          </div>
+          <div class="admin-attention-list" id="admin-overview-attention"></div>
+        </section>
+
+        <div class="admin-analytics-grid">
+          <article class="admin-data-panel admin-data-panel-wide">
+            <div class="admin-data-panel-head">
+              <div>
+                <h3 class="h-sm">Sales vs Recorded Outflows</h3>
+                <p class="body-sm text-muted">Monthly workbook invoiced sales and recorded outflows. The difference is not net profit.</p>
+              </div>
+              <div class="admin-chart-legend" aria-label="Chart legend">
+                <span><i class="invoiced"></i> Invoiced</span>
+                <span><i class="outflows"></i> Recorded outflows</span>
+              </div>
+            </div>
+            <div class="admin-line-chart" id="admin-overview-performance-chart"></div>
+          </article>
+
+          <article class="admin-data-panel">
+            <div class="admin-data-panel-head">
+              <div>
+                <h3 class="h-sm">Recorded Outflow Mix</h3>
+                <p class="body-sm text-muted">Where workbook-recorded payments and obligations are concentrated.</p>
+              </div>
+            </div>
+            <div class="admin-donut-layout" id="admin-overview-outflow-donut"></div>
+          </article>
+        </div>
+
+        <div class="admin-analytics-grid">
+          <article class="admin-data-panel admin-data-panel-wide">
+            <div class="admin-data-panel-head">
+              <div>
+                <h3 class="h-sm">Revenue by Product</h3>
+                <p class="body-sm text-muted">Workbook invoiced value grouped by the exact normalized product name.</p>
+              </div>
+            </div>
+            <div class="admin-horizontal-chart" id="admin-overview-product-bars"></div>
+          </article>
+
+          <article class="admin-data-panel">
+            <div class="admin-data-panel-head">
+              <div>
+                <h3 class="h-sm">Data Coverage</h3>
+                <p class="body-sm text-muted">Normalized workbook records included in this analysis.</p>
+              </div>
+            </div>
+            <div class="admin-coverage-list" id="admin-analytics-coverage"></div>
+          </article>
+        </div>
+
+        <div class="admin-analytics-grid admin-analytics-grid-single">
+          <article class="admin-data-panel">
+            <div class="admin-data-panel-head">
+              <div>
+                <h3 class="h-sm">Top Customers</h3>
+                <p class="body-sm text-muted">Workbook customers ranked by invoiced value. Historical outstanding balances are not inferred.</p>
+              </div>
+            </div>
+            <div class="admin-table-wrap admin-table-flat">
+              <table class="admin-table admin-analytics-table">
+                <thead>
+                  <tr>
+                    <th>Customer</th>
+                    <th>Invoiced</th>
+                    <th>Records</th>
+                  </tr>
+                </thead>
+                <tbody id="admin-outstanding-accounts"></tbody>
+              </table>
+            </div>
+          </article>
+        </div>
+      </div>
+
+      <div class="admin-analytics-panel" id="admin-analytics-marketing" role="tabpanel" hidden>
+        <div class="admin-report-intro">
+          <div>
+            <h3 class="h-sm">Marketing and Lead Analytics</h3>
+            <p class="body-sm text-muted">Lead acquisition, funnel health, follow-ups, locations, and data quality.</p>
+          </div>
+        </div>
+        <div class="admin-stats-grid admin-analytics-stats" id="admin-marketing-stats"></div>
+
+        <div class="admin-analytics-grid">
+          <article class="admin-data-panel admin-data-panel-wide">
+            <div class="admin-data-panel-head">
+              <div>
+                <h3 class="h-sm">Lead Trend</h3>
+                <p class="body-sm text-muted">New leads and verified conversions by month.</p>
+              </div>
+              <div class="admin-chart-legend" aria-label="Chart legend">
+                <span><i class="leads"></i> Leads</span>
+                <span><i class="converted"></i> Converted</span>
+              </div>
+            </div>
+            <div class="admin-monthly-chart" id="admin-lead-trend-chart"></div>
+          </article>
+
+          <article class="admin-data-panel">
+            <div class="admin-data-panel-head">
+              <div>
+                <h3 class="h-sm">Funnel by Stage</h3>
+                <p class="body-sm text-muted">Lead movement across the selected period.</p>
+              </div>
+            </div>
+            <div class="admin-pipeline-chart" id="admin-marketing-funnel"></div>
+          </article>
+        </div>
+
+        <div class="admin-analytics-grid">
+          <article class="admin-data-panel admin-data-panel-wide">
+            <div class="admin-data-panel-head">
+              <div>
+                <h3 class="h-sm">Channel Performance</h3>
+                <p class="body-sm text-muted">Lead volume and verified conversion by acquisition source.</p>
+              </div>
+            </div>
+            <div class="admin-breakdown-list" id="admin-marketing-sources"></div>
+          </article>
+          <article class="admin-data-panel">
+            <div class="admin-data-panel-head">
+              <div>
+                <h3 class="h-sm">Priority Mix</h3>
+                <p class="body-sm text-muted">Lead distribution by recorded priority.</p>
+              </div>
+            </div>
+            <div class="admin-breakdown-list" id="admin-marketing-priorities"></div>
+          </article>
+        </div>
+
+        <div class="admin-analytics-grid">
+          <article class="admin-data-panel admin-data-panel-wide">
+            <div class="admin-data-panel-head">
+              <div>
+                <h3 class="h-sm">Location Performance</h3>
+                <p class="body-sm text-muted">Demand concentration and measurable pipeline by customer location.</p>
+              </div>
+            </div>
+            <div class="admin-table-wrap admin-table-flat">
+              <table class="admin-table admin-analytics-table">
+                <thead>
+                  <tr>
+                    <th>Location</th>
+                    <th>Leads</th>
+                    <th>Converted</th>
+                    <th>Requested</th>
+                    <th>Pipeline</th>
+                  </tr>
+                </thead>
+                <tbody id="admin-location-performance"></tbody>
+              </table>
+            </div>
+          </article>
+
+          <div class="admin-report-stack">
+            <article class="admin-data-panel">
+              <div class="admin-data-panel-head">
+                <div>
+                  <h3 class="h-sm">Follow-up Health</h3>
+                  <p class="body-sm text-muted">Open lead follow-up readiness.</p>
+                </div>
+              </div>
+              <div class="admin-breakdown-list" id="admin-followup-health"></div>
+            </article>
+            <article class="admin-data-panel">
+              <div class="admin-data-panel-head">
+                <div>
+                  <h3 class="h-sm">Lead Data Quality</h3>
+                  <p class="body-sm text-muted">Records that need completion or assignment.</p>
+                </div>
+              </div>
+              <div class="admin-breakdown-list" id="admin-marketing-quality"></div>
+            </article>
+          </div>
+        </div>
+      </div>
+
+      <div class="admin-analytics-panel" id="admin-analytics-sales" role="tabpanel" hidden>
+        <div class="admin-report-intro">
+          <div>
+            <h3 class="h-sm">Sales and Customer Analysis</h3>
+            <p class="body-sm text-muted">Workbook invoices, product mix, customer concentration, and recorded pricing. Collections are not inferred.</p>
+          </div>
+        </div>
+        <div data-application-sales-report hidden>
+          <button type="button" id="admin-edit-sales-grid"></button>
+          <button type="button" id="admin-save-sales-grid"></button>
+          <button type="button" id="admin-cancel-sales-grid"></button>
+          <button type="button" id="admin-export-sales"></button>
+          <button type="button" id="admin-add-offline-sale"></button>
+          <div id="admin-sales-report-stats"></div>
+          <div id="admin-sales-status-breakdown"></div>
+          <div id="admin-sales-type-breakdown"></div>
+          <table><tbody id="admin-top-customers"></tbody></table>
+        </div>
+
+        <div class="admin-stats-grid admin-analytics-stats" id="admin-sales-workbook-stats"></div>
+        <div class="admin-analytics-grid">
+          <article class="admin-data-panel admin-data-panel-wide">
+            <div class="admin-data-panel-head"><div><h3 class="h-sm">Monthly Invoiced Sales</h3><p class="body-sm text-muted">Workbook invoiced value by reporting month.</p></div></div>
+            <div class="admin-column-chart" id="admin-sales-monthly-chart"></div>
+          </article>
+          <article class="admin-data-panel">
+            <div class="admin-data-panel-head"><div><h3 class="h-sm">Product Revenue Mix</h3><p class="body-sm text-muted">Share of workbook invoiced sales.</p></div></div>
+            <div class="admin-donut-layout" id="admin-sales-product-donut"></div>
+          </article>
+        </div>
+
+        <div class="admin-analytics-grid">
+          <article class="admin-data-panel admin-data-panel-wide">
+            <div class="admin-data-panel-head"><div><h3 class="h-sm">Product Price Summary</h3><p class="body-sm text-muted">Average of explicitly recorded per-unit prices; no target price or margin is assumed.</p></div></div>
+            <div class="admin-table-wrap admin-table-flat"><table class="admin-table admin-analytics-table">
+              <thead><tr><th>Product</th><th>Invoices</th><th>Invoiced</th><th>Quantity (loads)</th><th>Avg recorded price</th></tr></thead>
+              <tbody id="admin-sales-price-summary"></tbody>
+            </table></div>
+          </article>
+          <article class="admin-data-panel">
+            <div class="admin-data-panel-head"><div><h3 class="h-sm">Top Customers</h3><p class="body-sm text-muted">Ranked by workbook invoiced value.</p></div></div>
+            <div class="admin-horizontal-chart compact" id="admin-sales-customer-bars"></div>
+          </article>
+        </div>
+
+        <h3 class="admin-ledger-title" hidden>Unified Sales Ledger</h3>
+        <div class="admin-sales-tools" hidden>
+          <label class="form-field admin-search-field">
+            <span class="form-label">Search</span>
+            <input class="form-input" type="search" id="admin-sales-search" placeholder="Sale number, customer, phone, location, or product" />
+          </label>
+          <label class="form-field">
+            <span class="form-label">Record Type</span>
+            <select class="form-select" id="admin-sales-type">
+              <option value="ALL">All records</option>
+              <option value="QUOTE">Website quotations</option>
+              <option value="OFFLINE">Offline sales</option>
+            </select>
+          </label>
+          <label class="form-field">
+            <span class="form-label">Payment Status</span>
+            <select class="form-select" id="admin-sales-status-filter">
+              <option value="ALL">All statuses</option>
+              <option value="PAID">Paid</option>
+              <option value="PARTIAL">Partially paid</option>
+              <option value="OUTSTANDING">Outstanding</option>
+              <option value="CANCELLED">Cancelled</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="admin-sales-totals" id="admin-sales-totals" hidden></div>
+        <div class="admin-sales-grid-notice" id="admin-sales-grid-notice" role="status" aria-live="polite" hidden></div>
+        <div class="admin-table-wrap" data-application-sales-ledger hidden>
+          <table class="admin-table admin-sales-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Sale</th>
+                <th>Customer</th>
+                <th>Location</th>
+                <th>Product</th>
+                <th>Quantity</th>
+                <th>Unit Price</th>
+                <th>Invoiced</th>
+                <th>Received</th>
+                <th>Outstanding</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="admin-sales-log"></tbody>
+          </table>
+        </div>
+        <div class="admin-pagination" id="admin-sales-pagination" hidden></div>
+
+        <article class="admin-data-panel admin-report-panel">
+          <div class="admin-data-panel-head">
+            <div>
+              <h3 class="h-sm">Sales Log</h3>
+              <p class="body-sm text-muted">Workbook invoices and separately labeled manual sales. Manual rows do not change workbook-only KPIs.</p>
+            </div>
+            <div class="admin-log-controls">
+              <select class="form-select admin-log-origin" data-business-log-origin="sales" aria-label="Sales log source"><option value="ALL">All sources</option><option value="XLSX_IMPORT">Workbook only</option><option value="MANUAL">Manual only</option></select>
+              <input class="form-input admin-log-search" type="search" data-business-log-search="sales" placeholder="Search sales" />
+              <button class="btn btn-maroon btn-sm" type="button" data-open-business-record="sales">Add Sale</button>
+            </div>
+          </div>
+          <div class="admin-table-wrap admin-table-flat">
+            <table class="admin-table admin-analytics-table">
+              <thead><tr><th>Date</th><th>Customer</th><th>Product</th><th>Quantity</th><th>Invoiced</th><th>Source</th><th>Actions</th></tr></thead>
+              <tbody id="admin-business-sales-log"></tbody>
+            </table>
+          </div>
+          <div class="admin-pagination" data-business-log-pagination="sales"></div>
+        </article>
+      </div>
+
+      <div class="admin-analytics-panel" id="admin-analytics-finance" role="tabpanel" hidden>
+        <div class="admin-report-intro">
+          <div>
+            <h3 class="h-sm">Finance and Recorded Outflows</h3>
+            <p class="body-sm text-muted">Recorded factory expenses, raw-material purchases, driver batta, and labour obligations from the workbook.</p>
+          </div>
+          <div class="admin-action-row compact" hidden>
+            <button class="btn btn-outline btn-sm" type="button" data-open-business-record="receipts">Add Payment Received</button>
+            <button class="btn btn-outline btn-sm" type="button" data-open-business-record="expenses">Add Expense</button>
+            <button class="btn btn-maroon btn-sm" type="button" data-open-business-record="purchases">Add Material Purchase</button>
+          </div>
+        </div>
+        <div class="admin-stats-grid admin-analytics-stats" id="admin-finance-stats"></div>
+
+        <div class="admin-analytics-grid">
+          <article class="admin-data-panel admin-data-panel-wide">
+            <div class="admin-data-panel-head">
+              <div>
+                <h3 class="h-sm">Monthly Recorded Outflows</h3>
+                <p class="body-sm text-muted">Factory expenses, material purchases, driver batta, and labour obligations. This is not profit and loss.</p>
+              </div>
+            </div>
+            <div class="admin-line-chart" id="admin-business-outflow-chart"></div>
+          </article>
+          <article class="admin-data-panel">
+            <div class="admin-data-panel-head"><div><h3 class="h-sm">Outflow Composition</h3><p class="body-sm text-muted">Share of all recorded workbook outflows.</p></div></div>
+            <div class="admin-donut-layout" id="admin-finance-outflow-donut"></div>
+          </article>
+        </div>
+
+        <div class="admin-analytics-grid">
+          <article class="admin-data-panel admin-data-panel-wide">
+            <div class="admin-data-panel-head"><div><h3 class="h-sm">Largest Factory Expenses</h3><p class="body-sm text-muted">Top normalized expense descriptions by recorded value.</p></div></div>
+            <div class="admin-horizontal-chart" id="admin-finance-expense-bars"></div>
+          </article>
+          <article class="admin-data-panel">
+            <div class="admin-data-panel-head"><div><h3 class="h-sm">Material Purchase Mix</h3><p class="body-sm text-muted">Purchase value by normalized material.</p></div></div>
+            <div class="admin-horizontal-chart compact" id="admin-finance-material-bars"></div>
+          </article>
+        </div>
+
+        <div class="admin-analytics-grid">
+          <article class="admin-data-panel admin-data-panel-wide">
+            <div class="admin-data-panel-head"><div><h3 class="h-sm">Vendor Purchase Value</h3><p class="body-sm text-muted">Raw-material purchases grouped by the recorded vendor.</p></div></div>
+            <div class="admin-horizontal-chart compact" id="admin-finance-vendor-bars"></div>
+          </article>
+          <article class="admin-data-panel">
+            <div class="admin-data-panel-head"><div><h3 class="h-sm">Purchase Payment Markers</h3><p class="body-sm text-muted">Status labels exactly as normalized from the workbook.</p></div></div>
+            <div class="admin-breakdown-list" id="admin-finance-purchase-status"></div>
+          </article>
+        </div>
+
+        <div class="admin-analytics-grid">
+          <article class="admin-data-panel admin-data-panel-wide">
+            <div class="admin-data-panel-head"><div><h3 class="h-sm">Receipt Log</h3><p class="body-sm text-muted">Workbook receipt references and separately labeled manual receipts. Historical workbook values remain review-only.</p></div><div class="admin-log-controls"><select class="form-select admin-log-origin" data-business-log-origin="receipts" aria-label="Receipt log source"><option value="ALL">All sources</option><option value="XLSX_IMPORT">Workbook only</option><option value="MANUAL">Manual only</option></select><input class="form-input admin-log-search" type="search" data-business-log-search="receipts" placeholder="Search receipts" /><button class="btn btn-maroon btn-sm" type="button" data-open-business-record="receipts">Add Receipt</button></div></div>
+            <div class="admin-table-wrap admin-table-flat"><table class="admin-table admin-analytics-table">
+              <thead><tr><th>Date</th><th>Sale ID</th><th>Customer</th><th>Amount</th><th>Method</th><th>Source</th><th>Actions</th></tr></thead>
+              <tbody id="admin-receipt-log"></tbody>
+            </table></div><div class="admin-pagination" data-business-log-pagination="receipts"></div>
+          </article>
+          <article class="admin-data-panel admin-data-panel-wide">
+            <div class="admin-data-panel-head"><div><h3 class="h-sm">Expense Log</h3><p class="body-sm text-muted">Workbook expenses and separately labeled manual expense entries.</p></div><div class="admin-log-controls"><select class="form-select admin-log-origin" data-business-log-origin="expenses" aria-label="Expense log source"><option value="ALL">All sources</option><option value="XLSX_IMPORT">Workbook only</option><option value="MANUAL">Manual only</option></select><input class="form-input admin-log-search" type="search" data-business-log-search="expenses" placeholder="Search expenses" /><button class="btn btn-maroon btn-sm" type="button" data-open-business-record="expenses">Add Expense</button></div></div>
+            <div class="admin-table-wrap admin-table-flat"><table class="admin-table admin-analytics-table">
+              <thead><tr><th>Date</th><th>Description</th><th>Amount</th><th>Paid By</th><th>Source</th><th>Actions</th></tr></thead>
+              <tbody id="admin-expense-log"></tbody>
+            </table></div><div class="admin-pagination" data-business-log-pagination="expenses"></div>
+          </article>
+          <article class="admin-data-panel admin-data-panel-wide">
+            <div class="admin-data-panel-head"><div><h3 class="h-sm">Raw Material Purchase Log</h3><p class="body-sm text-muted">Workbook purchases and separately labeled manual material entries.</p></div><div class="admin-log-controls"><select class="form-select admin-log-origin" data-business-log-origin="purchases" aria-label="Purchase log source"><option value="ALL">All sources</option><option value="XLSX_IMPORT">Workbook only</option><option value="MANUAL">Manual only</option></select><input class="form-input admin-log-search" type="search" data-business-log-search="purchases" placeholder="Search purchases" /><button class="btn btn-maroon btn-sm" type="button" data-open-business-record="purchases">Add Purchase</button></div></div>
+            <div class="admin-table-wrap admin-table-flat"><table class="admin-table admin-analytics-table">
+              <thead><tr><th>Date</th><th>Material</th><th>Quantity</th><th>Amount</th><th>Status</th><th>Source</th><th>Actions</th></tr></thead>
+              <tbody id="admin-purchase-log"></tbody>
+            </table></div><div class="admin-pagination" data-business-log-pagination="purchases"></div>
+          </article>
+        </div>
+
+        <div class="admin-analytics-grid" data-application-finance hidden>
+          <article class="admin-data-panel">
+            <div class="admin-data-panel-head">
+              <div>
+                <h3 class="h-sm">Payment Outcomes</h3>
+                <p class="body-sm text-muted">Gateway attempts recorded for the selected period.</p>
+              </div>
+            </div>
+            <div class="admin-breakdown-list" id="admin-finance-payment-status"></div>
+          </article>
+          <article class="admin-data-panel admin-data-panel-wide">
+            <div class="admin-data-panel-head">
+              <div>
+                <h3 class="h-sm">Receivable Aging</h3>
+                <p class="body-sm text-muted">Outstanding confirmed balances grouped by age.</p>
+              </div>
+            </div>
+            <div class="admin-aging-grid" id="admin-receivable-aging"></div>
+          </article>
+        </div>
+
+        <div class="admin-analytics-grid" data-application-finance hidden>
+          <article class="admin-data-panel">
+            <div class="admin-data-panel-head">
+              <div>
+                <h3 class="h-sm">Collection Methods</h3>
+                <p class="body-sm text-muted">Successful online and recorded offline receipts.</p>
+              </div>
+            </div>
+            <div class="admin-breakdown-list" id="admin-payment-methods"></div>
+          </article>
+          <article class="admin-data-panel admin-data-panel-wide">
+            <div class="admin-data-panel-head">
+              <div>
+                <h3 class="h-sm">Recent Payment Transactions</h3>
+                <p class="body-sm text-muted">Latest payment gateway activity and failure context.</p>
+              </div>
+            </div>
+            <div class="admin-table-wrap admin-table-flat">
+              <table class="admin-table admin-analytics-table">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Enquiry</th>
+                    <th>Customer</th>
+                    <th>Amount</th>
+                    <th>Method</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="admin-finance-transactions"></tbody>
+              </table>
+            </div>
+          </article>
+        </div>
+        <div class="admin-availability-note" id="admin-finance-coverage"></div>
+      </div>
+
+      <div class="admin-analytics-panel" id="admin-analytics-operations" role="tabpanel" hidden>
+        <div class="admin-report-intro">
+          <div>
+            <h3 class="h-sm">Operations and Production</h3>
+            <p class="body-sm text-muted">Production output, no-production records, and material purchasing from the workbook.</p>
+          </div>
+          <button class="btn btn-maroon btn-sm" type="button" data-open-business-record="production" hidden>Add Production Record</button>
+        </div>
+        <div class="admin-stats-grid admin-analytics-stats" id="admin-operations-stats"></div>
+
+        <div class="admin-analytics-grid">
+          <article class="admin-data-panel admin-data-panel-wide">
+            <div class="admin-data-panel-head"><div><h3 class="h-sm">Monthly Production</h3><p class="body-sm text-muted">Recorded production line items by reporting month.</p></div></div>
+            <div class="admin-line-chart" id="admin-production-trend-chart"></div>
+          </article>
+          <article class="admin-data-panel">
+            <div class="admin-data-panel-head"><div><h3 class="h-sm">Production by Product</h3><p class="body-sm text-muted">Output units grouped by normalized product.</p></div></div>
+            <div class="admin-horizontal-chart compact" id="admin-production-product-bars"></div>
+          </article>
+        </div>
+
+        <div class="admin-analytics-grid">
+          <article class="admin-data-panel admin-data-panel-wide">
+            <div class="admin-data-panel-head"><div><h3 class="h-sm">Monthly Activity Mix</h3><p class="body-sm text-muted">Production entries, explicit no-production rows, and Sundays.</p></div></div>
+            <div class="admin-column-chart" id="admin-production-activity-chart"></div>
+          </article>
+          <article class="admin-data-panel">
+            <div class="admin-data-panel-head"><div><h3 class="h-sm">No-production Reasons</h3><p class="body-sm text-muted">Reasons exactly as recorded in the workbook.</p></div></div>
+            <div class="admin-breakdown-list" id="admin-no-production-reasons"></div>
+          </article>
+        </div>
+
+        <article class="admin-data-panel admin-report-panel">
+          <div class="admin-data-panel-head"><div><h3 class="h-sm">Production Log</h3><p class="body-sm text-muted">Workbook production and separately labeled manual production, Sunday, or no-production entries.</p></div><div class="admin-log-controls"><select class="form-select admin-log-origin" data-business-log-origin="production" aria-label="Production log source"><option value="ALL">All sources</option><option value="XLSX_IMPORT">Workbook only</option><option value="MANUAL">Manual only</option></select><input class="form-input admin-log-search" type="search" data-business-log-search="production" placeholder="Search production" /><button class="btn btn-maroon btn-sm" type="button" data-open-business-record="production">Add Production</button></div></div>
+          <div class="admin-table-wrap admin-table-flat"><table class="admin-table admin-analytics-table">
+            <thead><tr><th>Date</th><th>Type</th><th>Product / Reason</th><th>Quantity</th><th>Source</th><th>Actions</th></tr></thead>
+            <tbody id="admin-production-log"></tbody>
+          </table></div><div class="admin-pagination" data-business-log-pagination="production"></div>
+        </article>
+
+        <div class="admin-analytics-grid" data-application-operations hidden>
+          <article class="admin-data-panel admin-data-panel-wide">
+            <div class="admin-data-panel-head">
+              <div>
+                <h3 class="h-sm">Demand Trend</h3>
+                <p class="body-sm text-muted">Monthly leads and requested units in the selected period.</p>
+              </div>
+              <div class="admin-chart-legend" aria-label="Chart legend">
+                <span><i class="demand"></i> Requested units</span>
+              </div>
+            </div>
+            <div class="admin-monthly-chart" id="admin-demand-trend-chart"></div>
+          </article>
+          <article class="admin-data-panel">
+            <div class="admin-data-panel-head">
+              <div>
+                <h3 class="h-sm">Delivery Health</h3>
+                <p class="body-sm text-muted">Active requests grouped by delivery timing.</p>
+              </div>
+            </div>
+            <div class="admin-breakdown-list" id="admin-delivery-health"></div>
+          </article>
+        </div>
+
+        <article class="admin-data-panel admin-report-panel" data-application-operations hidden>
+          <div class="admin-data-panel-head">
+            <div>
+              <h3 class="h-sm">Product Demand and Availability</h3>
+              <p class="body-sm text-muted">Catalogue status compared with active lead requirements.</p>
+            </div>
+          </div>
+          <div class="admin-table-wrap admin-table-flat">
+            <table class="admin-table admin-analytics-table">
+              <thead>
+                <tr>
+                  <th>Product</th>
+                  <th>Availability</th>
+                  <th>Period Leads</th>
+                  <th>Period Requested</th>
+                  <th>Active Demand</th>
+                  <th>Standard Price</th>
+                  <th>Bulk Price</th>
+                </tr>
+              </thead>
+              <tbody id="admin-product-demand"></tbody>
+            </table>
+          </div>
+        </article>
+
+        <div class="admin-analytics-grid" data-application-operations hidden>
+          <article class="admin-data-panel admin-data-panel-wide">
+            <div class="admin-data-panel-head">
+              <div>
+                <h3 class="h-sm">Upcoming Deliveries</h3>
+                <p class="body-sm text-muted">Next active delivery commitments recorded on leads.</p>
+              </div>
+            </div>
+            <div class="admin-table-wrap admin-table-flat">
+              <table class="admin-table admin-analytics-table">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Enquiry</th>
+                    <th>Customer</th>
+                    <th>Location</th>
+                    <th>Product</th>
+                    <th>Quantity</th>
+                  </tr>
+                </thead>
+                <tbody id="admin-upcoming-deliveries"></tbody>
+              </table>
+            </div>
+          </article>
+          <article class="admin-data-panel">
+            <div class="admin-data-panel-head">
+              <div>
+                <h3 class="h-sm">Recent Price Changes</h3>
+                <p class="body-sm text-muted">Audited standard and bulk price updates.</p>
+              </div>
+            </div>
+            <div class="admin-price-change-list" id="admin-price-changes"></div>
+          </article>
+        </div>
+        <div class="admin-availability-note" id="admin-operations-coverage"></div>
+      </div>
+
+      <div class="admin-analytics-panel" id="admin-analytics-team" role="tabpanel" hidden>
+        <div class="admin-report-intro">
+          <div>
+            <h3 class="h-sm">Workbook Labour Payments</h3>
+            <p class="body-sm text-muted">Labour payment obligations and stated pending amounts recorded in the workbook.</p>
+          </div>
+          <button class="btn btn-maroon btn-sm" type="button" data-open-business-record="labour" hidden>Add Labour Payment</button>
+        </div>
+        <div class="admin-stats-grid admin-analytics-stats" id="admin-team-stats"></div>
+
+        <div class="admin-analytics-grid">
+          <article class="admin-data-panel admin-data-panel-wide">
+            <div class="admin-data-panel-head"><div><h3 class="h-sm">Monthly Labour Obligations</h3><p class="body-sm text-muted">Recorded labour payment totals by reporting month.</p></div></div>
+            <div class="admin-line-chart" id="admin-labour-trend-chart"></div>
+          </article>
+          <article class="admin-data-panel">
+            <div class="admin-data-panel-head"><div><h3 class="h-sm">Payment Method Mix</h3><p class="body-sm text-muted">Labour obligations grouped by recorded payment method.</p></div></div>
+            <div class="admin-donut-layout" id="admin-labour-payment-donut"></div>
+          </article>
+        </div>
+
+        <div class="admin-analytics-grid admin-analytics-grid-single">
+          <article class="admin-data-panel">
+            <div class="admin-data-panel-head"><div><h3 class="h-sm">Labour Cost by Work</h3><p class="body-sm text-muted">Payment obligations grouped by the workbook work description.</p></div></div>
+            <div class="admin-horizontal-chart" id="admin-labour-work-bars"></div>
+          </article>
+        </div>
+
+        <article class="admin-data-panel admin-report-panel">
+          <div class="admin-data-panel-head"><div><h3 class="h-sm">Labour Payment Log</h3><p class="body-sm text-muted">Workbook labour obligations and separately labeled manual payments. Employee roster and attendance remain unavailable.</p></div><div class="admin-log-controls"><select class="form-select admin-log-origin" data-business-log-origin="labour" aria-label="Labour log source"><option value="ALL">All sources</option><option value="XLSX_IMPORT">Workbook only</option><option value="MANUAL">Manual only</option></select><input class="form-input admin-log-search" type="search" data-business-log-search="labour" placeholder="Search labour" /><button class="btn btn-maroon btn-sm" type="button" data-open-business-record="labour">Add Labour</button></div></div>
+          <div class="admin-table-wrap admin-table-flat"><table class="admin-table admin-analytics-table">
+            <thead><tr><th>Date</th><th>Work</th><th>Quantity</th><th>Total</th><th>Pending Stated</th><th>Source</th><th>Actions</th></tr></thead>
+            <tbody id="admin-labour-log"></tbody>
+          </table></div><div class="admin-pagination" data-business-log-pagination="labour"></div>
+        </article>
+
+        <article class="admin-data-panel admin-report-panel" data-application-team hidden>
+          <div class="admin-data-panel-head">
+            <div>
+              <h3 class="h-sm">Assignment Performance</h3>
+              <p class="body-sm text-muted">Lead load, active work, priority, follow-up, and pipeline by assignee.</p>
+            </div>
+          </div>
+          <div class="admin-table-wrap admin-table-flat">
+            <table class="admin-table admin-analytics-table">
+              <thead>
+                <tr>
+                  <th>Assignee</th>
+                  <th>Leads</th>
+                  <th>Active</th>
+                  <th>High Priority</th>
+                  <th>Overdue</th>
+                  <th>Converted</th>
+                  <th>Pipeline</th>
+                </tr>
+              </thead>
+              <tbody id="admin-assignment-performance"></tbody>
+            </table>
+          </div>
+        </article>
+
+        <div class="admin-analytics-grid" data-application-team hidden>
+          <article class="admin-data-panel admin-data-panel-wide">
+            <div class="admin-data-panel-head">
+              <div>
+                <h3 class="h-sm">Recorded Admin Activity</h3>
+                <p class="body-sm text-muted">CRM activity volume by recorded actor.</p>
+              </div>
+            </div>
+            <div class="admin-table-wrap admin-table-flat">
+              <table class="admin-table admin-analytics-table">
+                <thead>
+                  <tr>
+                    <th>Contributor</th>
+                    <th>Activities</th>
+                    <th>Leads Touched</th>
+                    <th>Notes</th>
+                    <th>Status Changes</th>
+                  </tr>
+                </thead>
+                <tbody id="admin-activity-performance"></tbody>
+              </table>
+            </div>
+          </article>
+          <article class="admin-data-panel">
+            <div class="admin-data-panel-head">
+              <div>
+                <h3 class="h-sm">HR Data Coverage</h3>
+                <p class="body-sm text-muted">Available operational data versus HR modules not yet tracked.</p>
+              </div>
+            </div>
+            <div class="admin-coverage-list" id="admin-team-coverage"></div>
+          </article>
+        </div>
+      </div>
+
+      <div class="admin-analytics-panel" id="admin-analytics-insights" role="tabpanel" hidden>
+        <div class="admin-report-intro">
+          <div>
+            <h3 class="h-sm">Business Insights</h3>
+            <p class="body-sm text-muted">Rule-based findings calculated only from imported workbook records and reconciliation results.</p>
+          </div>
+          <button class="btn btn-maroon btn-sm" type="button" data-open-business-record="events" hidden>Add Business Event</button>
+        </div>
+        <div class="admin-insight-summary" id="admin-insight-summary"></div>
+        <div class="admin-insights-list" id="admin-insights-list"></div>
+        <article class="admin-data-panel admin-report-panel" data-application-events hidden>
+          <div class="admin-data-panel-head"><div><h3 class="h-sm">Business Event Log</h3><p class="body-sm text-muted">Structured operational observations, issues, corrections, and follow-ups.</p></div><input class="form-input admin-log-search" type="search" data-business-log-search="events" placeholder="Search events" /></div>
+          <div class="admin-table-wrap admin-table-flat"><table class="admin-table admin-analytics-table">
+            <thead><tr><th>Date</th><th>Type</th><th>Description</th><th>Impact</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody id="admin-business-events-log"></tbody>
+          </table></div><div class="admin-pagination" data-business-log-pagination="events"></div>
+        </article>
+        <article class="admin-data-panel admin-report-panel">
+          <div class="admin-data-panel-head">
+            <div>
+              <h3 class="h-sm">Reference Metric Coverage</h3>
+              <p class="body-sm text-muted">What the supplied workbook can calculate, and the exact source data missing for unavailable reference metrics.</p>
+            </div>
+          </div>
+          <div class="admin-table-wrap admin-table-flat">
+            <table class="admin-table admin-analytics-table admin-coverage-table">
+              <thead><tr><th>Area</th><th>Metric group</th><th>Status</th><th>Reason</th></tr></thead>
+              <tbody id="admin-reference-coverage"></tbody>
+            </table>
+          </div>
+        </article>
+        <div class="admin-availability-note" id="admin-insights-coverage"></div>
+      </div>
     </section>
 
     <section class="admin-view" id="admin-view-products">
@@ -273,6 +1004,55 @@
       <div class="admin-modal-actions">
         <button class="btn btn-outline" type="button" data-close-lead-modal>Cancel</button>
         <button class="btn btn-maroon" type="submit" data-label="Save Lead">Save Lead</button>
+      </div>
+    </form>
+  </section>
+</div>
+
+<div class="admin-modal" id="admin-business-import-modal" hidden>
+  <div class="admin-modal-backdrop" data-close-business-import></div>
+  <section class="admin-modal-card admin-business-import-card" role="dialog" aria-modal="true" aria-labelledby="admin-business-import-title">
+    <form id="admin-business-import-form" novalidate>
+      <div class="admin-modal-head">
+        <div><span class="label">Historical Data Import</span><h2 class="h-md" id="admin-business-import-title">Business Workbook</h2></div>
+        <button class="admin-icon-button" type="button" aria-label="Close" data-close-business-import>&times;</button>
+      </div>
+      <p class="body-sm text-muted">Preview validates sheet structure, row quality, and reconciliation. Committing stores normalized records in the database; analytics no longer needs the XLSX afterward.</p>
+      <div class="form-field">
+        <label class="form-label" for="business-import-file">XLSX File</label>
+        <input class="form-input" type="file" id="business-import-file" accept=".xlsx" required />
+      </div>
+      <div class="admin-import-preview" id="admin-business-import-preview"></div>
+      <div class="form-success" id="admin-business-import-status" role="alert" aria-live="polite"></div>
+      <div class="admin-modal-actions">
+        <button class="btn btn-outline" type="button" data-close-business-import>Cancel</button>
+        <button class="btn btn-outline" type="button" id="admin-preview-business-import">Preview</button>
+        <button class="btn btn-maroon" type="submit" data-label="Import Workbook" disabled>Import Workbook</button>
+      </div>
+    </form>
+  </section>
+</div>
+
+<div class="admin-modal" id="admin-business-record-modal" hidden>
+  <div class="admin-modal-backdrop" data-close-business-record></div>
+  <section class="admin-modal-card admin-business-record-card" role="dialog" aria-modal="true" aria-labelledby="admin-business-record-title">
+    <form id="admin-business-record-form" novalidate>
+      <input type="hidden" id="business-record-type" />
+      <input type="hidden" id="business-record-id" />
+      <div class="admin-modal-head">
+        <div><span class="label">Business Log</span><h2 class="h-md" id="admin-business-record-title">Add Record</h2></div>
+        <button class="admin-icon-button" type="button" aria-label="Close" data-close-business-record>&times;</button>
+      </div>
+      <p class="body-sm text-muted admin-record-source-note" id="admin-business-record-scope-note"></p>
+      <div class="admin-modal-grid" id="admin-business-record-fields"></div>
+      <div class="form-field" id="admin-business-correction-field" hidden>
+        <label class="form-label" for="business-record-reason">Correction Reason</label>
+        <input class="form-input" type="text" id="business-record-reason" maxlength="500" placeholder="Why is this record being changed?" />
+      </div>
+      <div class="form-success" id="admin-business-record-status" role="alert" aria-live="polite"></div>
+      <div class="admin-modal-actions">
+        <button class="btn btn-outline" type="button" data-close-business-record>Cancel</button>
+        <button class="btn btn-maroon" type="submit" data-label="Save Record">Save Record</button>
       </div>
     </form>
   </section>
@@ -477,6 +1257,86 @@
       <div class="admin-modal-actions">
         <button class="btn btn-outline" type="button" data-close-lead-detail-modal>Close</button>
         <button class="btn btn-maroon" type="submit" data-label="Add Note">Add Note</button>
+      </div>
+    </form>
+  </section>
+</div>
+
+<div class="admin-modal" id="admin-sale-modal" hidden>
+  <div class="admin-modal-backdrop" data-close-sale-modal></div>
+  <section class="admin-modal-card" role="dialog" aria-modal="true" aria-labelledby="admin-sale-modal-title">
+    <form id="admin-sale-form" novalidate>
+      <input type="hidden" id="admin-sale-id" />
+      <div class="admin-modal-head">
+        <div>
+          <span class="label">Sales Log</span>
+          <h2 class="h-md" id="admin-sale-modal-title">Add Offline Sale</h2>
+        </div>
+        <button class="admin-icon-button" type="button" aria-label="Close" data-close-sale-modal>&times;</button>
+      </div>
+
+      <div class="admin-modal-grid">
+        <div class="form-field">
+          <label class="form-label" for="sale-customer-name">Customer Name</label>
+          <input class="form-input" type="text" id="sale-customer-name" maxlength="100" required />
+        </div>
+        <div class="form-field">
+          <label class="form-label" for="sale-customer-phone">Phone</label>
+          <input class="form-input" type="tel" id="sale-customer-phone" inputmode="numeric" maxlength="15" />
+        </div>
+        <div class="form-field">
+          <label class="form-label" for="sale-location">Location</label>
+          <input class="form-input" type="text" id="sale-location" maxlength="100" />
+        </div>
+        <div class="form-field">
+          <label class="form-label" for="sale-product">Product</label>
+          <select class="form-select" id="sale-product" required></select>
+        </div>
+        <div class="form-field">
+          <label class="form-label" for="sale-quantity">Quantity</label>
+          <input class="form-input" type="number" id="sale-quantity" min="1" step="1" required />
+        </div>
+        <div class="form-field">
+          <label class="form-label" for="sale-unit-price">Unit Price (INR)</label>
+          <input class="form-input" type="number" id="sale-unit-price" min="0.01" step="0.01" required />
+        </div>
+        <div class="form-field">
+          <label class="form-label" for="sale-invoiced-amount">Invoiced Amount (INR)</label>
+          <input class="form-input" type="number" id="sale-invoiced-amount" min="0.01" step="0.01" required />
+        </div>
+        <div class="form-field">
+          <label class="form-label" for="sale-received-amount">Received Amount (INR)</label>
+          <input class="form-input" type="number" id="sale-received-amount" min="0" step="0.01" value="0" required />
+        </div>
+        <div class="form-field">
+          <label class="form-label" for="sale-date">Sale Date</label>
+          <input class="form-input" type="date" id="sale-date" required />
+        </div>
+        <div class="form-field">
+          <label class="form-label" for="sale-received-date">Received Date</label>
+          <input class="form-input" type="date" id="sale-received-date" />
+        </div>
+        <div class="form-field">
+          <label class="form-label" for="sale-payment-method">Payment Method</label>
+          <select class="form-select" id="sale-payment-method">
+            <option value="">Not received</option>
+            <option value="CASH">Cash</option>
+            <option value="UPI">UPI</option>
+            <option value="BANK_TRANSFER">Bank Transfer</option>
+            <option value="CARD">Card</option>
+            <option value="CHEQUE">Cheque</option>
+            <option value="OTHER">Other</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-field">
+        <label class="form-label" for="sale-notes">Notes</label>
+        <textarea class="form-input form-textarea" id="sale-notes" maxlength="1000"></textarea>
+      </div>
+      <div class="form-success" id="admin-sale-status" role="alert" aria-live="polite"></div>
+      <div class="admin-modal-actions">
+        <button class="btn btn-outline" type="button" data-close-sale-modal>Cancel</button>
+        <button class="btn btn-maroon" type="submit" data-label="Save Sale">Save Sale</button>
       </div>
     </form>
   </section>

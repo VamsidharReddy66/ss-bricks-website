@@ -15,12 +15,39 @@ const CUBIC_FEET_PER_CUBIC_METER = 35.3146667215;
 const defaultBrickTypes = [
   {
     name: 'Fly Ash Bricks',
-    length: '230',
-    width: '110',
-    height: '75',
-    dimensionUnit: 'MM',
+    length: '9',
+    width: '4.5',
+    height: '3',
+    dimensionUnit: 'INCH',
     pricePerPiece: '8.50',
-    defaultWastePercent: '5',
+    defaultWastePercent: '0',
+  },
+  {
+    name: 'Solid Cement Blocks',
+    length: '12',
+    width: '8',
+    height: '6',
+    dimensionUnit: 'INCH',
+    pricePerPiece: '42.00',
+    defaultWastePercent: '0',
+  },
+  {
+    name: 'Paver Blocks',
+    length: '9',
+    width: '4.5',
+    height: '3',
+    dimensionUnit: 'INCH',
+    pricePerPiece: '55.00',
+    defaultWastePercent: '0',
+  },
+  {
+    name: 'Mud Bricks',
+    length: '9',
+    width: '4.5',
+    height: '3',
+    dimensionUnit: 'INCH',
+    pricePerPiece: '12.00',
+    defaultWastePercent: '0',
   },
 ];
 
@@ -96,17 +123,19 @@ function toThicknessDto(thickness) {
 
 async function ensureDefaultCalculatorConfig() {
   for (const brickType of defaultBrickTypes) {
+    const values = {
+      ...brickType,
+      length: decimal(brickType.length),
+      width: decimal(brickType.width),
+      height: decimal(brickType.height),
+      pricePerPiece: decimal(brickType.pricePerPiece),
+      defaultWastePercent: decimal(brickType.defaultWastePercent),
+      isActive: true,
+    };
     await prisma.brickType.upsert({
       where: { name: brickType.name },
-      update: {},
-      create: {
-        ...brickType,
-        length: decimal(brickType.length),
-        width: decimal(brickType.width),
-        height: decimal(brickType.height),
-        pricePerPiece: decimal(brickType.pricePerPiece),
-        defaultWastePercent: decimal(brickType.defaultWastePercent),
-      },
+      update: values,
+      create: values,
     });
   }
 
@@ -146,7 +175,6 @@ async function getCalculatorConfig() {
   };
 }
 
-// Placeholder business formula. Replace only this function when the official formula is supplied.
 function calculateMaterialEstimate(payload, product, thickness, brickType = null) {
   if (!product || product.availability !== 'IN_STOCK') {
     throw clientError('Selected product type is inactive or unavailable.', 'productId');
@@ -172,35 +200,42 @@ function calculateMaterialEstimate(payload, product, thickness, brickType = null
 
   const wallAreaSquareMeters = heightMeters * widthMeters;
   const wallVolumeCubicMeters = wallAreaSquareMeters * thicknessMeters;
-  let brickSize = null;
-  let baseEstimatedBricks = null;
-  let estimatedBricks = null;
-
-  if (brickType?.isActive) {
-    const brickLength = requirePositive(brickType.length, 'Brick length is missing.', 'productId');
-    const brickWidth = requirePositive(brickType.width, 'Brick width is missing.', 'productId');
-    const brickHeight = requirePositive(brickType.height, 'Brick height is missing.', 'productId');
-    const brickLengthMeters = unitToMeters(brickLength, brickType.dimensionUnit, 'productId');
-    const brickWidthMeters = unitToMeters(brickWidth, brickType.dimensionUnit, 'productId');
-    const brickHeightMeters = unitToMeters(brickHeight, brickType.dimensionUnit, 'productId');
-    const brickVolumeCubicMeters = brickLengthMeters * brickWidthMeters * brickHeightMeters;
-    baseEstimatedBricks = wallVolumeCubicMeters / brickVolumeCubicMeters;
-    estimatedBricks = Math.ceil(baseEstimatedBricks);
-    brickSize = `${compactNumber(brickType.length)} \u00d7 ${compactNumber(brickType.width)} \u00d7 ${compactNumber(brickType.height)} ${brickType.dimensionUnit.toLowerCase()}`;
+  if (!brickType?.isActive) {
+    throw clientError(
+      'Selected product dimensions are not configured for calculation.',
+      'productId',
+    );
   }
 
-  const estimatedCost = payload.quantity * pricePerUnit;
+  const brickLength = requirePositive(brickType.length, 'Product length is missing.', 'productId');
+  const brickWidth = requirePositive(brickType.width, 'Product width is missing.', 'productId');
+  const brickHeight = requirePositive(brickType.height, 'Product height is missing.', 'productId');
+  const brickLengthMeters = unitToMeters(brickLength, brickType.dimensionUnit, 'productId');
+  const brickWidthMeters = unitToMeters(brickWidth, brickType.dimensionUnit, 'productId');
+  const brickHeightMeters = unitToMeters(brickHeight, brickType.dimensionUnit, 'productId');
+  const brickVolumeCubicMeters = brickLengthMeters * brickWidthMeters * brickHeightMeters;
+  const brickFaceAreaSquareMeters = brickLengthMeters * brickWidthMeters;
+  const isAreaPriced = product.unit === 'sq.ft';
+  const baseEstimatedPieces = isAreaPriced
+    ? wallAreaSquareMeters / brickFaceAreaSquareMeters
+    : wallVolumeCubicMeters / brickVolumeCubicMeters;
+  const normalizedBaseEstimatedPieces = round(baseEstimatedPieces, 6);
+  const estimatedPieces = Math.ceil(normalizedBaseEstimatedPieces);
+  const wallAreaSquareFeet = wallAreaSquareMeters * SQUARE_FEET_PER_SQUARE_METER;
+  const quantity = isAreaPriced ? round(wallAreaSquareFeet) : estimatedPieces;
+  const estimatedCost = quantity * pricePerUnit;
+  const brickSize = `${compactNumber(brickType.length)} \u00d7 ${compactNumber(brickType.width)} \u00d7 ${compactNumber(brickType.height)} ${brickType.dimensionUnit.toLowerCase()}`;
 
   return {
-    wallArea: round(wallAreaSquareMeters * SQUARE_FEET_PER_SQUARE_METER),
+    wallArea: round(wallAreaSquareFeet),
     wallAreaUnit: 'sq ft',
     wallVolume: round(wallVolumeCubicMeters * CUBIC_FEET_PER_CUBIC_METER),
     wallVolumeUnit: 'cu ft',
     brickType: product.name,
     brickSize,
-    baseEstimatedBricks: baseEstimatedBricks === null ? null : round(baseEstimatedBricks),
-    estimatedBricks,
-    quantity: payload.quantity,
+    baseEstimatedPieces: round(normalizedBaseEstimatedPieces),
+    estimatedPieces,
+    quantity,
     quantityUnit: product.unit,
     pricePerUnit: round(pricePerUnit),
     estimatedCost: round(estimatedCost),
@@ -225,6 +260,7 @@ module.exports = {
   getCalculatorConfig,
   __private: {
     calculateMaterialEstimate,
+    defaultBrickTypes,
     toCalculatorProductDto,
     toThicknessDto,
   },

@@ -17,16 +17,6 @@ const positiveId = (label) => z.coerce
   .int(`${label} is invalid.`)
   .positive(`${label} is required.`);
 
-const brickQuantity = z.coerce
-  .number({
-    required_error: 'Quantity is required.',
-    invalid_type_error: 'Quantity must be a number.',
-  })
-  .finite('Quantity must be a valid number.')
-  .int('Quantity must be a whole number of bricks.')
-  .positive('Quantity must be greater than zero.')
-  .max(100000000, 'Quantity is too large.');
-
 const wallUnit = z.enum(['ft', 'm'], {
   required_error: 'Unit is required.',
   invalid_type_error: 'Select feet or meters.',
@@ -39,7 +29,6 @@ const calculatorRequestSchema = z.object({
   widthUnit: wallUnit,
   thicknessId: positiveId('Wall thickness'),
   productId: positiveId('Product type'),
-  quantity: brickQuantity,
 }).strict();
 
 function formatCalculatorErrors(error) {

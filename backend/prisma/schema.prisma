@@ -8,15 +8,53 @@ datasource db {
 }
 
 model Admin {
-  id           Int      @id @default(autoincrement())
-  name         String   @db.VarChar(100)
-  email        String   @unique @db.VarChar(255)
-  passwordHash String   @db.VarChar(255)
-  createdAt    DateTime @default(now())
-  priceHistory PriceHistory[]
-  leadActivities LeadActivity[]
+  id                   Int                   @id @default(autoincrement())
+  name                 String                @db.VarChar(100)
+  email                String                @unique @db.VarChar(255)
+  passwordHash         String                @db.VarChar(255)
+  createdAt            DateTime              @default(now())
+  priceHistory         PriceHistory[]
+  leadActivities       LeadActivity[]
+  offlineSales         OfflineSale[]
+  businessImports      BusinessImportBatch[]
+  ledgerSales          LedgerSale[]
+  ledgerReceipts       LedgerReceipt[]
+  expenseEntries       ExpenseEntry[]
+  materialPurchases    MaterialPurchase[]
+  productionRecords    ProductionRecord[]
+  labourPayments       LabourPayment[]
+  businessEvents       BusinessEvent[]
+  businessAuditEntries BusinessAuditLog[]
 
   @@index([email])
+}
+
+model OfflineSale {
+  id             Int       @id @default(autoincrement())
+  saleNumber     String    @unique @map("sale_number") @db.VarChar(32)
+  customerName   String    @map("customer_name") @db.VarChar(100)
+  customerPhone  String?   @map("customer_phone") @db.VarChar(10)
+  location       String?   @db.VarChar(100)
+  product        String    @db.VarChar(100)
+  quantity       Int
+  unit           String    @db.VarChar(30)
+  unitPrice      Decimal?  @map("unit_price") @db.Decimal(10, 2)
+  invoicedAmount Decimal   @map("invoiced_amount") @db.Decimal(12, 2)
+  receivedAmount Decimal   @default(0) @map("received_amount") @db.Decimal(12, 2)
+  saleDate       DateTime  @map("sale_date")
+  receivedDate   DateTime? @map("received_date")
+  paymentMethod  String?   @map("payment_method") @db.VarChar(50)
+  notes          String?   @db.VarChar(1000)
+  createdBy      Int       @map("created_by")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  admin          Admin     @relation(fields: [createdBy], references: [id], onDelete: Restrict)
+
+  @@index([saleDate])
+  @@index([product])
+  @@index([customerName])
+  @@index([createdBy])
+  @@map("offline_sales")
 }
 
 model Customer {
@@ -69,24 +107,24 @@ model QuoteRequest {
 }
 
 model Payment {
-  id                  Int            @id @default(autoincrement())
-  quotationId         Int            @map("quotation_id")
-  customerName        String         @map("customer_name") @db.VarChar(100)
-  customerPhone       String         @map("customer_phone") @db.VarChar(10)
-  customerEmail       String?        @map("customer_email") @db.VarChar(255)
-  razorpayOrderId     String         @unique @map("razorpay_order_id") @db.VarChar(100)
-  razorpayPaymentId   String?        @unique @map("razorpay_payment_id") @db.VarChar(100)
-  razorpaySignature   String?        @map("razorpay_signature") @db.VarChar(255)
-  amount              Decimal        @db.Decimal(12, 2)
-  currency            String         @default("INR") @db.VarChar(3)
-  paymentMethod       String?        @map("payment_method") @db.VarChar(50)
-  status              PaymentStatus  @default(PENDING)
-  failureReason       String?        @map("failure_reason") @db.VarChar(500)
-  receiptUrl          String?        @map("receipt_path") @db.VarChar(255)
-  createdAt           DateTime       @default(now()) @map("created_at")
-  updatedAt           DateTime       @updatedAt @map("updated_at")
-  quotation           QuoteRequest   @relation(fields: [quotationId], references: [id], onDelete: Cascade)
-  receipt             PaymentReceipt?
+  id                Int             @id @default(autoincrement())
+  quotationId       Int             @map("quotation_id")
+  customerName      String          @map("customer_name") @db.VarChar(100)
+  customerPhone     String          @map("customer_phone") @db.VarChar(10)
+  customerEmail     String?         @map("customer_email") @db.VarChar(255)
+  razorpayOrderId   String          @unique @map("razorpay_order_id") @db.VarChar(100)
+  razorpayPaymentId String?         @unique @map("razorpay_payment_id") @db.VarChar(100)
+  razorpaySignature String?         @map("razorpay_signature") @db.VarChar(255)
+  amount            Decimal         @db.Decimal(12, 2)
+  currency          String          @default("INR") @db.VarChar(3)
+  paymentMethod     String?         @map("payment_method") @db.VarChar(50)
+  status            PaymentStatus   @default(PENDING)
+  failureReason     String?         @map("failure_reason") @db.VarChar(500)
+  receiptUrl        String?         @map("receipt_path") @db.VarChar(255)
+  createdAt         DateTime        @default(now()) @map("created_at")
+  updatedAt         DateTime        @updatedAt @map("updated_at")
+  quotation         QuoteRequest    @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  receipt           PaymentReceipt?
 
   @@index([quotationId])
   @@index([status])
@@ -286,4 +324,388 @@ enum ProductAvailability {
 enum PriceType {
   STANDARD
   BULK
+}
+
+model BusinessImportBatch {
+  id             Int                 @id @default(autoincrement())
+  fileName       String              @map("file_name") @db.VarChar(255)
+  fileHash       String              @unique @map("file_hash") @db.VarChar(64)
+  status         ImportBatchStatus   @default(PROCESSING)
+  reportingYear  Int?                @map("reporting_year")
+  summary        Json?
+  reconciliation Json?
+  importedBy     Int                 @map("imported_by")
+  createdAt      DateTime            @default(now()) @map("created_at")
+  completedAt    DateTime?           @map("completed_at")
+  admin          Admin               @relation(fields: [importedBy], references: [id], onDelete: Restrict)
+  rows           BusinessImportRow[]
+
+  @@index([status])
+  @@index([createdAt])
+  @@map("business_import_batches")
+}
+
+model BusinessImportRow {
+  id             Int                 @id @default(autoincrement())
+  batchId        Int                 @map("batch_id")
+  sheetName      String              @map("sheet_name") @db.VarChar(120)
+  rowNumber      Int                 @map("row_number")
+  rowHash        String              @map("row_hash") @db.VarChar(64)
+  status         ImportRowStatus
+  entityType     String?             @map("entity_type") @db.VarChar(50)
+  rawData        Json                @map("raw_data")
+  issues         Json?
+  createdAt      DateTime            @default(now()) @map("created_at")
+  batch          BusinessImportBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  ledgerSales    LedgerSale[]
+  ledgerReceipts LedgerReceipt[]
+  expenses       ExpenseEntry[]
+  purchases      MaterialPurchase[]
+  production     ProductionRecord[]
+  labourPayments LabourPayment[]
+
+  @@unique([batchId, sheetName, rowNumber])
+  @@index([rowHash])
+  @@index([status])
+  @@map("business_import_rows")
+}
+
+model LedgerCustomer {
+  id             Int             @id @default(autoincrement())
+  displayName    String          @map("display_name") @db.VarChar(160)
+  normalizedName String          @map("normalized_name") @db.VarChar(160)
+  phone          String?         @db.VarChar(20)
+  location       String?         @db.VarChar(200)
+  notes          String?         @db.VarChar(1000)
+  createdAt      DateTime        @default(now()) @map("created_at")
+  updatedAt      DateTime        @updatedAt @map("updated_at")
+  sales          LedgerSale[]
+  receipts       LedgerReceipt[]
+
+  @@index([normalizedName])
+  @@index([phone])
+  @@map("ledger_customers")
+}
+
+model BusinessVendor {
+  id             Int                @id @default(autoincrement())
+  displayName    String             @map("display_name") @db.VarChar(160)
+  normalizedName String             @map("normalized_name") @db.VarChar(160)
+  phone          String?            @db.VarChar(20)
+  address        String?            @db.VarChar(255)
+  productService String?            @map("product_service") @db.VarChar(160)
+  pricingNote    String?            @map("pricing_note") @db.VarChar(255)
+  createdAt      DateTime           @default(now()) @map("created_at")
+  updatedAt      DateTime           @updatedAt @map("updated_at")
+  purchases      MaterialPurchase[]
+
+  @@index([normalizedName])
+  @@index([phone])
+  @@map("business_vendors")
+}
+
+model LedgerSale {
+  id                      Int                 @id @default(autoincrement())
+  saleDate                DateTime?           @map("sale_date")
+  reportingMonth          DateTime            @map("reporting_month")
+  customerId              Int?                @map("customer_id")
+  customerName            String              @map("customer_name") @db.VarChar(160)
+  customerPhone           String?             @map("customer_phone") @db.VarChar(20)
+  location                String?             @db.VarChar(200)
+  productName             String?             @map("product_name") @db.VarChar(160)
+  quantity                Decimal?            @db.Decimal(14, 3)
+  quantityUnit            String              @default("load") @map("quantity_unit") @db.VarChar(30)
+  unitPrice               Decimal?            @map("unit_price") @db.Decimal(12, 2)
+  driverBatta             Decimal?            @map("driver_batta") @db.Decimal(12, 2)
+  invoicedAmount          Decimal?            @map("invoiced_amount") @db.Decimal(14, 2)
+  sourceReceivedAmount    Decimal?            @map("source_received_amount") @db.Decimal(14, 2)
+  sourceOutstandingAmount Decimal?            @map("source_outstanding_amount") @db.Decimal(14, 2)
+  paymentMethod           String?             @map("payment_method") @db.VarChar(80)
+  receivedTo              String?             @map("received_to") @db.VarChar(160)
+  notes                   String?             @db.VarChar(2000)
+  origin                  BusinessOrigin      @default(MANUAL)
+  confidence              DataConfidence      @default(CONFIRMED)
+  recordState             BusinessRecordState @default(ACTIVE) @map("record_state")
+  sourceRowId             Int?                @map("source_row_id")
+  createdBy               Int?                @map("created_by")
+  createdAt               DateTime            @default(now()) @map("created_at")
+  updatedAt               DateTime            @updatedAt @map("updated_at")
+  voidedAt                DateTime?           @map("voided_at")
+  customer                LedgerCustomer?     @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  sourceRow               BusinessImportRow?  @relation(fields: [sourceRowId], references: [id], onDelete: SetNull)
+  admin                   Admin?              @relation(fields: [createdBy], references: [id], onDelete: SetNull)
+  receipts                LedgerReceipt[]
+
+  @@index([reportingMonth])
+  @@index([saleDate])
+  @@index([customerId])
+  @@index([productName])
+  @@index([recordState])
+  @@index([sourceRowId])
+  @@map("ledger_sales")
+}
+
+model LedgerReceipt {
+  id             Int                 @id @default(autoincrement())
+  receiptDate    DateTime?           @map("receipt_date")
+  reportingMonth DateTime            @map("reporting_month")
+  customerId     Int?                @map("customer_id")
+  saleId         Int?                @map("sale_id")
+  amount         Decimal             @db.Decimal(14, 2)
+  paymentMethod  String?             @map("payment_method") @db.VarChar(80)
+  receivedTo     String?             @map("received_to") @db.VarChar(160)
+  reference      String?             @db.VarChar(255)
+  notes          String?             @db.VarChar(2000)
+  origin         BusinessOrigin      @default(MANUAL)
+  confidence     DataConfidence      @default(CONFIRMED)
+  recordState    BusinessRecordState @default(ACTIVE) @map("record_state")
+  sourceRowId    Int?                @map("source_row_id")
+  createdBy      Int?                @map("created_by")
+  createdAt      DateTime            @default(now()) @map("created_at")
+  updatedAt      DateTime            @updatedAt @map("updated_at")
+  voidedAt       DateTime?           @map("voided_at")
+  customer       LedgerCustomer?     @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  sale           LedgerSale?         @relation(fields: [saleId], references: [id], onDelete: SetNull)
+  sourceRow      BusinessImportRow?  @relation(fields: [sourceRowId], references: [id], onDelete: SetNull)
+  admin          Admin?              @relation(fields: [createdBy], references: [id], onDelete: SetNull)
+
+  @@index([reportingMonth])
+  @@index([receiptDate])
+  @@index([customerId])
+  @@index([saleId])
+  @@index([recordState])
+  @@map("ledger_receipts")
+}
+
+model ExpenseEntry {
+  id             Int                 @id @default(autoincrement())
+  expenseDate    DateTime?           @map("expense_date")
+  reportingMonth DateTime            @map("reporting_month")
+  category       String              @default("UNCATEGORIZED") @db.VarChar(80)
+  description    String?             @db.VarChar(500)
+  amount         Decimal             @db.Decimal(14, 2)
+  paymentMethod  String?             @map("payment_method") @db.VarChar(80)
+  paidBy         String?             @map("paid_by") @db.VarChar(160)
+  notes          String?             @db.VarChar(2000)
+  origin         BusinessOrigin      @default(MANUAL)
+  confidence     DataConfidence      @default(CONFIRMED)
+  recordState    BusinessRecordState @default(ACTIVE) @map("record_state")
+  sourceRowId    Int?                @map("source_row_id")
+  createdBy      Int?                @map("created_by")
+  createdAt      DateTime            @default(now()) @map("created_at")
+  updatedAt      DateTime            @updatedAt @map("updated_at")
+  voidedAt       DateTime?           @map("voided_at")
+  sourceRow      BusinessImportRow?  @relation(fields: [sourceRowId], references: [id], onDelete: SetNull)
+  admin          Admin?              @relation(fields: [createdBy], references: [id], onDelete: SetNull)
+
+  @@index([reportingMonth])
+  @@index([expenseDate])
+  @@index([category])
+  @@index([recordState])
+  @@map("expense_entries")
+}
+
+model MaterialPurchase {
+  id             Int                 @id @default(autoincrement())
+  purchaseDate   DateTime?           @map("purchase_date")
+  reportingMonth DateTime            @map("reporting_month")
+  materialName   String              @map("material_name") @db.VarChar(120)
+  unitPrice      Decimal?            @map("unit_price") @db.Decimal(12, 2)
+  quantity       Decimal?            @db.Decimal(14, 3)
+  purchaseAmount Decimal             @map("purchase_amount") @db.Decimal(14, 2)
+  driverBatta    Decimal             @default(0) @map("driver_batta") @db.Decimal(12, 2)
+  vendorId       Int?                @map("vendor_id")
+  vendorName     String?             @map("vendor_name") @db.VarChar(160)
+  paidDate       DateTime?           @map("paid_date")
+  paymentStatus  String              @default("UNKNOWN") @map("payment_status") @db.VarChar(30)
+  paymentMethod  String?             @map("payment_method") @db.VarChar(80)
+  paidBy         String?             @map("paid_by") @db.VarChar(160)
+  notes          String?             @db.VarChar(2000)
+  origin         BusinessOrigin      @default(MANUAL)
+  confidence     DataConfidence      @default(CONFIRMED)
+  recordState    BusinessRecordState @default(ACTIVE) @map("record_state")
+  sourceRowId    Int?                @map("source_row_id")
+  createdBy      Int?                @map("created_by")
+  createdAt      DateTime            @default(now()) @map("created_at")
+  updatedAt      DateTime            @updatedAt @map("updated_at")
+  voidedAt       DateTime?           @map("voided_at")
+  vendor         BusinessVendor?     @relation(fields: [vendorId], references: [id], onDelete: SetNull)
+  sourceRow      BusinessImportRow?  @relation(fields: [sourceRowId], references: [id], onDelete: SetNull)
+  admin          Admin?              @relation(fields: [createdBy], references: [id], onDelete: SetNull)
+
+  @@index([reportingMonth])
+  @@index([purchaseDate])
+  @@index([materialName])
+  @@index([vendorId])
+  @@index([recordState])
+  @@map("material_purchases")
+}
+
+model ProductionRecord {
+  id             Int                  @id @default(autoincrement())
+  recordDate     DateTime?            @map("record_date")
+  reportingMonth DateTime             @map("reporting_month")
+  recordType     ProductionRecordType @map("record_type")
+  productName    String?              @map("product_name") @db.VarChar(160)
+  quantity       Decimal?             @db.Decimal(14, 3)
+  reason         String?              @db.VarChar(500)
+  qualityNote    String?              @map("quality_note") @db.VarChar(1000)
+  origin         BusinessOrigin       @default(MANUAL)
+  confidence     DataConfidence       @default(CONFIRMED)
+  recordState    BusinessRecordState  @default(ACTIVE) @map("record_state")
+  sourceRowId    Int?                 @map("source_row_id")
+  createdBy      Int?                 @map("created_by")
+  createdAt      DateTime             @default(now()) @map("created_at")
+  updatedAt      DateTime             @updatedAt @map("updated_at")
+  voidedAt       DateTime?            @map("voided_at")
+  sourceRow      BusinessImportRow?   @relation(fields: [sourceRowId], references: [id], onDelete: SetNull)
+  admin          Admin?               @relation(fields: [createdBy], references: [id], onDelete: SetNull)
+
+  @@index([reportingMonth])
+  @@index([recordDate])
+  @@index([recordType])
+  @@index([productName])
+  @@index([recordState])
+  @@map("production_records")
+}
+
+model LabourPayment {
+  id                Int                 @id @default(autoincrement())
+  paymentDate       DateTime?           @map("payment_date")
+  reportingMonth    DateTime            @map("reporting_month")
+  workDescription   String              @map("work_description") @db.VarChar(500)
+  quantity          Decimal?            @db.Decimal(14, 3)
+  rawQuantity       String?             @map("raw_quantity") @db.VarChar(255)
+  brickMakingAmount Decimal?            @map("brick_making_amount") @db.Decimal(14, 2)
+  otherPaymentNote  String?             @map("other_payment_note") @db.VarChar(1000)
+  totalAmount       Decimal             @map("total_amount") @db.Decimal(14, 2)
+  pendingAmount     Decimal?            @map("pending_amount") @db.Decimal(14, 2)
+  paymentMethod     String?             @map("payment_method") @db.VarChar(80)
+  paidBy            String?             @map("paid_by") @db.VarChar(160)
+  notes             String?             @db.VarChar(2000)
+  origin            BusinessOrigin      @default(MANUAL)
+  confidence        DataConfidence      @default(CONFIRMED)
+  recordState       BusinessRecordState @default(ACTIVE) @map("record_state")
+  sourceRowId       Int?                @map("source_row_id")
+  createdBy         Int?                @map("created_by")
+  createdAt         DateTime            @default(now()) @map("created_at")
+  updatedAt         DateTime            @updatedAt @map("updated_at")
+  voidedAt          DateTime?           @map("voided_at")
+  sourceRow         BusinessImportRow?  @relation(fields: [sourceRowId], references: [id], onDelete: SetNull)
+  admin             Admin?              @relation(fields: [createdBy], references: [id], onDelete: SetNull)
+
+  @@index([reportingMonth])
+  @@index([paymentDate])
+  @@index([recordState])
+  @@map("labour_payments")
+}
+
+model BusinessEvent {
+  id                Int                 @id @default(autoincrement())
+  occurredAt        DateTime            @map("occurred_at")
+  type              BusinessEventType
+  category          String?             @db.VarChar(100)
+  description       String              @db.VarChar(2000)
+  relatedEntityType String?             @map("related_entity_type") @db.VarChar(50)
+  relatedEntityId   String?             @map("related_entity_id") @db.VarChar(80)
+  amount            Decimal?            @db.Decimal(14, 2)
+  impact            BusinessImpact      @default(NEUTRAL)
+  status            BusinessEventStatus @default(OPEN)
+  createdBy         Int                 @map("created_by")
+  createdAt         DateTime            @default(now()) @map("created_at")
+  updatedAt         DateTime            @updatedAt @map("updated_at")
+  admin             Admin               @relation(fields: [createdBy], references: [id], onDelete: Restrict)
+
+  @@index([occurredAt])
+  @@index([type])
+  @@index([status])
+  @@map("business_events")
+}
+
+model BusinessAuditLog {
+  id         Int                 @id @default(autoincrement())
+  entityType String              @map("entity_type") @db.VarChar(50)
+  entityId   String              @map("entity_id") @db.VarChar(80)
+  action     BusinessAuditAction
+  reason     String?             @db.VarChar(500)
+  beforeData Json?               @map("before_data")
+  afterData  Json?               @map("after_data")
+  createdBy  Int                 @map("created_by")
+  createdAt  DateTime            @default(now()) @map("created_at")
+  admin      Admin               @relation(fields: [createdBy], references: [id], onDelete: Restrict)
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@map("business_audit_logs")
+}
+
+enum ImportBatchStatus {
+  PROCESSING
+  COMPLETED
+  COMPLETED_WITH_WARNINGS
+  FAILED
+}
+
+enum ImportRowStatus {
+  IMPORTED
+  REVIEW
+  SKIPPED
+  DUPLICATE
+}
+
+enum BusinessOrigin {
+  XLSX_IMPORT
+  MANUAL
+  SYSTEM
+}
+
+enum DataConfidence {
+  CONFIRMED
+  STATED
+  INFERRED
+  REVIEW
+}
+
+enum BusinessRecordState {
+  ACTIVE
+  VOIDED
+}
+
+enum ProductionRecordType {
+  PRODUCTION
+  NO_PRODUCTION
+  SUNDAY
+  UNKNOWN
+}
+
+enum BusinessEventType {
+  CUSTOMER_ISSUE
+  MACHINE_PROBLEM
+  STOCK_ISSUE
+  VENDOR_ISSUE
+  RECEIVABLE_FOLLOW_UP
+  LARGE_ORDER
+  CORRECTION
+  OPERATIONAL_OBSERVATION
+  BUSINESS_NOTE
+}
+
+enum BusinessImpact {
+  POSITIVE
+  NEGATIVE
+  NEUTRAL
+}
+
+enum BusinessEventStatus {
+  OPEN
+  RESOLVED
+  ARCHIVED
+}
+
+enum BusinessAuditAction {
+  IMPORT
+  CREATE
+  UPDATE
+  VOID
+  RESTORE
 }
