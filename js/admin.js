@@ -1260,12 +1260,12 @@
       const favorable = inverse ? value < 0 : value > 0;
       return `${value >= 0 ? '+' : ''}${value.toFixed(1)}% vs previous period${favorable ? '' : ''}`;
     };
-    const unavailable = (labelText, reason) => `<article class="marketing-kpi unavailable"><span>${escapeHtml(labelText)}</span><strong>Not tracked</strong><small>${escapeHtml(reason)}</small></article>`;
+    const unavailable = (labelText) => `<article class="marketing-kpi unavailable"><span>${escapeHtml(labelText)}</span><strong>Unavailable</strong></article>`;
     document.getElementById('admin-marketing-stats').innerHTML = `
       <article class="marketing-kpi positive"><span>Enquiries</span><strong>${Number(data.kpis.enquiries.value).toLocaleString('en-IN')}</strong><small>${escapeHtml(trendText(data.kpis.enquiries))}</small></article>
       <article class="marketing-kpi warning"><span>Conversion</span><strong>${escapeHtml(percent(data.kpis.conversion.value))}</strong><small>${Number(data.kpis.conversion.numerator).toLocaleString('en-IN')} won of ${Number(data.kpis.conversion.denominator).toLocaleString('en-IN')} enquiries</small></article>
-      ${unavailable('Cost per Lead', data.kpis.costPerLead.reason)}
-      ${unavailable('Marketing Spend', data.kpis.marketingSpend.reason)}
+      ${unavailable('Cost per lead')}
+      ${unavailable('Marketing spend')}
     `;
 
     const rows = data.leadTrend || [];
@@ -1293,7 +1293,7 @@
       <div class="marketing-donut" style="background:conic-gradient(${stops})"><div><strong>${Number(data.kpis.enquiries.value).toLocaleString('en-IN')}</strong><span>Total Leads</span></div></div>
       <div class="marketing-source-legend">${data.sources.map((row, index) => `<span><i style="background:${colors[index % colors.length]}"></i><b>${escapeHtml(label(row.source))}</b><small>${row.count} (${row.percentage.toFixed(1)}%)</small></span>`).join('')}</div>
     ` : '<div class="marketing-empty">No source data in this period.</div>';
-    document.getElementById('admin-marketing-cpl').innerHTML = `<strong>Unavailable</strong><p>${escapeHtml(data.costPerLeadTrend.reason)}</p><small>Add dated marketing-expense records to enable this metric and chart.</small>`;
+    document.getElementById('admin-marketing-cpl').innerHTML = '<strong>Unavailable</strong>';
     populateMarketingFilters();
     renderMarketingLeads();
   }
@@ -2131,6 +2131,7 @@
     if (businessImportButton) businessImportButton.hidden = isMarketing;
     analyticsView?.classList.toggle('sales-active', isSales);
     analyticsView?.classList.toggle('overview-reference-active', name === 'overview');
+    analyticsView?.classList.toggle('marketing-reference-active', isMarketing);
     document.querySelectorAll('[data-analytics-tab]').forEach((button) => {
       const active = button.dataset.analyticsTab === name;
       button.classList.toggle('active', active);
