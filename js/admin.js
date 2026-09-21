@@ -791,7 +791,7 @@
       const x = padding.left + (slot * index) + ((slot - barWidth) / 2);
       const y = padding.top + plotHeight - barHeight;
       const tooltip = `${row.dateLabel || row.label}: ${money(value)} invoiced`;
-      return `<g class="sales-chart-bar-group" tabindex="0" role="img" aria-label="${escapeHtml(tooltip)}"><rect x="${x}" y="${y}" width="${barWidth}" height="${barHeight}" rx="3" class="sales-chart-bar"><title>${escapeHtml(tooltip)}</title></rect><text x="${x + (barWidth / 2)}" y="${height - 22}" text-anchor="middle" class="sales-chart-label">${escapeHtml(row.label)}</text></g>`;
+      return `<g class="sales-chart-bar-group" tabindex="0" role="img" aria-label="${escapeHtml(tooltip)}"><rect x="${x}" y="${y}" width="${barWidth}" height="${barHeight}" class="sales-chart-bar"><title>${escapeHtml(tooltip)}</title></rect><text x="${x + (barWidth / 2)}" y="${height - 22}" text-anchor="middle" class="sales-chart-label">${escapeHtml(row.label)}</text></g>`;
     }).join('');
     target.innerHTML = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${granularity === 'DAY' ? 'Daily' : 'Monthly'} invoiced sales in Indian rupees">${grid}${bars}</svg>`;
   }
@@ -1052,7 +1052,6 @@
       <article class="sales-kpi-card unavailable">
         <span>Net Profit</span>
         <strong>Unavailable</strong>
-        <div><small>${escapeHtml(report.sales.netProfitReason || 'A complete cost ledger is required.')}</small></div>
       </article>
       <article class="sales-kpi-card positive">
         <span>Avg. order value</span>
@@ -1072,11 +1071,11 @@
     const customerMixTarget = document.getElementById('admin-sales-customer-mix');
     customerMixTarget.innerHTML = `
       <div class="sales-unavailable-donut" aria-hidden="true"><span>?</span></div>
-      <div class="sales-unavailable-copy"><strong>Classification unavailable</strong><p>${escapeHtml(report.sales.customerMixReason || 'Customer type is not recorded in the workbook.')}</p></div>
+      <div class="sales-unavailable-copy"><strong>Unavailable</strong></div>
     `;
     renderSalesPeriodChart(report.sales.chart || report.sales.monthly || [], report.sales.chartGranularity);
     const chartCaption = document.getElementById('admin-sales-chart-caption');
-    chartCaption.textContent = report.sales.chartGranularity === 'DAY' ? 'Daily invoiced sales from normalized workbook rows' : 'Monthly invoiced sales from normalized workbook rows';
+    chartCaption.textContent = report.sales.chartGranularity === 'DAY' ? 'Daily sales' : 'Monthly sales';
     renderSalesMonthOptions(report.sales.availableMonths || []);
     const priceTarget = document.getElementById('admin-sales-price-summary');
     priceTarget.innerHTML = (report.sales.products || []).length ? report.sales.products.map((row) => `
@@ -1088,8 +1087,7 @@
 
     document.getElementById('admin-sales-margin-table').innerHTML = `
       <div class="sales-data-unavailable">
-        <strong>Gross margin is unavailable</strong>
-        <p>${escapeHtml(report.sales.grossMarginReason || 'Product-level cost allocation is not present in the workbook.')}</p>
+        <strong>Unavailable</strong>
       </div>
     `;
     const customerTarget = document.getElementById('admin-sales-customer-table');

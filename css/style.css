@@ -3397,7 +3397,12 @@ select.admin-grid-input {
   --sales-line: rgba(60, 56, 48, 0.16);
   display: grid;
   gap: 1.15rem;
+  font-family: "Helvetica Neue", Arial, Helvetica, sans-serif;
 }
+
+#admin-view-analytics.sales-active #admin-analytics-description,
+#admin-view-analytics.sales-active [data-open-business-import] { display: none; }
+#admin-view-analytics.sales-active .admin-analytics-actions { margin-left: auto; }
 
 .sales-reference-top-grid {
   display: grid;
@@ -3612,7 +3617,7 @@ select.admin-grid-input {
 }
 
 .sales-chart-bar {
-  fill: #75aa60;
+  fill: #12af00;
   transition: opacity 0.18s ease;
 }
 
@@ -3792,7 +3797,7 @@ body.admin-dark-theme .admin-nav-item { color: rgba(255, 255, 255, 0.7); }
 body.admin-dark-theme .admin-logout { color: #fca5a5; }
 body.admin-dark-theme .form-input,
 body.admin-dark-theme .form-select { color-scheme: dark; }
-body.admin-dark-theme .sales-chart-bar { fill: #4f9f56; }
+body.admin-dark-theme .sales-chart-bar { fill: #12af00; }
 
 @media (max-width: 1260px) {
   .sales-reference-top-grid {
