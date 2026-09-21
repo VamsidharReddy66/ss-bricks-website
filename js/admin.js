@@ -890,8 +890,8 @@
     `).join('') : '<tr><td colspan="6" class="text-muted">No expense records in this period.</td></tr>';
     const accountsExpenses = document.getElementById('admin-accounts-expense-log');
     if (accountsExpenses) accountsExpenses.innerHTML = expenses.length ? expenses.map((row) => `
-      <tr><td>${escapeHtml(dateOnly(row.expenseDate || row.reportingMonth))}</td><td><strong>${escapeHtml(row.description || 'No description')}</strong></td><td>${escapeHtml(label(row.category))}</td><td>${escapeHtml(money(row.amount))}</td><td>${businessSource(row)}</td><td>${businessActions('expenses', row)}</td></tr>
-    `).join('') : '<tr><td colspan="6" class="text-muted">No expenses in this period.</td></tr>';
+      <tr><td>${escapeHtml(dateOnly(row.expenseDate || row.reportingMonth))}</td><td><strong>${escapeHtml(row.description || 'No description')}</strong></td><td>${escapeHtml(label(row.category))}</td><td>${escapeHtml(money(row.amount))}</td><td>${businessActions('expenses', row)}</td></tr>
+    `).join('') : '<tr><td colspan="5" class="text-muted">No expenses in this period.</td></tr>';
 
     const purchases = report.finance?.recentPurchases || [];
     cacheBusinessRecords('purchases', purchases);
@@ -928,25 +928,26 @@
 
   function renderAccountsAnalytics(report) {
     const finance = report.finance || {};
-    const unavailable = (name, reason) => `<article class="accounts-kpi unavailable"><span>${escapeHtml(name)}</span><strong>Unavailable</strong><small>${escapeHtml(reason)}</small></article>`;
+    const unavailable = (name) => `<article class="accounts-kpi unavailable"><span>${escapeHtml(name)}</span><strong>Unavailable</strong></article>`;
     document.getElementById('admin-accounts-kpis').innerHTML = `
-      <article class="accounts-kpi expense"><span>Total Expenses</span><strong>${escapeHtml(money(finance.factoryExpenses || 0))}</strong><small>Recognized factory-expense rows for this period</small></article>
-      ${unavailable('Gross Profit', 'Product-level cost of goods sold is not available.')}
-      ${unavailable('Cash Flow', 'The workbook does not provide a complete cash and bank ledger.')}
-      ${unavailable('Outstanding Loans', 'Loan principal and repayment schedules are not recorded.')}
+      <article class="accounts-kpi expense"><span>Total Expenses</span><strong>${escapeHtml(money(finance.factoryExpenses || 0))}</strong><small>Selected period</small></article>
+      ${unavailable('Gross Profit')}
+      ${unavailable('Cash Flow')}
+      ${unavailable('Outstanding Loans')}
     `;
     const payables = finance.payables || [];
     document.getElementById('admin-accounts-payables').innerHTML = payables.length ? payables.map((row, index) => {
       const name = row.vendorName || row.materialName || 'Unspecified vendor';
       const initials = name.split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase();
       return `<div class="accounts-balance-row"><span class="accounts-avatar avatar-${index % 5}">${escapeHtml(initials)}</span><span><strong>${escapeHtml(name)}</strong><small>Supplier · ${escapeHtml(row.materialName || 'Material purchase')}</small></span><span><strong>${escapeHtml(money(Number(row.purchaseAmount || 0) + Number(row.driverBatta || 0)))}</strong><small class="accounts-status overdue">Pending status</small></span></div>`;
-    }).join('') : '<div class="accounts-empty">No purchases explicitly marked pending.</div>';
-    document.getElementById('admin-accounts-receivables').innerHTML = '<div class="accounts-empty"><strong>Unavailable</strong><span>Invoice-level due dates, applied payments, credits, and write-offs are not reliably recorded.</span></div>';
+    }).join('') : '<div class="accounts-empty"><strong>Unavailable</strong></div>';
+    document.getElementById('admin-accounts-receivables').innerHTML = '<div class="accounts-empty"><strong>Unavailable</strong></div>';
     const asOf = `As of ${dateTime(report.generatedAt || new Date())}`;
     document.getElementById('admin-accounts-payables-asof').textContent = asOf;
     document.getElementById('admin-accounts-receivables-asof').textContent = asOf;
-    renderDonutChart('admin-accounts-expense-donut', finance.expenseCategories || [], { formatter: compactMoney, centerLabel: 'expenses' });
-    document.getElementById('admin-accounts-coverage').innerHTML = '<strong>Accounting basis:</strong> Expense totals use normalized recognized expense rows. Pending purchases are obligations, not recognized expenses. Gross profit, cash flow, receivables aging, and loan liabilities remain unavailable until complete ledgers are provided.';
+    const expenseColors = ['#06619e', '#cf1c00', '#ffc400', '#cf7c00', '#552722'];
+    const expenseCategories = (finance.expenseCategories || []).map((row, index) => ({ ...row, color: expenseColors[index % expenseColors.length] }));
+    renderDonutChart('admin-accounts-expense-donut', expenseCategories, { formatter: compactMoney, centerLabel: 'Overall Expenses' });
   }
 
   function renderHrAnalytics(report) {
@@ -2140,6 +2141,7 @@
     analyticsView?.classList.toggle('overview-reference-active', name === 'overview');
     analyticsView?.classList.toggle('marketing-reference-active', isMarketing);
     analyticsView?.classList.toggle('operations-reference-active', name === 'operations');
+    analyticsView?.classList.toggle('accounts-reference-active', name === 'accounts');
     document.querySelectorAll('[data-analytics-tab]').forEach((button) => {
       const active = button.dataset.analyticsTab === name;
       button.classList.toggle('active', active);

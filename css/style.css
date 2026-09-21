@@ -3942,35 +3942,45 @@ body.admin-dark-theme .operations-log-card .admin-table th { background: #26231f
 .operations-stack-group small { color: #707070; white-space: nowrap; }
 
 /* Accounts reference dashboard */
-.accounts-reference-dashboard { display: grid; gap: 1.5rem; color: #212020; }
+#admin-view-analytics.accounts-reference-active .admin-analytics-head > div:first-child,
+#admin-view-analytics.accounts-reference-active [data-open-business-import] { display: none; }
+#admin-view-analytics.accounts-reference-active .admin-analytics-actions { margin-left: auto; }
+.accounts-reference-dashboard { display: grid; gap: 1.5rem; color: #212020; font-family: "Helvetica Neue", Arial, Helvetica, sans-serif; }
 .accounts-kpi-grid { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 1.4rem; }
 .accounts-kpi, .accounts-card { background: #fff; border: 1px solid #e2ded7; border-radius: 8px; box-shadow: 0 5px 14px rgba(33,32,32,.08); }
-.accounts-kpi { min-height: 142px; padding: 1.35rem 1.45rem; position: relative; overflow: hidden; }
+.accounts-kpi { min-height: 132px; padding: 1.2rem 1.35rem; position: relative; overflow: hidden; }
 .accounts-kpi::before { content: ''; position: absolute; inset: 0 auto 0 0; width: 4px; background: #cf1c00; }
 .accounts-kpi.unavailable::before { background: #817d79; }
 .accounts-kpi span { display: block; font-weight: 700; }
-.accounts-kpi strong { display: block; font-size: clamp(1.7rem,3vw,2.6rem); line-height: 1; margin: 1rem 0 .55rem; }
+.accounts-kpi strong { display: block; font-size: clamp(1.7rem,3vw,2.6rem); line-height: 1; margin: .9rem 0 .45rem; }
 .accounts-kpi.unavailable strong { font-size: 1.35rem; }
 .accounts-kpi small { color: #5d5853; line-height: 1.35; }
-.accounts-main-grid { display: grid; grid-template-columns: minmax(330px,.85fr) minmax(480px,1.15fr); gap: 1.5rem; }
+.accounts-main-grid { display: grid; grid-template-columns: minmax(330px,.82fr) minmax(480px,1.18fr); gap: 1.5rem; }
 .accounts-balance-stack { display: grid; gap: 1.5rem; }
-.accounts-card { padding: 1.35rem; min-width: 0; }
+.accounts-card { padding: 1.2rem; min-width: 0; }
 .accounts-card-head { display: flex; justify-content: space-between; gap: 1rem; align-items: baseline; }
 .accounts-card-head h3, .accounts-log-head h3 { font-size: 1.35rem; margin: 0; }
 .accounts-card-head > span { color: #817d79; font-size: .72rem; }
 .accounts-balance-head { display: grid; grid-template-columns: 1fr auto; border-bottom: 1px solid #bfbfbf; color: #707070; font-size: .75rem; padding: 1rem 0 .6rem 3.2rem; }
-.accounts-balance-list { max-height: 310px; overflow: auto; }
+.accounts-balance-list { height: 240px; overflow: auto; }
 .accounts-balance-row { display: grid; grid-template-columns: 38px 1fr auto; gap: .75rem; align-items: center; border-bottom: 1px solid #e5e1da; padding: .8rem 0; }
 .accounts-balance-row > span:last-child { text-align: right; }
 .accounts-balance-row small { display: block; color: #817d79; margin-top: .2rem; }
 .accounts-avatar { width: 36px; height: 36px; border-radius: 6px; display: grid; place-items: center; color: #fff; background: #06619e; font-weight: 800; }
 .accounts-avatar.avatar-1 { background: #cf7c00; } .accounts-avatar.avatar-2 { background: #12af00; } .accounts-avatar.avatar-3 { background: #b73c28; } .accounts-avatar.avatar-4 { background: #552722; }
 .accounts-status.overdue { color: #a71908; }
-.accounts-empty { min-height: 150px; display: grid; place-content: center; gap: .5rem; text-align: center; color: #707070; padding: 1rem; }
-.accounts-expense-types .admin-donut-layout, .accounts-donut-layout { min-height: 690px; align-content: center; }
+.accounts-empty { min-height: 180px; display: grid; place-content: center; text-align: center; color: #707070; padding: 1rem; }
+.accounts-expense-types .accounts-donut-layout { min-height: 570px; grid-template-columns: 1fr; justify-items: center; align-content: center; gap: 1.5rem; }
+.accounts-expense-types .admin-donut { width: min(330px,70%); }
+.accounts-expense-types .admin-donut-center strong { color: #212020; font-size: 1.2rem; }
+.accounts-expense-types .admin-donut-center span { color: #212020; font-size: .82rem; font-weight: 700; line-height: 1.05; }
+.accounts-expense-types .admin-donut-legend { width: min(100%,520px); gap: .75rem; }
+.accounts-expense-types .admin-donut-legend-row { grid-template-columns: 13px minmax(0,1fr) auto; font-size: .9rem; color: #212020; }
+.accounts-expense-types .admin-donut-swatch { width: 13px; height: 13px; }
+.accounts-expense-types .admin-donut-legend-row strong { color: #212020; font-size: .9rem; }
 .accounts-expense-log { padding: 1.4rem; }
-.accounts-log-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 1rem; }
-.accounts-log-head p { color: #707070; margin: .35rem 0 0; }
+.accounts-log-head { display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
+.accounts-log-head .btn { min-height: 44px; background: #3c3830; border-color: #3c3830; }
 .accounts-expense-table { min-height: 420px; max-height: 620px; overflow: auto; margin-top: 1.1rem; background: #eceae4; }
 .accounts-expense-table th { position: sticky; top: 0; z-index: 1; background: #e3dfd7; }
 body.admin-dark-theme .accounts-reference-dashboard { color: #f6f2eb; }

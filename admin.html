@@ -672,10 +672,9 @@
             <article class="accounts-card accounts-expense-types"><div class="accounts-card-head"><h3>Types of Expenses</h3></div><div class="accounts-donut-layout" id="admin-accounts-expense-donut"></div></article>
           </div>
           <article class="accounts-card accounts-expense-log">
-            <div class="accounts-log-head"><div><h3>Expense Log</h3><p>Recognized workbook expenses and clearly identified manual entries.</p></div><div class="admin-log-controls"><select class="form-select admin-log-origin" data-business-log-origin="expenses" aria-label="Expense log source"><option value="ALL">All sources</option><option value="XLSX_IMPORT">Workbook only</option><option value="MANUAL">Manual only</option></select><input class="form-input admin-log-search" type="search" data-business-log-search="expenses" placeholder="Search expenses" /><button class="btn btn-maroon btn-sm" type="button" data-open-business-record="expenses">Add Entry</button></div></div>
-            <div class="admin-table-wrap accounts-expense-table"><table class="admin-table"><thead><tr><th>Date</th><th>Description</th><th>Category</th><th>Amount</th><th>Source</th><th>Action</th></tr></thead><tbody id="admin-accounts-expense-log"></tbody></table></div>
+            <div class="accounts-log-head"><h3>Expense Log</h3><div class="admin-log-controls"><button class="btn btn-maroon btn-sm" type="button" data-open-business-record="expenses">+ Add Entry</button></div></div>
+            <div class="admin-table-wrap accounts-expense-table" tabindex="0"><table class="admin-table"><thead><tr><th>Date</th><th>Description</th><th>Category</th><th>Amount</th><th>Action</th></tr></thead><tbody id="admin-accounts-expense-log"></tbody></table></div>
           </article>
-          <div class="admin-availability-note" id="admin-accounts-coverage"></div>
         </div>
       </div>
 
