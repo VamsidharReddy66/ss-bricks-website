@@ -4115,3 +4115,150 @@ body.admin-dark-theme .reference-overview-kpi,
 body.admin-dark-theme .reference-overview-chart-card { background: #fff; border-color: #dedbd5; }
 @media (max-width: 1350px) { .reference-overview-top { grid-template-columns: 1fr; } }
 @media (max-width: 680px) { .reference-overview-kpis { grid-template-columns: 1fr; } .reference-overview-alert { grid-template-columns: 28px minmax(0,1fr); } .reference-overview-alert > span:last-child { grid-column: 2; } }
+
+/* High-contrast analytics surfaces */
+#admin-view-analytics.overview-reference-active,
+#admin-view-analytics.marketing-reference-active,
+#admin-view-analytics.sales-active,
+#admin-view-analytics.operations-reference-active,
+#admin-view-analytics.accounts-reference-active,
+#admin-view-analytics.hr-reference-active {
+  color: #111;
+}
+
+.reference-overview-kpi,
+.reference-overview-chart-card,
+.marketing-kpi,
+.marketing-card,
+.sales-kpi-card,
+.sales-reference-card,
+.operations-reference-card,
+.accounts-kpi,
+.accounts-card,
+.hr-group-panel {
+  border-color: #595959;
+  background: #fff;
+  color: #111;
+  box-shadow: 0 4px 10px rgba(0,0,0,.13);
+}
+
+.sales-reference-dashboard { --sales-card: #fff; --sales-surface: #f5f5f3; --sales-line: rgba(0,0,0,.42); }
+.hr-kpi,
+.hr-feedback-panel,
+.operations-unavailable,
+.operations-log-card .admin-table-wrap,
+.accounts-expense-table { background: #f5f5f3; border-color: #595959; }
+
+.reference-overview-kpi > span,
+.reference-overview-kpi > strong,
+.reference-overview-chart-card h3,
+.marketing-kpi,
+.marketing-card,
+.marketing-card-heading p,
+.marketing-donut span,
+.marketing-source-legend small,
+.marketing-lead-head p,
+.marketing-table-summary,
+.sales-kpi-card > span,
+.sales-kpi-card > strong,
+.sales-kpi-card small,
+.sales-kpi-neutral,
+.sales-kpi-compare,
+.sales-card-heading h3,
+.sales-card-heading p,
+.sales-log-heading h3,
+.sales-log-heading p,
+.sales-chart-unit,
+.operations-reference-dashboard,
+.operations-stack-group small,
+.accounts-reference-dashboard,
+.accounts-card-head > span,
+.accounts-balance-head,
+.accounts-balance-row small,
+.accounts-empty,
+.hr-reference-dashboard,
+.hr-kpi,
+.hr-feedback-panel {
+  color: #111;
+}
+
+.admin-table,
+.marketing-lead-table,
+.operations-log-card .admin-table,
+.accounts-expense-table .admin-table {
+  color: #111;
+}
+
+.admin-table td,
+.marketing-lead-table td,
+.accounts-balance-row {
+  color: #111;
+  border-bottom-color: #6a6a6a;
+}
+
+.marketing-lead-table th,
+.operations-log-card .admin-table th,
+.accounts-expense-table th {
+  background: #deddd9;
+  color: #111;
+  border-bottom: 1px solid #4d4d4d;
+}
+
+.accounts-balance-head,
+.operations-stack-plot {
+  border-bottom-color: #4d4d4d;
+}
+
+.sales-chart-grid,
+.admin-chart-grid-line {
+  stroke: rgba(0,0,0,.42);
+}
+
+.sales-chart-axis,
+.sales-chart-label {
+  fill: #111;
+}
+
+.form-input,
+.form-select,
+.admin-theme-toggle {
+  border-color: #595959;
+  color: #111;
+}
+
+body.admin-dark-theme .reference-overview-kpi,
+body.admin-dark-theme .reference-overview-chart-card,
+body.admin-dark-theme .marketing-kpi,
+body.admin-dark-theme .marketing-card,
+body.admin-dark-theme .sales-kpi-card,
+body.admin-dark-theme .sales-reference-card,
+body.admin-dark-theme .operations-reference-card,
+body.admin-dark-theme .accounts-kpi,
+body.admin-dark-theme .accounts-card,
+body.admin-dark-theme .hr-group-panel {
+  background: #1a1917;
+  border-color: #77716a;
+  color: #f8f8f8;
+}
+
+body.admin-dark-theme .reference-overview-kpi *,
+body.admin-dark-theme .reference-overview-chart-card *,
+body.admin-dark-theme .marketing-kpi *,
+body.admin-dark-theme .marketing-card *,
+body.admin-dark-theme .sales-kpi-card *,
+body.admin-dark-theme .sales-reference-card *,
+body.admin-dark-theme .operations-reference-card *,
+body.admin-dark-theme .accounts-kpi *,
+body.admin-dark-theme .accounts-card *,
+body.admin-dark-theme .hr-group-panel * { color: #f8f8f8; }
+
+body.admin-dark-theme .hr-kpi,
+body.admin-dark-theme .hr-feedback-panel,
+body.admin-dark-theme .operations-unavailable,
+body.admin-dark-theme .operations-log-card .admin-table-wrap,
+body.admin-dark-theme .accounts-expense-table { background: #242321; border-color: #77716a; }
+
+body.admin-dark-theme .sales-chart-grid,
+body.admin-dark-theme .admin-chart-grid-line { stroke: rgba(255,255,255,.38); }
+body.admin-dark-theme .sales-chart-axis,
+body.admin-dark-theme .sales-chart-label { fill: #f8f8f8; }
