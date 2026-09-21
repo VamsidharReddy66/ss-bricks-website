@@ -3862,13 +3862,13 @@ body.admin-dark-theme .sales-chart-bar { fill: #4f9f56; }
 .marketing-line { fill: none; stroke: #06619e; stroke-width: 3; }
 .marketing-area { fill: rgba(6,97,158,.18); }
 .marketing-funnel { min-height: 260px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .55rem; }
-.marketing-funnel-stage { color: #fff; min-height: 48px; display: grid; place-content: center; text-align: center; border-radius: 5px; background: #06619e; padding: .4rem; }
-.marketing-funnel-stage.stage-1 { background: #b73c28; }
-.marketing-funnel-stage.stage-3 { background: #cf7c00; }
+.marketing-funnel-stage { color: #fff; min-height: 48px; display: grid; place-content: center; text-align: center; border-radius: 6px; background: #096da5; padding: .4rem; transition: width .2s ease; }
+.marketing-funnel-stage.stage-quotations { background: #c63e2e; }
+.marketing-funnel-stage.stage-siteVisits { background: #10ad00; }
+.marketing-funnel-stage.stage-orders { background: #d47a00; }
+.marketing-funnel-stage.unavailable { opacity: 1; }
 .marketing-funnel-stage strong { font-size: 1.2rem; }
 .marketing-funnel-stage span, .marketing-funnel-stage small { font-size: .72rem; }
-.marketing-funnel-missing { border: 1px dashed #a7a19a; border-radius: 5px; padding: .55rem .8rem; width: 64%; text-align: center; color: #5d5853; }
-.marketing-funnel-missing strong, .marketing-funnel-missing span { display: block; font-size: .75rem; }
 .marketing-donut-layout { min-height: 265px; display: grid; grid-template-columns: minmax(180px,.9fr) minmax(170px,1fr); gap: 1rem; align-items: center; }
 .marketing-donut { width: min(220px,100%); aspect-ratio: 1; border-radius: 50%; display: grid; place-items: center; margin: auto; }
 .marketing-donut > div { width: 58%; aspect-ratio: 1; border-radius: 50%; background: #fff; display: grid; place-content: center; text-align: center; }

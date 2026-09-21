@@ -1280,11 +1280,19 @@
         ${rows.map((row, index) => { const x = rows.length === 1 ? width / 2 : (index / (rows.length - 1)) * width; const y = height - ((row.enquiries / max) * 220); return `<circle cx="${x}" cy="${y}" r="5"><title>${escapeHtml(row.label)}: ${row.enquiries} enquiries</title></circle><text x="${x}" y="292" text-anchor="middle">${escapeHtml(row.label)}</text>`; }).join('')}
       </svg>` : '<div class="marketing-empty">No enquiries in this period.</div>';
 
-    const availableStages = (data.funnel || []).filter((stage) => stage.available);
-    const funnelMax = Math.max(...availableStages.map((stage) => stage.count), 1);
-    document.getElementById('admin-marketing-funnel').innerHTML = (data.funnel || []).map((stage, index, stages) => { const previous = stages.slice(0, index).reverse().find((item) => item.available); return stage.available ? `
-      <div class="marketing-funnel-stage stage-${index}" style="width:${Math.max((stage.count / funnelMax) * 100, 38)}%"><strong>${Number(stage.count).toLocaleString('en-IN')}</strong><span>${escapeHtml(stage.label)}</span>${previous ? `<small>${previous.count ? Math.round((stage.count / previous.count) * 100) : 0}% of previous tracked stage</small>` : ''}</div>
-    ` : `<div class="marketing-funnel-missing"><strong>${escapeHtml(stage.label)}</strong><span>${escapeHtml(stage.reason)}</span></div>`; }).join('');
+    const funnelWidths = [100, 58, 40, 28];
+    document.getElementById('admin-marketing-funnel').innerHTML = (data.funnel || []).map((stage, index, stages) => {
+      const previous = stages.slice(0, index).reverse().find((item) => item.available);
+      const comparison = stage.available && previous
+        ? `${previous.count ? Math.round((stage.count / previous.count) * 100) : 0}% of prev`
+        : '';
+      return `
+        <div class="marketing-funnel-stage stage-${escapeHtml(stage.key)}${stage.available ? '' : ' unavailable'}" style="width:${funnelWidths[index] || 28}%">
+          <strong>${stage.available ? Number(stage.count).toLocaleString('en-IN') : 'Unavailable'}</strong>
+          <span>${escapeHtml(stage.label)}${comparison ? ` - ${comparison}` : ''}</span>
+        </div>
+      `;
+    }).join('');
 
     const colors = ['#06619e', '#12af00', '#cf7c00', '#d0004e', '#b73c28', '#552722', '#ffc400'];
     let offset = 0;
