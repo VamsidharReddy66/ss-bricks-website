@@ -67,6 +67,7 @@ function reportingMonth(date) {
 
 function rangeStart(range, now = new Date()) {
   const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  if (range === 'LAST_7_DAYS') return new Date(today.getTime() - (6 * 86400000));
   if (range === 'LAST_30_DAYS') return new Date(today.getTime() - (29 * 86400000));
   if (range === 'LAST_90_DAYS') return new Date(today.getTime() - (89 * 86400000));
   if (range === 'LAST_6_MONTHS') return new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() - 5, 1));
@@ -166,8 +167,16 @@ function recordWhere(type, config, query) {
       );
     }
   }
-  const start = rangeStart(query.range);
-  if (start) where[config.isEvent ? 'occurredAt' : 'reportingMonth'] = { gte: start };
+  if (!config.isEvent && query.month !== 'ALL') {
+    const [year, month] = query.month.split('-').map(Number);
+    where.reportingMonth = {
+      gte: new Date(Date.UTC(year, month - 1, 1)),
+      lt: new Date(Date.UTC(year, month, 1)),
+    };
+  } else {
+    const start = rangeStart(query.range);
+    if (start) where[config.isEvent ? 'occurredAt' : 'reportingMonth'] = { gte: start };
+  }
   return where;
 }
 

@@ -54,6 +54,7 @@
   let activeLead = null;
   let showAllTimeline = false;
   let analytics = {};
+  let marketingAnalytics = null;
   let sales = [];
   let salesTotals = {};
   let salesRange = 'LAST_6_MONTHS';
@@ -80,6 +81,7 @@
       total: 0,
       search: '',
       origin: 'ALL',
+      month: 'ALL',
     }]),
   );
 
@@ -484,47 +486,16 @@
     const target = document.getElementById('admin-analytics-stats');
     if (!target) return;
     const report = analytics.business || {};
-    const sales = Number(report.sales?.invoicedAmount || 0);
-    const outflows = Number(report.finance?.recordedOutflows || 0);
-    const cards = [
-      {
-        label: 'Invoiced Sales',
-        value: money(sales),
-        context: `${Number(report.sales?.records || 0).toLocaleString('en-IN')} normalized sale records`,
-      },
-      {
-        label: 'Recorded Outflows',
-        value: money(outflows),
-        context: 'Recorded payments and obligations; not COGS',
-      },
-      {
-        label: 'Sales / Outflows',
-        value: percent(outflows ? (sales / outflows) * 100 : 0),
-        context: 'Coverage comparison only; not margin or break-even',
-      },
-      {
-        label: 'Production Output',
-        value: Number(report.operations?.productionUnits || 0).toLocaleString('en-IN'),
-        context: `${Number(report.operations?.productionLineItems || 0).toLocaleString('en-IN')} production entries`,
-      },
-      {
-        label: 'No-production Rows',
-        value: Number(report.operations?.noProductionDays || 0).toLocaleString('en-IN'),
-        context: 'Explicitly recorded in the production sheet',
-      },
-      {
-        label: 'Rows to Review',
-        value: Number(report.trust?.reviewRows || 0).toLocaleString('en-IN'),
-        context: `${Number(report.trust?.sourceRows || 0).toLocaleString('en-IN')} total workbook rows`,
-      },
-    ];
-    target.innerHTML = cards.map((card) => `
-      <article class="admin-stat-card">
-        <div class="admin-stat-label">${escapeHtml(card.label)}</div>
-        <div class="admin-stat-value">${escapeHtml(card.value)}</div>
-        <div class="${card.secondary ? 'admin-stat-secondary' : 'admin-stat-context'}">${escapeHtml(card.context)}</div>
-      </article>
-    `).join('');
+    const salesTrend = report.sales?.trends?.sales;
+    const trend = salesTrend?.available
+      ? `${salesTrend.direction === 'down' ? '↓' : '↑'} ${Math.abs(Number(salesTrend.changePercent || 0)).toLocaleString('en-IN', { maximumFractionDigits: 1 })}%`
+      : 'Unavailable';
+    target.innerHTML = `
+      <article class="reference-overview-kpi"><span>Production</span><strong>${Number(report.operations?.productionUnits || 0).toLocaleString('en-IN')} <small>units</small></strong><p>Unavailable</p></article>
+      <article class="reference-overview-kpi"><span>Sales Revenue</span><strong>₹${escapeHtml(compactNumber(report.sales?.invoicedAmount || 0))}</strong><p>${escapeHtml(trend)}</p></article>
+      <article class="reference-overview-kpi unavailable"><span>Marketing Leads</span><strong>Unavailable</strong></article>
+      <article class="reference-overview-kpi unavailable"><span>Net Profit</span><strong>Unavailable</strong></article>
+    `;
   }
 
   function renderMonthlySales() {
@@ -575,6 +546,7 @@
 
   function renderOutstandingAccounts() {
     const target = document.getElementById('admin-outstanding-accounts');
+    if (!target) return;
     const rows = analytics.business?.sales?.customers || [];
     target.innerHTML = rows.length ? rows.map((row) => `
       <tr>
@@ -587,6 +559,7 @@
 
   function renderAnalyticsCoverage() {
     const target = document.getElementById('admin-analytics-coverage');
+    if (!target) return;
     const report = analytics.business || {};
     const rows = [
       ['Sales', report.sales?.records || 0],
@@ -709,6 +682,25 @@
     `).join('');
   }
 
+  function renderStackedProductionChart(targetId, rows) {
+    const target = document.getElementById(targetId);
+    if (!target) return;
+    const visibleRows = (rows || []).filter((row) => Number(row.total || 0) > 0);
+    if (!visibleRows.length) {
+      target.innerHTML = '<div class="admin-chart-empty">No recorded production in this period.</div>';
+      return;
+    }
+    const products = [...new Set(visibleRows.flatMap((row) => row.segments.map((segment) => segment.product)))];
+    const colors = ['#06619e', '#cf7c00', '#12af00', '#552722', '#b73c28', '#ffc400', '#d0004e'];
+    const colorMap = new Map(products.map((product, index) => [product, colors[index % colors.length]]));
+    const maxTotal = Math.max(...visibleRows.map((row) => Number(row.total || 0)), 1);
+    target.innerHTML = `
+      <div class="operations-stack-legend" aria-label="Product legend">${products.map((product) => `<span><i style="--stack-color:${colorMap.get(product)}"></i>${escapeHtml(product)}</span>`).join('')}</div>
+      <div class="operations-stack-plot" style="--stack-columns:${visibleRows.length}">
+        ${visibleRows.map((row) => `<div class="operations-stack-group"><div class="operations-stack-bar" style="height:${Math.max((row.total / maxTotal) * 300, 4)}px">${row.segments.map((segment) => `<span style="height:${row.total ? (segment.quantity / row.total) * 100 : 0}%;--stack-color:${colorMap.get(segment.product)}" tabindex="0"><span class="sr-only">${escapeHtml(row.label)}, ${escapeHtml(segment.product)}, ${escapeHtml(compactNumber(segment.quantity))} units</span><title>${escapeHtml(`${row.label}: ${segment.product} - ${Number(segment.quantity).toLocaleString('en-IN')} units; total ${Number(row.total).toLocaleString('en-IN')}`)}</title></span>`).join('')}</div><strong>${escapeHtml(compactNumber(row.total))}</strong><small>${escapeHtml(row.label)}</small></div>`).join('')}
+      </div>`;
+  }
+
   function renderHorizontalChart(targetId, rows, options = {}) {
     const target = document.getElementById(targetId);
     if (!target) return;
@@ -762,6 +754,59 @@
         `).join('')}
       </div>
     `;
+  }
+
+  function salesTrendMarkup(trend, noun) {
+    if (!trend?.available) return `<span class="sales-kpi-neutral">No prior ${escapeHtml(noun)} baseline</span>`;
+    const change = Number(trend.changePercent || 0);
+    const direction = change > 0 ? 'up' : change < 0 ? 'down' : 'neutral';
+    const arrow = change > 0 ? '↑' : change < 0 ? '↓' : '→';
+    return `<span class="sales-kpi-trend ${direction}">${arrow} ${Math.abs(change).toLocaleString('en-IN', { maximumFractionDigits: 1 })}%</span><span class="sales-kpi-compare">vs previous period</span>`;
+  }
+
+  function renderSalesPeriodChart(rows, granularity) {
+    const target = document.getElementById('admin-sales-period-chart');
+    if (!target) return;
+    if (!rows?.length || !rows.some((row) => Number(row.invoiced || 0) > 0)) {
+      target.innerHTML = '<div class="sales-chart-empty"><strong>No invoiced sales in this period</strong><span>Choose a wider period to inspect workbook history.</span></div>';
+      return;
+    }
+    const width = 1180;
+    const height = 390;
+    const padding = { top: 22, right: 86, bottom: 58, left: 28 };
+    const plotWidth = width - padding.left - padding.right;
+    const plotHeight = height - padding.top - padding.bottom;
+    const max = Math.max(...rows.map((row) => Number(row.invoiced || 0)), 1);
+    const roundedMax = Math.ceil(max / 10000) * 10000 || max;
+    const slot = plotWidth / rows.length;
+    const barWidth = Math.min(Math.max(slot * 0.38, 18), 58);
+    const grid = [0, 0.25, 0.5, 0.75, 1].map((ratio) => {
+      const value = roundedMax * ratio;
+      const y = padding.top + plotHeight - (plotHeight * ratio);
+      return `<line x1="${padding.left}" x2="${width - padding.right}" y1="${y}" y2="${y}" class="sales-chart-grid"></line><text x="${width - 8}" y="${y + 5}" text-anchor="end" class="sales-chart-axis">${escapeHtml(compactMoney(value))}</text>`;
+    }).join('');
+    const bars = rows.map((row, index) => {
+      const value = Number(row.invoiced || 0);
+      const barHeight = value ? Math.max((value / roundedMax) * plotHeight, 3) : 0;
+      const x = padding.left + (slot * index) + ((slot - barWidth) / 2);
+      const y = padding.top + plotHeight - barHeight;
+      const tooltip = `${row.dateLabel || row.label}: ${money(value)} invoiced`;
+      return `<g class="sales-chart-bar-group" tabindex="0" role="img" aria-label="${escapeHtml(tooltip)}"><rect x="${x}" y="${y}" width="${barWidth}" height="${barHeight}" rx="3" class="sales-chart-bar"><title>${escapeHtml(tooltip)}</title></rect><text x="${x + (barWidth / 2)}" y="${height - 22}" text-anchor="middle" class="sales-chart-label">${escapeHtml(row.label)}</text></g>`;
+    }).join('');
+    target.innerHTML = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${granularity === 'DAY' ? 'Daily' : 'Monthly'} invoiced sales in Indian rupees">${grid}${bars}</svg>`;
+  }
+
+  function customerInitials(name) {
+    return String(name || 'Customer').split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join('').toUpperCase();
+  }
+
+  function renderSalesMonthOptions(months) {
+    const select = document.getElementById('admin-sales-log-month');
+    if (!select) return;
+    const selected = businessLogState.sales.month;
+    select.innerHTML = '<option value="ALL">All visible months</option>' + (months || []).map((month) => `<option value="${escapeHtml(month.key)}">${escapeHtml(month.label)}</option>`).join('');
+    select.value = [...select.options].some((option) => option.value === selected) ? selected : 'ALL';
+    businessLogState.sales.month = select.value;
   }
 
   function businessRecordKey(type, id) {
@@ -822,14 +867,15 @@
     document.getElementById('admin-business-sales-log').innerHTML = salesRows.length ? salesRows.map((row) => `
       <tr>
         <td>${escapeHtml(dateOnly(row.saleDate || row.reportingMonth))}</td>
-        <td><strong>${escapeHtml(row.customerName)}</strong><br><span class="text-muted">Ledger #${Number(row.id).toLocaleString('en-IN')}${row.customerPhone ? ` · ${escapeHtml(row.customerPhone)}` : ''}</span></td>
+        <td><strong>${escapeHtml(row.customerName)}</strong><br><span class="sales-log-meta">${businessSource(row)} Ledger #${Number(row.id).toLocaleString('en-IN')}</span></td>
         <td>${escapeHtml(row.productName || 'Not specified')}</td>
         <td>${row.quantity === null ? '-' : Number(row.quantity).toLocaleString('en-IN')} <span class="text-muted">${escapeHtml(row.quantityUnit || '')}</span></td>
+        <td>${row.unitPrice === null ? '<span class="text-muted">Not recorded</span>' : escapeHtml(money(row.unitPrice))}</td>
         <td>${escapeHtml(money(row.invoicedAmount || 0))}</td>
-        <td>${businessSource(row)}</td>
+        <td><span class="sales-payment-state review" title="Workbook collections and outstanding values require invoice-level confirmation">${row.sourceReceivedAmount != null || row.sourceOutstandingAmount != null ? 'Review source' : 'Not recorded'}</span></td>
         <td>${businessActions('sales', row)}</td>
       </tr>
-    `).join('') : '<tr><td colspan="7" class="text-muted">No imported workbook sales in this period.</td></tr>';
+    `).join('') : '<tr><td colspan="8" class="text-muted">No sales records match this period and filter.</td></tr>';
 
     const receipts = report.finance?.recentReceipts || [];
     cacheBusinessRecords('receipts', receipts);
@@ -842,12 +888,20 @@
     document.getElementById('admin-expense-log').innerHTML = expenses.length ? expenses.map((row) => `
       <tr><td>${escapeHtml(dateOnly(row.expenseDate || row.reportingMonth))}</td><td><strong>${escapeHtml(row.description || 'No description')}</strong><br><span class="text-muted">${escapeHtml(label(row.category))}</span></td><td>${escapeHtml(money(row.amount))}</td><td>${escapeHtml(row.paidBy || '-')}</td><td>${businessSource(row)}</td><td>${businessActions('expenses', row)}</td></tr>
     `).join('') : '<tr><td colspan="6" class="text-muted">No expense records in this period.</td></tr>';
+    const accountsExpenses = document.getElementById('admin-accounts-expense-log');
+    if (accountsExpenses) accountsExpenses.innerHTML = expenses.length ? expenses.map((row) => `
+      <tr><td>${escapeHtml(dateOnly(row.expenseDate || row.reportingMonth))}</td><td><strong>${escapeHtml(row.description || 'No description')}</strong></td><td>${escapeHtml(label(row.category))}</td><td>${escapeHtml(money(row.amount))}</td><td>${businessSource(row)}</td><td>${businessActions('expenses', row)}</td></tr>
+    `).join('') : '<tr><td colspan="6" class="text-muted">No expenses in this period.</td></tr>';
 
     const purchases = report.finance?.recentPurchases || [];
     cacheBusinessRecords('purchases', purchases);
     document.getElementById('admin-purchase-log').innerHTML = purchases.length ? purchases.map((row) => `
       <tr><td>${escapeHtml(dateOnly(row.purchaseDate || row.reportingMonth))}</td><td><strong>${escapeHtml(row.materialName)}</strong><br><span class="text-muted">${escapeHtml(row.vendorName || 'Vendor not specified')}</span></td><td>${row.quantity === null ? '-' : Number(row.quantity).toLocaleString('en-IN')}</td><td>${escapeHtml(money(row.purchaseAmount))}</td><td>${escapeHtml(label(row.paymentStatus))}</td><td>${businessSource(row)}</td><td>${businessActions('purchases', row)}</td></tr>
     `).join('') : '<tr><td colspan="7" class="text-muted">No material purchase records in this period.</td></tr>';
+    const operationsInventory = document.getElementById('admin-operations-inventory-log');
+    if (operationsInventory) operationsInventory.innerHTML = purchases.length ? purchases.map((row) => `
+      <tr><td>${escapeHtml(dateOnly(row.purchaseDate || row.reportingMonth))}</td><td><strong>${escapeHtml(row.materialName)}</strong></td><td>${row.unitPrice === null ? 'Not recorded' : escapeHtml(money(row.unitPrice))}</td><td>${row.quantity === null ? 'Not recorded' : Number(row.quantity).toLocaleString('en-IN')}</td><td>${escapeHtml(money(row.purchaseAmount))}</td><td>${escapeHtml(row.vendorName || 'Not specified')}</td><td>${businessSource(row)}</td><td>${businessActions('purchases', row)}</td></tr>
+    `).join('') : '<tr><td colspan="8" class="text-muted">No material purchase records in this period.</td></tr>';
 
     const production = report.operations?.recentProduction || [];
     cacheBusinessRecords('production', production);
@@ -860,12 +914,108 @@
     document.getElementById('admin-labour-log').innerHTML = labour.length ? labour.map((row) => `
       <tr><td>${escapeHtml(dateOnly(row.paymentDate || row.reportingMonth))}</td><td><strong>${escapeHtml(row.workDescription)}</strong></td><td>${row.quantity === null ? escapeHtml(row.rawQuantity || '-') : Number(row.quantity).toLocaleString('en-IN')}</td><td>${escapeHtml(money(row.totalAmount))}</td><td>${row.pendingAmount === null ? '-' : escapeHtml(money(row.pendingAmount))}</td><td>${businessSource(row)}</td><td>${businessActions('labour', row)}</td></tr>
     `).join('') : '<tr><td colspan="7" class="text-muted">No labour payment records in this period.</td></tr>';
+    const hrLabourLog = document.getElementById('admin-hr-labour-log');
+    if (hrLabourLog) hrLabourLog.innerHTML = labour.length ? labour.map((row) => `
+      <tr><td>${escapeHtml(dateOnly(row.paymentDate || row.reportingMonth))}</td><td><strong>${escapeHtml(row.workDescription)}</strong></td><td>${row.quantity === null ? escapeHtml(row.rawQuantity || '-') : Number(row.quantity).toLocaleString('en-IN')}</td><td>${escapeHtml(money(row.totalAmount))}</td><td>${row.pendingAmount === null ? 'Not recorded' : escapeHtml(money(row.pendingAmount))}</td><td>${businessSource(row)}</td><td>${businessActions('labour', row)}</td></tr>
+    `).join('') : '<tr><td colspan="7" class="text-muted">No labour payment records in this period.</td></tr>';
 
     const events = report.events || [];
     cacheBusinessRecords('events', events);
     document.getElementById('admin-business-events-log').innerHTML = events.length ? events.map((row) => `
       <tr><td>${escapeHtml(dateTime(row.occurredAt))}</td><td>${escapeHtml(label(row.type))}</td><td><strong>${escapeHtml(row.description)}</strong>${row.category ? `<br><span class="text-muted">${escapeHtml(row.category)}</span>` : ''}</td><td>${escapeHtml(label(row.impact))}</td><td>${escapeHtml(label(row.status))}</td><td>${businessActions('events', row)}</td></tr>
     `).join('') : '<tr><td colspan="6" class="text-muted">No business events recorded in this period.</td></tr>';
+  }
+
+  function renderAccountsAnalytics(report) {
+    const finance = report.finance || {};
+    const unavailable = (name, reason) => `<article class="accounts-kpi unavailable"><span>${escapeHtml(name)}</span><strong>Unavailable</strong><small>${escapeHtml(reason)}</small></article>`;
+    document.getElementById('admin-accounts-kpis').innerHTML = `
+      <article class="accounts-kpi expense"><span>Total Expenses</span><strong>${escapeHtml(money(finance.factoryExpenses || 0))}</strong><small>Recognized factory-expense rows for this period</small></article>
+      ${unavailable('Gross Profit', 'Product-level cost of goods sold is not available.')}
+      ${unavailable('Cash Flow', 'The workbook does not provide a complete cash and bank ledger.')}
+      ${unavailable('Outstanding Loans', 'Loan principal and repayment schedules are not recorded.')}
+    `;
+    const payables = finance.payables || [];
+    document.getElementById('admin-accounts-payables').innerHTML = payables.length ? payables.map((row, index) => {
+      const name = row.vendorName || row.materialName || 'Unspecified vendor';
+      const initials = name.split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase();
+      return `<div class="accounts-balance-row"><span class="accounts-avatar avatar-${index % 5}">${escapeHtml(initials)}</span><span><strong>${escapeHtml(name)}</strong><small>Supplier · ${escapeHtml(row.materialName || 'Material purchase')}</small></span><span><strong>${escapeHtml(money(Number(row.purchaseAmount || 0) + Number(row.driverBatta || 0)))}</strong><small class="accounts-status overdue">Pending status</small></span></div>`;
+    }).join('') : '<div class="accounts-empty">No purchases explicitly marked pending.</div>';
+    document.getElementById('admin-accounts-receivables').innerHTML = '<div class="accounts-empty"><strong>Unavailable</strong><span>Invoice-level due dates, applied payments, credits, and write-offs are not reliably recorded.</span></div>';
+    const asOf = `As of ${dateTime(report.generatedAt || new Date())}`;
+    document.getElementById('admin-accounts-payables-asof').textContent = asOf;
+    document.getElementById('admin-accounts-receivables-asof').textContent = asOf;
+    renderDonutChart('admin-accounts-expense-donut', finance.expenseCategories || [], { formatter: compactMoney, centerLabel: 'expenses' });
+    document.getElementById('admin-accounts-coverage').innerHTML = '<strong>Accounting basis:</strong> Expense totals use normalized recognized expense rows. Pending purchases are obligations, not recognized expenses. Gross profit, cash flow, receivables aging, and loan liabilities remain unavailable until complete ledgers are provided.';
+  }
+
+  function renderHrAnalytics(report) {
+    const unavailableTile = (name, reason) => `<article class="hr-kpi unavailable"><span>${escapeHtml(name)}</span><strong>Unavailable</strong><small>${escapeHtml(reason)}</small></article>`;
+    const executiveTiles = [
+      unavailableTile('Attendance', 'No attendance or work-calendar records.'),
+      unavailableTile('Salary Payable', 'No employee payroll runs or salary records.'),
+      unavailableTile('Tasks Completed', 'No task-assignment workflow is recorded.'),
+      unavailableTile('Task Efficiency', 'No approved task-efficiency inputs or policy.'),
+    ].join('');
+    document.getElementById('admin-hr-production-kpis').innerHTML = executiveTiles;
+    document.getElementById('admin-hr-sales-kpis').innerHTML = executiveTiles;
+    const labour = report.labour || {};
+    document.getElementById('admin-hr-worker-kpis').innerHTML = `
+      ${unavailableTile('Number of Staff', 'Worker identities and employment status are not recorded.')}
+      ${unavailableTile('Number of Working Days', 'No shift calendar, attendance, holidays, or leave records.')}
+      <article class="hr-kpi available"><span>Wages Payable</span><strong>${escapeHtml(money(labour.statedPendingAmount || 0))}</strong><small>Pending amount stated in workbook rows; not a payroll calculation</small></article>
+      ${unavailableTile('Production Efficiency', 'Worker-group targets and output attribution are not recorded.')}
+    `;
+    document.getElementById('admin-hr-coverage').innerHTML = `<strong>HR scope:</strong> ${Number(labour.paymentRecords || 0).toLocaleString('en-IN')} aggregate labour-payment records and ${escapeHtml(money(labour.paymentObligation || 0))} in recorded obligations are available. Employee-level HR, payroll, attendance, task, target, and feedback data is not present and is not inferred.`;
+  }
+
+  function renderExecutiveOverview(report) {
+    const target = document.getElementById('admin-executive-overview-kpis');
+    if (!target) return;
+    const production = report.operations || {};
+    const sales = report.sales || {};
+    const salesTrend = sales.trends?.sales;
+    const trendDirection = salesTrend?.direction || 'neutral';
+    const trendText = salesTrend?.available
+      ? `${Number(Math.abs(salesTrend.changePercent || 0)).toLocaleString('en-IN', { maximumFractionDigits: 1 })}% vs previous equivalent period`
+      : 'Previous-period comparison unavailable';
+    target.innerHTML = `
+      <article class="executive-kpi available"><span>Production</span><strong>${Number(production.productionUnits || 0).toLocaleString('en-IN')} <small>recorded units</small></strong><p><b class="neutral">Selected period</b> ${Number(production.productionLineItems || 0).toLocaleString('en-IN')} normalized production rows</p></article>
+      <article class="executive-kpi available"><span>Sales Revenue</span><strong>${escapeHtml(money(sales.invoicedAmount || 0))}</strong><p><b class="${trendDirection}">${trendDirection === 'up' ? 'Up' : trendDirection === 'down' ? 'Down' : 'Trend'}</b> ${escapeHtml(trendText)}</p></article>
+      <article class="executive-kpi unavailable"><span>Marketing Leads</span><strong>Unavailable</strong><p>Website and CSV leads are intentionally excluded from workbook analytics.</p></article>
+      <article class="executive-kpi unavailable"><span>Net Profit</span><strong>Unavailable</strong><p>${escapeHtml(sales.netProfitReason || 'Complete cost and accrual data is required.')}</p></article>
+    `;
+
+    const revenueRows = (report.sales?.monthly || []).slice(-6);
+    renderLineChart('admin-executive-revenue-chart', revenueRows, [
+      { key: 'invoiced', title: 'revenue', formatter: compactMoney, color: '#CF1C00' },
+    ], { ariaLabel: 'Six-month workbook invoiced revenue. Revenue target is unavailable.' });
+    const chartSummary = document.getElementById('admin-executive-chart-summary');
+    if (chartSummary) chartSummary.textContent = revenueRows.length
+      ? revenueRows.map((row) => `${row.label}: ${money(row.invoiced)}`).join('; ')
+      : 'No invoiced revenue was recorded in this six-month context.';
+
+    const generatedAt = analytics.generatedAt || new Date();
+    const alerts = (report.insights || []).slice(0, 4);
+    const alertTarget = document.getElementById('admin-executive-overview-alerts');
+    alertTarget.innerHTML = alerts.length ? alerts.map((item, index) => `
+      <article class="executive-alert ${escapeHtml(item.severity.toLowerCase())}" aria-label="${escapeHtml(label(item.severity))} alert: ${escapeHtml(item.title)}">
+        <span class="executive-alert-icon">${businessInsightIcon(item.severity)}</span>
+        <div class="executive-alert-copy"><span class="executive-alert-severity">${escapeHtml(label(item.severity))}</span><strong>${escapeHtml(item.title)}</strong><p>${escapeHtml(item.detail)}</p><small>Calculated ${escapeHtml(dateTime(generatedAt))}</small></div>
+        <button type="button" data-analytics-target="${escapeHtml(item.target)}" aria-label="Open ${escapeHtml(item.department || label(item.target))} analytics for ${escapeHtml(item.title)}">${escapeHtml(item.department || label(item.target))}</button>
+      </article>
+    `).join('') : '<div class="executive-overview-empty"><strong>No active workbook alerts</strong><span>No deterministic finding met an alert threshold for this period.</span></div>';
+
+    document.getElementById('admin-executive-overview-coverage').innerHTML = '<strong>Data boundaries:</strong> Revenue is invoiced workbook value, not confirmed cash collection. Revenue targets, net profit, receivables aging, machine downtime, capacity impact, marketing leads, and employee performance are unavailable because the workbook does not contain the required source records or approved policies.';
+  }
+
+  function activeAnalyticsTarget(target) {
+    return ({ finance: 'accounts', team: 'hr', insights: 'overview', 'executive-overview': 'overview' })[target] || target;
+  }
+
+  function activeAnalyticsDepartment(item) {
+    const target = activeAnalyticsTarget(item.target);
+    return target === 'accounts' ? 'Accounts' : target === 'hr' ? 'HR Management' : target === 'overview' ? 'Overview' : item.department || label(target);
   }
 
   function renderBusinessAnalytics() {
@@ -876,49 +1026,80 @@
       return;
     }
 
-    renderLineChart('admin-overview-performance-chart', report.overview?.monthlyPerformance || [], [
-      { key: 'invoiced', title: 'invoiced sales', formatter: compactMoney, color: analyticsColors[1], area: true },
-      { key: 'recordedOutflows', title: 'recorded outflows', formatter: compactMoney, color: analyticsColors[3] },
-    ], { ariaLabel: 'Monthly invoiced sales compared with recorded outflows' });
-    renderDonutChart('admin-overview-outflow-donut', report.overview?.outflowComposition || [], {
-      formatter: compactMoney,
-      centerLabel: 'outflows',
-    });
+    renderAccountsAnalytics(report);
+    renderHrAnalytics(report);
+    renderExecutiveOverview(report);
+
+    renderLineChart('admin-overview-performance-chart', (report.sales?.monthly || []).slice(-6), [
+      { key: 'invoiced', title: 'revenue', formatter: compactMoney, color: '#CF1C00' },
+    ], { ariaLabel: 'Revenue for the latest six months. Target unavailable.' });
 
     const attentionTarget = document.getElementById('admin-overview-attention');
-    const attention = (report.insights || []).slice(0, 5);
-    attentionTarget.innerHTML = attention.length ? attention.map((item) => `
-      <article class="admin-attention-item ${escapeHtml(item.severity.toLowerCase())}">
-        <span class="admin-attention-icon">${businessInsightIcon(item.severity)}</span>
-        <div><strong>${escapeHtml(item.title)}</strong><p>${escapeHtml(item.detail)}</p></div>
-        <button class="admin-insight-department" type="button" title="Open ${escapeHtml(label(item.target))} analytics" data-analytics-target="${escapeHtml(item.target)}">${escapeHtml(item.department || label(item.target))}</button>
-      </article>
-    `).join('') : '<p class="body-sm text-muted">No deterministic workbook alerts for this period.</p>';
+    attentionTarget.innerHTML = `
+      <article class="reference-overview-alert critical"><span class="reference-overview-alert-icon">${businessInsightIcon('CRITICAL')}</span><div><strong>Overdue receivables</strong><p>Unavailable</p></div><span>Sales</span></article>
+      <article class="reference-overview-alert warning"><span class="reference-overview-alert-icon">${businessInsightIcon('WARNING')}</span><div><strong>Machine downtime</strong><p>Unavailable</p></div><span>Operations</span></article>
+      <article class="reference-overview-alert warning"><span class="reference-overview-alert-icon">${businessInsightIcon('WARNING')}</span><div><strong>Sales executives below target</strong><p>Unavailable</p></div><span>HR</span></article>
+      <article class="reference-overview-alert opportunity"><span class="reference-overview-alert-icon">${businessInsightIcon('OPPORTUNITY')}</span><div><strong>Break-even</strong><p>Unavailable</p></div><span>Overview</span></article>
+    `;
 
-    renderReportStats('admin-sales-workbook-stats', [
-      { label: 'Invoiced Sales', value: money(report.sales.invoicedAmount), context: 'Normalized workbook sale value' },
-      { label: 'Average Invoice', value: money(report.sales.averageInvoiceValue), context: 'Mean across normalized sale rows' },
-      { label: 'Sale Records', value: Number(report.sales.records).toLocaleString('en-IN'), context: `${Number(report.sales.pricedRecords).toLocaleString('en-IN')} include a recorded unit price` },
-      { label: 'Unique Customers', value: Number(report.sales.uniqueCustomers).toLocaleString('en-IN'), context: 'Normalized recorded customer names' },
-    ]);
+    const salesStatsTarget = document.getElementById('admin-sales-workbook-stats');
+    salesStatsTarget.innerHTML = `
+      <article class="sales-kpi-card positive">
+        <span>Sales</span>
+        <strong>${escapeHtml(money(report.sales.invoicedAmount))}</strong>
+        <div>${salesTrendMarkup(report.sales.trends?.sales, 'sales')}<small>${Number(report.sales.records).toLocaleString('en-IN')} workbook records</small></div>
+      </article>
+      <article class="sales-kpi-card unavailable">
+        <span>Net Profit</span>
+        <strong>Unavailable</strong>
+        <div><small>${escapeHtml(report.sales.netProfitReason || 'A complete cost ledger is required.')}</small></div>
+      </article>
+      <article class="sales-kpi-card positive">
+        <span>Avg. order value</span>
+        <strong>${escapeHtml(money(report.sales.averageInvoiceValue))}</strong>
+        <div>${salesTrendMarkup(report.sales.trends?.averageInvoiceValue, 'order value')}</div>
+      </article>
+      <article class="sales-kpi-card neutral">
+        <span>Unique customers</span>
+        <strong>${Number(report.sales.uniqueCustomers).toLocaleString('en-IN')}</strong>
+        <div>${salesTrendMarkup(report.sales.trends?.uniqueCustomers, 'customer')}</div>
+      </article>
+    `;
     renderDonutChart('admin-sales-product-donut', report.sales.products || [], {
       formatter: compactMoney,
       centerLabel: 'invoiced',
     });
-    renderHorizontalChart('admin-sales-customer-bars', (report.sales.customers || []).slice(0, 6), {
-      formatter: compactMoney,
-      emptyMessage: 'No workbook customers in this period.',
-    });
+    const customerMixTarget = document.getElementById('admin-sales-customer-mix');
+    customerMixTarget.innerHTML = `
+      <div class="sales-unavailable-donut" aria-hidden="true"><span>?</span></div>
+      <div class="sales-unavailable-copy"><strong>Classification unavailable</strong><p>${escapeHtml(report.sales.customerMixReason || 'Customer type is not recorded in the workbook.')}</p></div>
+    `;
+    renderSalesPeriodChart(report.sales.chart || report.sales.monthly || [], report.sales.chartGranularity);
+    const chartCaption = document.getElementById('admin-sales-chart-caption');
+    chartCaption.textContent = report.sales.chartGranularity === 'DAY' ? 'Daily invoiced sales from normalized workbook rows' : 'Monthly invoiced sales from normalized workbook rows';
+    renderSalesMonthOptions(report.sales.availableMonths || []);
     const priceTarget = document.getElementById('admin-sales-price-summary');
     priceTarget.innerHTML = (report.sales.products || []).length ? report.sales.products.map((row) => `
       <tr>
         <td><strong>${escapeHtml(row.name)}</strong></td>
-        <td>${Number(row.records).toLocaleString('en-IN')}</td>
-        <td>${escapeHtml(money(row.value))}</td>
-        <td>${Number(row.quantity || 0).toLocaleString('en-IN')}</td>
-        <td>${row.averageUnitPrice === null ? '<span class="text-muted">Not recorded</span>' : escapeHtml(money(row.averageUnitPrice))}</td>
+        <td>${row.averageUnitPrice === null ? '<span class="text-muted">Not comparable</span>' : `${escapeHtml(money(row.averageUnitPrice))}<small class="sales-price-unit">/${escapeHtml(row.quantityUnit || 'unit')}</small>`}</td>
       </tr>
-    `).join('') : '<tr><td colspan="5" class="text-muted">No workbook product pricing in this period.</td></tr>';
+    `).join('') : '<tr><td colspan="2" class="text-muted">No workbook product pricing in this period.</td></tr>';
+
+    document.getElementById('admin-sales-margin-table').innerHTML = `
+      <div class="sales-data-unavailable">
+        <strong>Gross margin is unavailable</strong>
+        <p>${escapeHtml(report.sales.grossMarginReason || 'Product-level cost allocation is not present in the workbook.')}</p>
+      </div>
+    `;
+    const customerTarget = document.getElementById('admin-sales-customer-table');
+    customerTarget.innerHTML = (report.sales.customers || []).slice(0, 6).map((row) => `
+      <tr>
+        <td><span class="sales-customer-avatar">${escapeHtml(customerInitials(row.name))}</span><strong>${escapeHtml(row.name)}</strong></td>
+        <td>${escapeHtml(money(row.value))}</td>
+        <td><span class="text-muted" title="${escapeHtml(report.sales.outstandingReason || 'Invoice-level receipts are unavailable.')}">Unavailable</span></td>
+      </tr>
+    `).join('') || '<tr><td colspan="3" class="text-muted">No workbook customers in this period.</td></tr>';
 
     renderReportStats('admin-finance-stats', [
       { label: 'Recorded Outflows', value: money(report.finance.recordedOutflows), context: 'Not profit, COGS, or cash balance' },
@@ -950,9 +1131,7 @@
       { label: 'Sunday Rows', value: Number(report.operations.sundayRows).toLocaleString('en-IN'), context: 'Recorded separately from production output' },
       { label: 'Material Spend', value: money(report.finance.materialPurchases), context: `${Number(report.operations.pendingPurchases).toLocaleString('en-IN')} purchases marked pending` },
     ]);
-    renderLineChart('admin-production-trend-chart', report.operations.monthlyProduction || [], [
-      { key: 'production', title: 'produced units', formatter: compactNumber, color: analyticsColors[1], area: true },
-    ], { ariaLabel: 'Monthly production output' });
+    renderStackedProductionChart('admin-production-trend-chart', report.operations.productionMix || []);
     renderHorizontalChart('admin-production-product-bars', report.operations.products || [], { formatter: compactNumber });
     renderColumnChart('admin-production-activity-chart', report.operations.monthlyActivity || [], [
       { key: 'productionEntries', title: 'production entries', color: analyticsColors[1] },
@@ -1012,6 +1191,7 @@
       state: 'ACTIVE',
       origin: state.origin,
       range: salesRange,
+      month: state.month || 'ALL',
     });
     const data = await api(`/api/admin/business-records/${type}?${params}`);
     state.page = data.pagination?.page || page;
@@ -1072,75 +1252,85 @@
   }
 
   function renderMarketingReport() {
-    const report = analytics.marketing || {};
-    const metrics = report.metrics || {};
-    renderReportStats('admin-marketing-stats', [
-      {
-        label: 'Total Leads',
-        value: Number(metrics.totalLeads || 0).toLocaleString('en-IN'),
-        context: `${Number(metrics.newLeads || 0).toLocaleString('en-IN')} currently new`,
-      },
-      {
-        label: 'Active Leads',
-        value: Number(metrics.activeLeads || 0).toLocaleString('en-IN'),
-        context: `${Number(metrics.highPriority || 0).toLocaleString('en-IN')} high priority`,
-      },
-      {
-        label: 'Conversion Rate',
-        value: percent(metrics.conversionRate),
-        context: `${Number(metrics.convertedLeads || 0).toLocaleString('en-IN')} verified conversions`,
-        tone: 'positive',
-      },
-      {
-        label: 'Follow-up Attention',
-        value: Number((metrics.dueToday || 0) + (metrics.overdueFollowUps || 0)).toLocaleString('en-IN'),
-        context: `${Number(metrics.overdueFollowUps || 0).toLocaleString('en-IN')} overdue`,
-      },
-    ]);
+    const data = marketingAnalytics;
+    if (!data) return;
+    const trendText = (item, inverse = false) => {
+      if (!item?.trend?.available) return 'No prior-period comparison';
+      const value = Number(item.trend.value || 0);
+      const favorable = inverse ? value < 0 : value > 0;
+      return `${value >= 0 ? '+' : ''}${value.toFixed(1)}% vs previous period${favorable ? '' : ''}`;
+    };
+    const unavailable = (labelText, reason) => `<article class="marketing-kpi unavailable"><span>${escapeHtml(labelText)}</span><strong>Not tracked</strong><small>${escapeHtml(reason)}</small></article>`;
+    document.getElementById('admin-marketing-stats').innerHTML = `
+      <article class="marketing-kpi positive"><span>Enquiries</span><strong>${Number(data.kpis.enquiries.value).toLocaleString('en-IN')}</strong><small>${escapeHtml(trendText(data.kpis.enquiries))}</small></article>
+      <article class="marketing-kpi warning"><span>Conversion</span><strong>${escapeHtml(percent(data.kpis.conversion.value))}</strong><small>${Number(data.kpis.conversion.numerator).toLocaleString('en-IN')} won of ${Number(data.kpis.conversion.denominator).toLocaleString('en-IN')} enquiries</small></article>
+      ${unavailable('Cost per Lead', data.kpis.costPerLead.reason)}
+      ${unavailable('Marketing Spend', data.kpis.marketingSpend.reason)}
+    `;
 
-    renderSeriesChart('admin-lead-trend-chart', report.leadTrend || [], [
-      { key: 'leads', className: 'leads', title: 'leads' },
-      { key: 'converted', className: 'converted', title: 'converted' },
-    ]);
-    renderPipeline('admin-marketing-funnel', analytics.leadPipeline || []);
-    renderBreakdown('admin-marketing-sources', (analytics.sourcePerformance || []).map((row) => ({
-      name: label(row.source),
-      detail: `${Number(row.converted).toLocaleString('en-IN')} verified conversion${row.converted === 1 ? '' : 's'} (${percent(row.conversionRate)})`,
-      value: `${Number(row.leads).toLocaleString('en-IN')} lead${row.leads === 1 ? '' : 's'}`,
-    })), 'No acquisition source data.');
-    renderBreakdown('admin-marketing-priorities', (report.priorityBreakdown || []).map((row) => ({
-      name: label(row.priority),
-      value: Number(row.count).toLocaleString('en-IN'),
-      tone: row.priority === 'HIGH' ? 'critical' : row.priority === 'MEDIUM' ? 'warning' : '',
-    })), 'No priority data.');
+    const rows = data.leadTrend || [];
+    const max = Math.max(...rows.map((row) => row.enquiries), 1);
+    const width = 760;
+    const height = 260;
+    const points = rows.map((row, index) => `${rows.length === 1 ? width / 2 : (index / (rows.length - 1)) * width},${height - ((row.enquiries / max) * 220)}`).join(' ');
+    document.getElementById('admin-lead-trend-chart').innerHTML = rows.length ? `
+      <svg viewBox="0 0 ${width} 310" role="img" aria-label="Enquiries over time">
+        <polygon class="marketing-area" points="0,${height} ${points} ${width},${height}"></polygon>
+        <polyline class="marketing-line" points="${points}"></polyline>
+        ${rows.map((row, index) => { const x = rows.length === 1 ? width / 2 : (index / (rows.length - 1)) * width; const y = height - ((row.enquiries / max) * 220); return `<circle cx="${x}" cy="${y}" r="5"><title>${escapeHtml(row.label)}: ${row.enquiries} enquiries</title></circle><text x="${x}" y="292" text-anchor="middle">${escapeHtml(row.label)}</text>`; }).join('')}
+      </svg>` : '<div class="marketing-empty">No enquiries in this period.</div>';
 
-    const followUp = report.followUpHealth || {};
-    renderBreakdown('admin-followup-health', [
-      { name: 'Overdue', value: Number(followUp.overdue || 0).toLocaleString('en-IN'), tone: 'critical' },
-      { name: 'Due Today', value: Number(followUp.dueToday || 0).toLocaleString('en-IN'), tone: 'warning' },
-      { name: 'Scheduled Later', value: Number(followUp.future || 0).toLocaleString('en-IN') },
-      { name: 'Not Scheduled', value: Number(followUp.unscheduled || 0).toLocaleString('en-IN') },
-    ], 'No follow-up data.');
+    const availableStages = (data.funnel || []).filter((stage) => stage.available);
+    const funnelMax = Math.max(...availableStages.map((stage) => stage.count), 1);
+    document.getElementById('admin-marketing-funnel').innerHTML = (data.funnel || []).map((stage, index, stages) => { const previous = stages.slice(0, index).reverse().find((item) => item.available); return stage.available ? `
+      <div class="marketing-funnel-stage stage-${index}" style="width:${Math.max((stage.count / funnelMax) * 100, 38)}%"><strong>${Number(stage.count).toLocaleString('en-IN')}</strong><span>${escapeHtml(stage.label)}</span>${previous ? `<small>${previous.count ? Math.round((stage.count / previous.count) * 100) : 0}% of previous tracked stage</small>` : ''}</div>
+    ` : `<div class="marketing-funnel-missing"><strong>${escapeHtml(stage.label)}</strong><span>${escapeHtml(stage.reason)}</span></div>`; }).join('');
 
-    const quality = report.dataQuality || {};
-    renderBreakdown('admin-marketing-quality', [
-      { name: 'Zero Quantity', value: Number(quality.zeroQuantity || 0).toLocaleString('en-IN') },
-      { name: 'Unmatched Product', value: Number(quality.unspecifiedProduct || 0).toLocaleString('en-IN') },
-      { name: 'Unassigned Leads', value: Number(quality.unassigned || 0).toLocaleString('en-IN') },
-      { name: 'Missing Follow-up', value: Number(quality.missingFollowUp || 0).toLocaleString('en-IN') },
-    ], 'No data quality exceptions.');
+    const colors = ['#06619e', '#12af00', '#cf7c00', '#d0004e', '#b73c28', '#552722', '#ffc400'];
+    let offset = 0;
+    const stops = (data.sources || []).map((row, index) => { const start = offset; offset += row.percentage; return `${colors[index % colors.length]} ${start}% ${offset}%`; }).join(', ');
+    document.getElementById('admin-marketing-sources').innerHTML = data.sources.length ? `
+      <div class="marketing-donut" style="background:conic-gradient(${stops})"><div><strong>${Number(data.kpis.enquiries.value).toLocaleString('en-IN')}</strong><span>Total Leads</span></div></div>
+      <div class="marketing-source-legend">${data.sources.map((row, index) => `<span><i style="background:${colors[index % colors.length]}"></i><b>${escapeHtml(label(row.source))}</b><small>${row.count} (${row.percentage.toFixed(1)}%)</small></span>`).join('')}</div>
+    ` : '<div class="marketing-empty">No source data in this period.</div>';
+    document.getElementById('admin-marketing-cpl').innerHTML = `<strong>Unavailable</strong><p>${escapeHtml(data.costPerLeadTrend.reason)}</p><small>Add dated marketing-expense records to enable this metric and chart.</small>`;
+    populateMarketingFilters();
+    renderMarketingLeads();
+  }
 
-    const locations = report.locationPerformance || [];
-    const locationTarget = document.getElementById('admin-location-performance');
-    locationTarget.innerHTML = locations.length ? locations.map((row) => `
-      <tr>
-        <td><strong>${escapeHtml(row.location)}</strong></td>
-        <td>${Number(row.leads).toLocaleString('en-IN')}</td>
-        <td>${Number(row.converted).toLocaleString('en-IN')} <span class="text-muted">(${escapeHtml(percent(row.conversionRate))})</span></td>
-        <td>${Number(row.requestedQuantity).toLocaleString('en-IN')}</td>
-        <td>${escapeHtml(money(row.pipelineValue))}</td>
-      </tr>
-    `).join('') : '<tr><td colspan="5" class="text-muted">No location data in this period.</td></tr>';
+  function populateMarketingFilters() {
+    const leads = marketingAnalytics?.leads || [];
+    const source = document.getElementById('marketing-source-filter');
+    const product = document.getElementById('marketing-product-filter');
+    const sourceValue = source.value;
+    const productValue = product.value;
+    source.innerHTML = '<option value="ALL">All sources</option>' + [...new Set(leads.map((lead) => lead.source))].sort().map((value) => `<option value="${escapeHtml(value)}">${escapeHtml(label(value))}</option>`).join('');
+    product.innerHTML = '<option value="ALL">All products</option>' + [...new Set(leads.map((lead) => lead.product))].sort().map((value) => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`).join('');
+    source.value = [...source.options].some((option) => option.value === sourceValue) ? sourceValue : 'ALL';
+    product.value = [...product.options].some((option) => option.value === productValue) ? productValue : 'ALL';
+  }
+
+  function renderMarketingLeads() {
+    const source = document.getElementById('marketing-source-filter')?.value || 'ALL';
+    const product = document.getElementById('marketing-product-filter')?.value || 'ALL';
+    const start = document.getElementById('marketing-start-date')?.value || '';
+    const end = document.getElementById('marketing-end-date')?.value || '';
+    const search = (document.getElementById('marketing-lead-search')?.value || '').trim().toLowerCase();
+    const rows = (marketingAnalytics?.leads || []).filter((lead) => {
+      const date = String(lead.date).slice(0, 10);
+      if (source !== 'ALL' && lead.source !== source) return false;
+      if (product !== 'ALL' && lead.product !== product) return false;
+      if (start && date < start) return false;
+      if (end && date > end) return false;
+      return !search || [lead.customerName, lead.phone, lead.location].some((value) => String(value || '').toLowerCase().includes(search));
+    });
+    document.getElementById('admin-marketing-leads').innerHTML = rows.length ? rows.map((lead) => `<tr><td>${escapeHtml(dateOnly(lead.date))}</td><td><strong>${escapeHtml(lead.customerName)}</strong><small>${escapeHtml(lead.phone || '')}</small></td><td>${escapeHtml(lead.product)}</td><td>${Number(lead.quantity).toLocaleString('en-IN')}</td><td>${escapeHtml(label(lead.priority))}</td><td><span class="admin-status ${String(lead.status).toLowerCase()}">${escapeHtml(label(lead.status))}</span></td><td>${lead.followUp ? escapeHtml(dateOnly(lead.followUp)) : 'Not scheduled'}</td><td>${escapeHtml(label(lead.source))}</td><td><button class="admin-link-button inline" type="button" data-view-lead="${lead.id}">Edit</button></td></tr>`).join('') : '<tr><td colspan="9" class="text-muted">No matching leads.</td></tr>';
+    document.getElementById('admin-marketing-lead-summary').textContent = `${rows.length.toLocaleString('en-IN')} of ${(marketingAnalytics?.leads || []).length.toLocaleString('en-IN')} records shown`;
+  }
+
+  async function loadMarketingAnalytics() {
+    marketingAnalytics = await api(`/api/admin/marketing-analytics?range=${encodeURIComponent(salesRange)}`);
+    renderMarketingReport();
   }
 
   function renderSalesReport() {
@@ -1909,16 +2099,66 @@
   }
 
   function setAnalyticsTab(name) {
+    const retiredTargets = {
+      'executive-overview': 'overview',
+      finance: 'accounts',
+      team: 'hr',
+      insights: 'overview',
+    };
+    name = retiredTargets[name] || name;
+    const title = document.getElementById('admin-analytics-title');
+    const description = document.getElementById('admin-analytics-description');
+    const health = document.getElementById('admin-analytics-health');
+    const businessImportButton = document.querySelector('[data-open-business-import]');
+    const analyticsView = document.getElementById('admin-view-analytics');
+    const isSales = name === 'sales';
+    const isMarketing = name === 'marketing';
+    if (title) title.textContent = isSales ? 'Sales Analytics' : isMarketing ? 'Marketing' : name === 'operations' ? 'Operations Analytics' : name === 'accounts' ? 'Accounts Analytics' : name === 'hr' ? 'HR Management' : name === 'executive-overview' ? 'Executive Overview' : 'Business Analytics';
+    if (description) description.textContent = isSales
+      ? 'Workbook sales, customer revenue and product pricing from normalized records.'
+      : isMarketing
+        ? 'Application enquiries and lead management, kept separate from workbook analytics.'
+        : name === 'operations'
+          ? 'Workbook production and material-purchase records, without inferred stock, capacity, or product costs.'
+          : name === 'accounts'
+            ? 'Recognized expenses and explicit pending purchase obligations from normalized workbook records.'
+            : name === 'hr'
+              ? 'Workforce view limited to aggregate workbook labour-payment records.'
+            : name === 'executive-overview'
+              ? 'A concise cross-department view powered only by normalized workbook records.'
+      : 'Workbook-backed performance across sales, finance, production and labour.';
+    if (health) health.querySelector('strong').textContent = isSales ? 'Coverage limited' : isMarketing ? 'Lead data only' : name === 'executive-overview' ? 'Unavailable' : 'Data limited';
+    if (businessImportButton) businessImportButton.hidden = isMarketing;
+    analyticsView?.classList.toggle('sales-active', isSales);
+    analyticsView?.classList.toggle('overview-reference-active', name === 'overview');
     document.querySelectorAll('[data-analytics-tab]').forEach((button) => {
       const active = button.dataset.analyticsTab === name;
       button.classList.toggle('active', active);
       button.setAttribute('aria-selected', String(active));
     });
     document.querySelectorAll('.admin-analytics-panel').forEach((panel) => {
-      const active = panel.id === `admin-analytics-${name}`;
+      const active = !panel.classList.contains('admin-analytics-retired') && panel.id === `admin-analytics-${name}`;
       panel.classList.toggle('active', active);
       panel.hidden = !active;
     });
+    if (isMarketing && !marketingAnalytics) loadMarketingAnalytics().catch((error) => showToast(error.message));
+  }
+
+  function setAdminTheme(theme) {
+    const isDark = theme === 'dark';
+    document.body.classList.toggle('admin-dark-theme', isDark);
+    const button = document.getElementById('admin-theme-toggle');
+    if (button) {
+      const nextTheme = isDark ? 'light' : 'dark';
+      button.setAttribute('aria-label', `Switch to ${nextTheme} theme`);
+      button.title = `Switch to ${nextTheme} theme`;
+      button.classList.toggle('active', isDark);
+    }
+    try {
+      localStorage.setItem('ssb_admin_theme', isDark ? 'dark' : 'light');
+    } catch (_error) {
+      // Theme persistence is optional when browser storage is unavailable.
+    }
   }
 
   function fieldValue(record, name, type, fallback = '') {
@@ -2203,6 +2443,7 @@
 
     if (name === 'leads') loadLeads().catch((error) => showToast(error.message));
     if (name === 'analytics') {
+      setAnalyticsTab(document.querySelector('[data-analytics-tab].active')?.dataset.analyticsTab || 'overview');
       loadAnalytics().catch((error) => showToast(error.message));
     }
     if (name === 'settings') loadHistory().catch((error) => showToast(error.message));
@@ -2559,6 +2800,13 @@
   }
 
   async function bootstrap() {
+    let savedTheme = 'light';
+    try {
+      savedTheme = localStorage.getItem('ssb_admin_theme') === 'dark' ? 'dark' : 'light';
+    } catch (_error) {
+      savedTheme = 'light';
+    }
+    setAdminTheme(savedTheme);
     if (!getToken()) {
       showLogin();
       return;
@@ -2600,6 +2848,11 @@
   });
 
   document.addEventListener('click', (event) => {
+    if (event.target.closest('#admin-theme-toggle')) {
+      setAdminTheme(document.body.classList.contains('admin-dark-theme') ? 'light' : 'dark');
+      return;
+    }
+
     const navButton = event.target.closest('[data-view]');
     if (navButton) {
       if (salesGridEditing && !confirmCancelSalesGridEdit()) return;
@@ -2827,7 +3080,23 @@
     if (event.target.id === 'admin-analytics-range') {
       salesRange = event.target.value;
       Object.values(businessLogState).forEach((state) => { state.page = 1; });
+      businessLogState.sales.month = 'ALL';
       await loadAnalytics().catch((error) => showToast(error.message));
+      if (document.querySelector('[data-analytics-tab="marketing"]')?.classList.contains('active')) {
+        await loadMarketingAnalytics().catch((error) => showToast(error.message));
+      }
+      return;
+    }
+
+    if (['marketing-source-filter', 'marketing-product-filter', 'marketing-start-date', 'marketing-end-date'].includes(event.target.id)) {
+      renderMarketingLeads();
+      return;
+    }
+
+    if (event.target.id === 'admin-sales-log-month') {
+      businessLogState.sales.month = event.target.value;
+      businessLogState.sales.page = 1;
+      await loadBusinessLog('sales', 1).catch((error) => showToast(error.message));
       return;
     }
 
@@ -2943,6 +3212,11 @@
     }, 250);
   });
 
+  document.getElementById('marketing-lead-search').addEventListener('input', (event) => {
+    window.clearTimeout(event.target.searchTimer);
+    event.target.searchTimer = window.setTimeout(renderMarketingLeads, 180);
+  });
+
   ['sale-quantity', 'sale-unit-price'].forEach((id) => {
     document.getElementById(id).addEventListener('input', updateSaleTotal);
   });
@@ -2993,7 +3267,7 @@
         method: 'POST',
         body: JSON.stringify(payload),
       });
-      await Promise.all([loadDashboard(), loadLeads()]);
+      await Promise.all([loadDashboard(), loadLeads(), marketingAnalytics ? loadMarketingAnalytics() : Promise.resolve()]);
       closeLeadModal();
       showToast('Lead created successfully');
       openView('leads');

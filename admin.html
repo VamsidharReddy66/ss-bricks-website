@@ -122,14 +122,16 @@
     <section class="admin-view" id="admin-view-analytics">
       <div class="admin-section-head admin-analytics-head">
         <div>
-          <h2 class="h-md">Business Analytics</h2>
-          <p class="body-sm text-muted">KPIs and charts use imported workbook data only. Logs can also hold clearly identified manual admin entries; website and CSV leads remain excluded.</p>
+          <h2 class="h-md" id="admin-analytics-title">Business Analytics</h2>
+          <p class="body-sm text-muted" id="admin-analytics-description">KPIs and charts use imported workbook data only. Logs can also hold clearly identified manual admin entries; website and CSV leads remain excluded.</p>
         </div>
         <div class="admin-action-row compact admin-analytics-actions">
+          <span class="admin-health-indicator" id="admin-analytics-health"><small>Health</small><strong>Data limited</strong></span>
           <button class="btn btn-outline btn-sm" type="button" data-open-business-import>Import Business XLSX</button>
           <label class="form-field admin-range-field">
             <span class="form-label">Period</span>
             <select class="form-select" id="admin-analytics-range">
+              <option value="LAST_7_DAYS">Last 1 week</option>
               <option value="LAST_30_DAYS">Last 30 days</option>
               <option value="LAST_90_DAYS">Last 90 days</option>
               <option value="LAST_6_MONTHS" selected>Last 6 months</option>
@@ -137,216 +139,206 @@
               <option value="ALL">All time</option>
             </select>
           </label>
+          <button class="admin-theme-toggle" id="admin-theme-toggle" type="button" aria-label="Switch to dark theme" title="Switch theme">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.2 15.2A8.5 8.5 0 0 1 8.8 3.8 8.6 8.6 0 1 0 20.2 15.2Z"></path></svg>
+          </button>
         </div>
       </div>
 
       <div class="admin-analytics-tabs" role="tablist" aria-label="Analytics views">
         <button class="admin-analytics-tab active" type="button" role="tab" aria-selected="true" data-analytics-tab="overview">Overview</button>
-        <button class="admin-analytics-tab" type="button" role="tab" aria-selected="false" data-analytics-tab="marketing" hidden>Marketing</button>
+        <button class="admin-analytics-tab" type="button" role="tab" aria-selected="false" data-analytics-tab="marketing">Marketing</button>
         <button class="admin-analytics-tab" type="button" role="tab" aria-selected="false" data-analytics-tab="sales">Sales</button>
-        <button class="admin-analytics-tab" type="button" role="tab" aria-selected="false" data-analytics-tab="finance">Finance</button>
         <button class="admin-analytics-tab" type="button" role="tab" aria-selected="false" data-analytics-tab="operations">Operations</button>
-        <button class="admin-analytics-tab" type="button" role="tab" aria-selected="false" data-analytics-tab="team">Labour</button>
-        <button class="admin-analytics-tab" type="button" role="tab" aria-selected="false" data-analytics-tab="insights">Insights</button>
+        <button class="admin-analytics-tab" type="button" role="tab" aria-selected="false" data-analytics-tab="accounts">Accounts</button>
+        <button class="admin-analytics-tab" type="button" role="tab" aria-selected="false" data-analytics-tab="hr">HR Management</button>
       </div>
 
       <div class="admin-analytics-panel active" id="admin-analytics-overview" role="tabpanel">
-        <div class="admin-stats-grid admin-analytics-stats" id="admin-analytics-stats"></div>
-
-        <div class="admin-availability-note admin-import-trust" id="admin-business-import-trust"></div>
-
-        <section class="admin-attention-section" aria-labelledby="admin-attention-title">
-          <div class="admin-data-panel-head">
-            <div>
-              <h3 class="h-sm" id="admin-attention-title">Needs Attention</h3>
-              <p class="body-sm text-muted">Deterministic findings from workbook records and reconciliation checks.</p>
-            </div>
+        <div class="reference-overview">
+          <div class="reference-overview-top">
+            <section class="reference-overview-kpis" id="admin-analytics-stats" aria-label="Overview metrics"></section>
+            <article class="reference-overview-chart-card">
+              <h3>Revenue vs target, 6 months</h3>
+              <div class="admin-line-chart reference-overview-chart" id="admin-overview-performance-chart"></div>
+              <div class="reference-overview-legend" aria-label="Chart legend"><span><i class="revenue"></i>Revenue</span><span><i class="target"></i>Target unavailable</span></div>
+            </article>
           </div>
-          <div class="admin-attention-list" id="admin-overview-attention"></div>
-        </section>
-
-        <div class="admin-analytics-grid">
-          <article class="admin-data-panel admin-data-panel-wide">
-            <div class="admin-data-panel-head">
-              <div>
-                <h3 class="h-sm">Sales vs Recorded Outflows</h3>
-                <p class="body-sm text-muted">Monthly workbook invoiced sales and recorded outflows. The difference is not net profit.</p>
-              </div>
-              <div class="admin-chart-legend" aria-label="Chart legend">
-                <span><i class="invoiced"></i> Invoiced</span>
-                <span><i class="outflows"></i> Recorded outflows</span>
-              </div>
-            </div>
-            <div class="admin-line-chart" id="admin-overview-performance-chart"></div>
-          </article>
-
-          <article class="admin-data-panel">
-            <div class="admin-data-panel-head">
-              <div>
-                <h3 class="h-sm">Recorded Outflow Mix</h3>
-                <p class="body-sm text-muted">Where workbook-recorded payments and obligations are concentrated.</p>
-              </div>
-            </div>
-            <div class="admin-donut-layout" id="admin-overview-outflow-donut"></div>
-          </article>
+          <section class="reference-overview-attention" aria-labelledby="admin-attention-title">
+            <h3 id="admin-attention-title">Needs your attention</h3>
+            <div class="reference-overview-alerts" id="admin-overview-attention"></div>
+          </section>
         </div>
+      </div>
 
-        <div class="admin-analytics-grid">
-          <article class="admin-data-panel admin-data-panel-wide">
-            <div class="admin-data-panel-head">
-              <div>
-                <h3 class="h-sm">Revenue by Product</h3>
-                <p class="body-sm text-muted">Workbook invoiced value grouped by the exact normalized product name.</p>
-              </div>
-            </div>
-            <div class="admin-horizontal-chart" id="admin-overview-product-bars"></div>
-          </article>
+      <div class="admin-analytics-panel admin-analytics-retired" id="admin-analytics-executive-overview" role="tabpanel" aria-hidden="true" hidden>
+        <div class="executive-overview-dashboard">
+          <div class="executive-overview-hero-grid">
+            <section class="executive-overview-kpis" id="admin-executive-overview-kpis" aria-label="Executive overview key performance indicators"></section>
 
-          <article class="admin-data-panel">
-            <div class="admin-data-panel-head">
-              <div>
-                <h3 class="h-sm">Data Coverage</h3>
-                <p class="body-sm text-muted">Normalized workbook records included in this analysis.</p>
+            <article class="executive-overview-chart-card">
+              <div class="executive-overview-card-head">
+                <div><h3>Revenue vs Target, 6 months</h3><p>Workbook invoiced sales; no approved revenue targets are recorded.</p></div>
+                <span class="executive-overview-fixed-period">Fixed 6-month context</span>
               </div>
-            </div>
-            <div class="admin-coverage-list" id="admin-analytics-coverage"></div>
-          </article>
-        </div>
+              <div class="admin-line-chart executive-overview-chart" id="admin-executive-revenue-chart"></div>
+              <div class="executive-overview-legend" aria-label="Chart legend">
+                <span><i class="revenue"></i> Revenue</span>
+                <span class="unavailable"><i class="target"></i> Target unavailable</span>
+              </div>
+              <p class="sr-only" id="admin-executive-chart-summary"></p>
+            </article>
+          </div>
 
-        <div class="admin-analytics-grid admin-analytics-grid-single">
-          <article class="admin-data-panel">
-            <div class="admin-data-panel-head">
-              <div>
-                <h3 class="h-sm">Top Customers</h3>
-                <p class="body-sm text-muted">Workbook customers ranked by invoiced value. Historical outstanding balances are not inferred.</p>
-              </div>
-            </div>
-            <div class="admin-table-wrap admin-table-flat">
-              <table class="admin-table admin-analytics-table">
-                <thead>
-                  <tr>
-                    <th>Customer</th>
-                    <th>Invoiced</th>
-                    <th>Records</th>
-                  </tr>
-                </thead>
-                <tbody id="admin-outstanding-accounts"></tbody>
-              </table>
-            </div>
-          </article>
+          <section class="executive-overview-attention" aria-labelledby="admin-executive-attention-title">
+            <h3 id="admin-executive-attention-title">Needs your attention</h3>
+            <p class="executive-overview-attention-intro">Prioritized, deterministic findings from normalized workbook records.</p>
+            <div class="executive-overview-alerts" id="admin-executive-overview-alerts"></div>
+          </section>
+
+          <div class="admin-availability-note" id="admin-executive-overview-coverage"></div>
         </div>
       </div>
 
       <div class="admin-analytics-panel" id="admin-analytics-marketing" role="tabpanel" hidden>
-        <div class="admin-report-intro">
-          <div>
-            <h3 class="h-sm">Marketing and Lead Analytics</h3>
-            <p class="body-sm text-muted">Lead acquisition, funnel health, follow-ups, locations, and data quality.</p>
+        <div class="marketing-reference-dashboard">
+          <div class="marketing-kpi-grid" id="admin-marketing-stats"></div>
+
+          <h3 class="marketing-section-title">Enquiries &amp; conversion</h3>
+          <div class="marketing-chart-grid">
+            <article class="marketing-card marketing-card-wide">
+              <div class="marketing-card-heading"><h3>Leads</h3><p id="admin-marketing-lead-caption">Application enquiries for the selected period</p></div>
+              <div class="marketing-line-chart" id="admin-lead-trend-chart"></div>
+            </article>
+            <article class="marketing-card">
+              <div class="marketing-card-heading"><h3>Conversion funnel</h3><p id="admin-marketing-funnel-caption">Status progression from application leads</p></div>
+              <div class="marketing-funnel" id="admin-marketing-funnel"></div>
+            </article>
           </div>
-        </div>
-        <div class="admin-stats-grid admin-analytics-stats" id="admin-marketing-stats"></div>
 
-        <div class="admin-analytics-grid">
-          <article class="admin-data-panel admin-data-panel-wide">
-            <div class="admin-data-panel-head">
-              <div>
-                <h3 class="h-sm">Lead Trend</h3>
-                <p class="body-sm text-muted">New leads and verified conversions by month.</p>
-              </div>
-              <div class="admin-chart-legend" aria-label="Chart legend">
-                <span><i class="leads"></i> Leads</span>
-                <span><i class="converted"></i> Converted</span>
-              </div>
-            </div>
-            <div class="admin-monthly-chart" id="admin-lead-trend-chart"></div>
-          </article>
+          <div class="marketing-chart-grid marketing-chart-grid-even">
+            <article class="marketing-card">
+              <div class="marketing-card-heading"><h3>Leads by source</h3><p>Application lead records only</p></div>
+              <div class="marketing-donut-layout" id="admin-marketing-sources"></div>
+            </article>
+            <article class="marketing-card">
+              <div class="marketing-card-heading"><h3>Cost per Lead</h3><p>Marketing spend divided by qualifying enquiries</p></div>
+              <div class="marketing-unavailable" id="admin-marketing-cpl"></div>
+            </article>
+          </div>
 
-          <article class="admin-data-panel">
-            <div class="admin-data-panel-head">
-              <div>
-                <h3 class="h-sm">Funnel by Stage</h3>
-                <p class="body-sm text-muted">Lead movement across the selected period.</p>
+          <article class="marketing-card marketing-lead-card">
+            <div class="marketing-lead-head">
+              <div><h3>Lead Management</h3><p>Independent CRM records; excluded from workbook analytics.</p></div>
+              <div class="admin-action-row compact">
+                <button class="btn btn-outline btn-sm" type="button" data-open-import-modal>Import CSV</button>
+                <button class="btn btn-maroon btn-sm" type="button" data-open-lead-modal>Add Lead</button>
               </div>
             </div>
-            <div class="admin-pipeline-chart" id="admin-marketing-funnel"></div>
-          </article>
-        </div>
-
-        <div class="admin-analytics-grid">
-          <article class="admin-data-panel admin-data-panel-wide">
-            <div class="admin-data-panel-head">
-              <div>
-                <h3 class="h-sm">Channel Performance</h3>
-                <p class="body-sm text-muted">Lead volume and verified conversion by acquisition source.</p>
-              </div>
+            <div class="marketing-lead-filters">
+              <label><span>Source</span><select id="marketing-source-filter"><option value="ALL">All sources</option></select></label>
+              <label><span>Product</span><select id="marketing-product-filter"><option value="ALL">All products</option></select></label>
+              <label><span>Customer type</span><select disabled title="Customer type is not recorded"><option>Not tracked</option></select></label>
+              <label><span>Start date</span><input type="date" id="marketing-start-date" /></label>
+              <label><span>End date</span><input type="date" id="marketing-end-date" /></label>
+              <label class="marketing-search"><span>Search</span><input type="search" id="marketing-lead-search" placeholder="Name, phone, or district" /></label>
             </div>
-            <div class="admin-breakdown-list" id="admin-marketing-sources"></div>
-          </article>
-          <article class="admin-data-panel">
-            <div class="admin-data-panel-head">
-              <div>
-                <h3 class="h-sm">Priority Mix</h3>
-                <p class="body-sm text-muted">Lead distribution by recorded priority.</p>
-              </div>
-            </div>
-            <div class="admin-breakdown-list" id="admin-marketing-priorities"></div>
-          </article>
-        </div>
-
-        <div class="admin-analytics-grid">
-          <article class="admin-data-panel admin-data-panel-wide">
-            <div class="admin-data-panel-head">
-              <div>
-                <h3 class="h-sm">Location Performance</h3>
-                <p class="body-sm text-muted">Demand concentration and measurable pipeline by customer location.</p>
-              </div>
-            </div>
-            <div class="admin-table-wrap admin-table-flat">
-              <table class="admin-table admin-analytics-table">
-                <thead>
-                  <tr>
-                    <th>Location</th>
-                    <th>Leads</th>
-                    <th>Converted</th>
-                    <th>Requested</th>
-                    <th>Pipeline</th>
-                  </tr>
-                </thead>
-                <tbody id="admin-location-performance"></tbody>
+            <div class="admin-table-wrap marketing-table-wrap">
+              <table class="admin-table marketing-lead-table">
+                <thead><tr><th>Date</th><th>Customer name</th><th>Type of bricks</th><th>Quantity</th><th>Priority</th><th>Status</th><th>Follow-up</th><th>Source</th><th>Action</th></tr></thead>
+                <tbody id="admin-marketing-leads"></tbody>
               </table>
             </div>
+            <p class="marketing-table-summary" id="admin-marketing-lead-summary"></p>
           </article>
-
-          <div class="admin-report-stack">
-            <article class="admin-data-panel">
-              <div class="admin-data-panel-head">
-                <div>
-                  <h3 class="h-sm">Follow-up Health</h3>
-                  <p class="body-sm text-muted">Open lead follow-up readiness.</p>
-                </div>
-              </div>
-              <div class="admin-breakdown-list" id="admin-followup-health"></div>
-            </article>
-            <article class="admin-data-panel">
-              <div class="admin-data-panel-head">
-                <div>
-                  <h3 class="h-sm">Lead Data Quality</h3>
-                  <p class="body-sm text-muted">Records that need completion or assignment.</p>
-                </div>
-              </div>
-              <div class="admin-breakdown-list" id="admin-marketing-quality"></div>
-            </article>
-          </div>
         </div>
       </div>
 
       <div class="admin-analytics-panel" id="admin-analytics-sales" role="tabpanel" hidden>
-        <div class="admin-report-intro">
-          <div>
-            <h3 class="h-sm">Sales and Customer Analysis</h3>
-            <p class="body-sm text-muted">Workbook invoices, product mix, customer concentration, and recorded pricing. Collections are not inferred.</p>
+        <div class="sales-reference-dashboard">
+          <div class="sales-reference-top-grid">
+            <div class="sales-kpi-grid" id="admin-sales-workbook-stats"></div>
+
+            <article class="sales-reference-card sales-mix-card">
+              <div class="sales-card-heading">
+                <h3>Product Revenue Mix</h3>
+                <p>Share of workbook invoiced sales</p>
+              </div>
+              <div class="admin-donut-layout sales-donut-layout" id="admin-sales-product-donut"></div>
+            </article>
+
+            <article class="sales-reference-card sales-mix-card">
+              <div class="sales-card-heading">
+                <h3>Customer Mix</h3>
+                <p>Customer type is not recorded in the workbook</p>
+              </div>
+              <div class="sales-unavailable-visual" id="admin-sales-customer-mix"></div>
+            </article>
           </div>
+
+          <article class="sales-reference-card sales-chart-card">
+            <div class="sales-card-heading sales-card-heading-row">
+              <div>
+                <h3>Sales</h3>
+                <p id="admin-sales-chart-caption">Invoiced value for the selected period</p>
+              </div>
+              <span class="sales-chart-unit">INR</span>
+            </div>
+            <div class="sales-reference-chart" id="admin-sales-period-chart"></div>
+          </article>
+
+          <div class="sales-reference-lower-grid">
+            <article class="sales-reference-card sales-table-card">
+              <div class="sales-card-heading"><h3>Average Sale Price</h3><p>Quantity-weighted recorded unit price</p></div>
+              <div class="sales-compact-table-wrap">
+                <table class="sales-compact-table">
+                  <thead><tr><th>Product</th><th>Avg. Price</th></tr></thead>
+                  <tbody id="admin-sales-price-summary"></tbody>
+                </table>
+              </div>
+            </article>
+
+            <article class="sales-reference-card sales-table-card">
+              <div class="sales-card-heading"><h3>Gross Margin</h3><p>Product-level cost allocation required</p></div>
+              <div class="sales-unavailable-panel" id="admin-sales-margin-table"></div>
+            </article>
+
+            <article class="sales-reference-card sales-table-card sales-customers-card">
+              <div class="sales-card-heading"><h3>Top Customers</h3><p>Ranked by workbook invoiced value</p></div>
+              <div class="sales-compact-table-wrap sales-customer-scroll">
+                <table class="sales-compact-table sales-customer-table">
+                  <thead><tr><th>Customer</th><th>Revenue</th><th>Outstanding</th></tr></thead>
+                  <tbody id="admin-sales-customer-table"></tbody>
+                </table>
+              </div>
+            </article>
+          </div>
+
+          <article class="sales-reference-card sales-log-card admin-report-panel">
+            <div class="sales-log-heading">
+              <div><h3>Full Sales Log</h3><p>Workbook and separately labeled manual ledger entries</p></div>
+              <div class="sales-log-primary-actions">
+                <button class="btn btn-dark btn-sm" type="button" data-open-business-record="sales" aria-label="Add sales entry">+ Add entry</button>
+                <label class="sr-only" for="admin-sales-log-month">Sales log month</label>
+                <select class="form-select sales-month-select" id="admin-sales-log-month" aria-label="Sales log month"><option value="ALL">All visible months</option></select>
+              </div>
+            </div>
+            <div class="sales-log-secondary-actions">
+              <select class="form-select admin-log-origin" data-business-log-origin="sales" aria-label="Sales log source"><option value="ALL">All sources</option><option value="XLSX_IMPORT">Workbook only</option><option value="MANUAL">Manual only</option></select>
+              <input class="form-input admin-log-search" type="search" data-business-log-search="sales" placeholder="Search customer, product, or location" aria-label="Search sales log" />
+            </div>
+            <div class="sales-log-table-shell">
+              <div class="admin-table-wrap admin-table-flat sales-log-scroll">
+                <table class="admin-table admin-analytics-table sales-reference-log-table">
+                  <thead><tr><th>Date</th><th>Customer name</th><th>Type of bricks</th><th>No. of bricks</th><th>Unit Price</th><th>Payable</th><th>Payment status</th><th>Actions</th></tr></thead>
+                  <tbody id="admin-business-sales-log"></tbody>
+                </table>
+              </div>
+              <div class="admin-pagination" data-business-log-pagination="sales"></div>
+            </div>
+          </article>
         </div>
+
         <div data-application-sales-report hidden>
           <button type="button" id="admin-edit-sales-grid"></button>
           <button type="button" id="admin-save-sales-grid"></button>
@@ -357,32 +349,6 @@
           <div id="admin-sales-status-breakdown"></div>
           <div id="admin-sales-type-breakdown"></div>
           <table><tbody id="admin-top-customers"></tbody></table>
-        </div>
-
-        <div class="admin-stats-grid admin-analytics-stats" id="admin-sales-workbook-stats"></div>
-        <div class="admin-analytics-grid">
-          <article class="admin-data-panel admin-data-panel-wide">
-            <div class="admin-data-panel-head"><div><h3 class="h-sm">Monthly Invoiced Sales</h3><p class="body-sm text-muted">Workbook invoiced value by reporting month.</p></div></div>
-            <div class="admin-column-chart" id="admin-sales-monthly-chart"></div>
-          </article>
-          <article class="admin-data-panel">
-            <div class="admin-data-panel-head"><div><h3 class="h-sm">Product Revenue Mix</h3><p class="body-sm text-muted">Share of workbook invoiced sales.</p></div></div>
-            <div class="admin-donut-layout" id="admin-sales-product-donut"></div>
-          </article>
-        </div>
-
-        <div class="admin-analytics-grid">
-          <article class="admin-data-panel admin-data-panel-wide">
-            <div class="admin-data-panel-head"><div><h3 class="h-sm">Product Price Summary</h3><p class="body-sm text-muted">Average of explicitly recorded per-unit prices; no target price or margin is assumed.</p></div></div>
-            <div class="admin-table-wrap admin-table-flat"><table class="admin-table admin-analytics-table">
-              <thead><tr><th>Product</th><th>Invoices</th><th>Invoiced</th><th>Quantity (loads)</th><th>Avg recorded price</th></tr></thead>
-              <tbody id="admin-sales-price-summary"></tbody>
-            </table></div>
-          </article>
-          <article class="admin-data-panel">
-            <div class="admin-data-panel-head"><div><h3 class="h-sm">Top Customers</h3><p class="body-sm text-muted">Ranked by workbook invoiced value.</p></div></div>
-            <div class="admin-horizontal-chart compact" id="admin-sales-customer-bars"></div>
-          </article>
         </div>
 
         <h3 class="admin-ledger-title" hidden>Unified Sales Ledger</h3>
@@ -436,29 +402,9 @@
         </div>
         <div class="admin-pagination" id="admin-sales-pagination" hidden></div>
 
-        <article class="admin-data-panel admin-report-panel">
-          <div class="admin-data-panel-head">
-            <div>
-              <h3 class="h-sm">Sales Log</h3>
-              <p class="body-sm text-muted">Workbook invoices and separately labeled manual sales. Manual rows do not change workbook-only KPIs.</p>
-            </div>
-            <div class="admin-log-controls">
-              <select class="form-select admin-log-origin" data-business-log-origin="sales" aria-label="Sales log source"><option value="ALL">All sources</option><option value="XLSX_IMPORT">Workbook only</option><option value="MANUAL">Manual only</option></select>
-              <input class="form-input admin-log-search" type="search" data-business-log-search="sales" placeholder="Search sales" />
-              <button class="btn btn-maroon btn-sm" type="button" data-open-business-record="sales">Add Sale</button>
-            </div>
-          </div>
-          <div class="admin-table-wrap admin-table-flat">
-            <table class="admin-table admin-analytics-table">
-              <thead><tr><th>Date</th><th>Customer</th><th>Product</th><th>Quantity</th><th>Invoiced</th><th>Source</th><th>Actions</th></tr></thead>
-              <tbody id="admin-business-sales-log"></tbody>
-            </table>
-          </div>
-          <div class="admin-pagination" data-business-log-pagination="sales"></div>
-        </article>
       </div>
 
-      <div class="admin-analytics-panel" id="admin-analytics-finance" role="tabpanel" hidden>
+      <div class="admin-analytics-panel admin-analytics-retired" id="admin-analytics-finance" role="tabpanel" aria-hidden="true" hidden>
         <div class="admin-report-intro">
           <div>
             <h3 class="h-sm">Finance and Recorded Outflows</h3>
@@ -593,18 +539,17 @@
       </div>
 
       <div class="admin-analytics-panel" id="admin-analytics-operations" role="tabpanel" hidden>
-        <div class="admin-report-intro">
-          <div>
-            <h3 class="h-sm">Operations and Production</h3>
-            <p class="body-sm text-muted">Production output, no-production records, and material purchasing from the workbook.</p>
+        <div class="operations-reference-dashboard">
+          <div class="operations-summary-grid">
+            <article class="operations-reference-card"><h3>Closing Stock</h3><div class="operations-unavailable"><strong>Not available</strong><p>Opening stock, dispatches, adjustments, and usable closing-stock snapshots are not recorded.</p></div></article>
+            <article class="operations-reference-card"><h3>Capacity Utilisation</h3><div class="operations-unavailable"><strong>Not available</strong><p>Rated line capacity and qualifying shifts are not recorded.</p></div></article>
+            <article class="operations-reference-card"><h3>Inventory</h3><div class="operations-unavailable"><strong>Status unavailable</strong><p>Purchases are recorded, but current quantities, reorder points, safety stock, and target stock are not.</p></div></article>
           </div>
-          <button class="btn btn-maroon btn-sm" type="button" data-open-business-record="production" hidden>Add Production Record</button>
-        </div>
-        <div class="admin-stats-grid admin-analytics-stats" id="admin-operations-stats"></div>
+          <div class="admin-stats-grid admin-analytics-stats" id="admin-operations-stats"></div>
 
         <div class="admin-analytics-grid">
           <article class="admin-data-panel admin-data-panel-wide">
-            <div class="admin-data-panel-head"><div><h3 class="h-sm">Monthly Production</h3><p class="body-sm text-muted">Recorded production line items by reporting month.</p></div></div>
+            <div class="admin-data-panel-head"><div><h3 class="h-sm" id="admin-production-mix-title">Production Mix</h3><p class="body-sm text-muted">Completed workbook production grouped by the selected period.</p></div></div>
             <div class="admin-line-chart" id="admin-production-trend-chart"></div>
           </article>
           <article class="admin-data-panel">
@@ -612,6 +557,11 @@
             <div class="admin-horizontal-chart compact" id="admin-production-product-bars"></div>
           </article>
         </div>
+
+        <article class="operations-reference-card operations-cost-card">
+          <h3>Cost per 1,000 Units: Actual vs Standard</h3>
+          <div class="operations-unavailable"><strong>Cost comparison unavailable</strong><p>The workbook does not allocate material, labour, power, and overhead by product and contains no approved standard-cost versions. Recorded purchase and labour totals are not treated as product cost.</p></div>
+        </article>
 
         <div class="admin-analytics-grid">
           <article class="admin-data-panel admin-data-panel-wide">
@@ -631,6 +581,17 @@
             <tbody id="admin-production-log"></tbody>
           </table></div><div class="admin-pagination" data-business-log-pagination="production"></div>
         </article>
+
+        <article class="admin-data-panel admin-report-panel operations-log-card">
+          <div class="admin-data-panel-head"><div><h3 class="h-sm">Inventory Log</h3><p class="body-sm text-muted">Material purchases. Quantity and price are displayed exactly as normalized; unsupported unit conversions are not inferred.</p></div><div class="admin-log-controls"><select class="form-select admin-log-origin" data-business-log-origin="purchases" aria-label="Inventory log source"><option value="ALL">All sources</option><option value="XLSX_IMPORT">Workbook only</option><option value="MANUAL">Manual only</option></select><input class="form-input admin-log-search" type="search" data-business-log-search="purchases" placeholder="Search materials or vendors" /><button class="btn btn-maroon btn-sm" type="button" data-open-business-record="purchases">Add Entry</button></div></div>
+          <div class="admin-table-wrap admin-table-flat"><table class="admin-table admin-analytics-table">
+            <thead><tr><th>Date</th><th>Material</th><th>Price per Unit</th><th>Quantity</th><th>Recorded Total</th><th>Vendor</th><th>Source</th><th>Actions</th></tr></thead>
+            <tbody id="admin-operations-inventory-log"></tbody>
+          </table></div>
+        </article>
+
+        <div class="admin-availability-note" id="admin-operations-coverage"></div>
+        </div>
 
         <div class="admin-analytics-grid" data-application-operations hidden>
           <article class="admin-data-panel admin-data-panel-wide">
@@ -715,10 +676,39 @@
             <div class="admin-price-change-list" id="admin-price-changes"></div>
           </article>
         </div>
-        <div class="admin-availability-note" id="admin-operations-coverage"></div>
       </div>
 
-      <div class="admin-analytics-panel" id="admin-analytics-team" role="tabpanel" hidden>
+      <div class="admin-analytics-panel" id="admin-analytics-accounts" role="tabpanel" hidden>
+        <div class="accounts-reference-dashboard">
+          <div class="accounts-kpi-grid" id="admin-accounts-kpis"></div>
+          <div class="accounts-main-grid">
+            <div class="accounts-balance-stack">
+              <article class="accounts-card accounts-balance-card"><div class="accounts-card-head"><h3>Payables</h3><span id="admin-accounts-payables-asof"></span></div><div class="accounts-balance-head"><span>Counterparty</span><span>Payable</span></div><div class="accounts-balance-list" id="admin-accounts-payables"></div></article>
+              <article class="accounts-card accounts-balance-card"><div class="accounts-card-head"><h3>Receivables</h3><span id="admin-accounts-receivables-asof"></span></div><div class="accounts-balance-head"><span>Customer</span><span>Receivable</span></div><div class="accounts-balance-list" id="admin-accounts-receivables"></div></article>
+            </div>
+            <article class="accounts-card accounts-expense-types"><div class="accounts-card-head"><h3>Types of Expenses</h3></div><div class="accounts-donut-layout" id="admin-accounts-expense-donut"></div></article>
+          </div>
+          <article class="accounts-card accounts-expense-log">
+            <div class="accounts-log-head"><div><h3>Expense Log</h3><p>Recognized workbook expenses and clearly identified manual entries.</p></div><div class="admin-log-controls"><select class="form-select admin-log-origin" data-business-log-origin="expenses" aria-label="Expense log source"><option value="ALL">All sources</option><option value="XLSX_IMPORT">Workbook only</option><option value="MANUAL">Manual only</option></select><input class="form-input admin-log-search" type="search" data-business-log-search="expenses" placeholder="Search expenses" /><button class="btn btn-maroon btn-sm" type="button" data-open-business-record="expenses">Add Entry</button></div></div>
+            <div class="admin-table-wrap accounts-expense-table"><table class="admin-table"><thead><tr><th>Date</th><th>Description</th><th>Category</th><th>Amount</th><th>Source</th><th>Action</th></tr></thead><tbody id="admin-accounts-expense-log"></tbody></table></div>
+          </article>
+          <div class="admin-availability-note" id="admin-accounts-coverage"></div>
+        </div>
+      </div>
+
+      <div class="admin-analytics-panel" id="admin-analytics-hr" role="tabpanel" hidden>
+        <div class="hr-reference-dashboard">
+          <div class="hr-executive-grid">
+            <article class="hr-group-panel"><h3>Production Executive</h3><p class="hr-scope">Role data is not present in the workbook.</p><div class="hr-kpi-grid" id="admin-hr-production-kpis"></div><div class="hr-feedback-panel"><h4>Production Feedback</h4><div class="hr-empty-feedback"><strong>No feedback records</strong><span>Manager-authored feedback and visibility permissions are not available.</span></div></div></article>
+            <article class="hr-group-panel"><h3>Sales Executive</h3><p class="hr-scope">Role data is not present in the workbook.</p><div class="hr-kpi-grid" id="admin-hr-sales-kpis"></div><div class="hr-feedback-panel"><h4>Sales Feedback</h4><div class="hr-empty-feedback warning"><strong>No feedback records</strong><span>Performance feedback is not inferred from sales totals.</span></div></div></article>
+          </div>
+          <article class="hr-group-panel hr-blue-collar-panel"><h3>Blue-collar Staff</h3><p class="hr-scope">Aggregate labour-payment records; individual workers are not identified.</p><div class="hr-blue-collar-layout"><div class="hr-kpi-grid" id="admin-hr-worker-kpis"></div><div class="hr-feedback-panel"><h4>Workforce Feedback</h4><div class="hr-empty-feedback"><strong>No authorized feedback</strong><span>Worker-group feedback, authors, timestamps, and confidentiality levels are not recorded.</span></div></div></div></article>
+          <article class="hr-group-panel hr-labour-log"><div class="accounts-log-head"><div><h3>Labour Payment Log</h3><p>Workbook obligations and clearly identified manual records.</p></div><div class="admin-log-controls"><select class="form-select admin-log-origin" data-business-log-origin="labour" aria-label="Labour log source"><option value="ALL">All sources</option><option value="XLSX_IMPORT">Workbook only</option><option value="MANUAL">Manual only</option></select><input class="form-input admin-log-search" type="search" data-business-log-search="labour" placeholder="Search labour payments" /><button class="btn btn-maroon btn-sm" type="button" data-open-business-record="labour">Add Entry</button></div></div><div class="admin-table-wrap accounts-expense-table"><table class="admin-table"><thead><tr><th>Date</th><th>Work Description</th><th>Quantity</th><th>Total</th><th>Pending Stated</th><th>Source</th><th>Action</th></tr></thead><tbody id="admin-hr-labour-log"></tbody></table></div></article>
+          <div class="admin-availability-note" id="admin-hr-coverage"></div>
+        </div>
+      </div>
+
+      <div class="admin-analytics-panel admin-analytics-retired" id="admin-analytics-team" role="tabpanel" aria-hidden="true" hidden>
         <div class="admin-report-intro">
           <div>
             <h3 class="h-sm">Workbook Labour Payments</h3>
@@ -814,7 +804,7 @@
         </div>
       </div>
 
-      <div class="admin-analytics-panel" id="admin-analytics-insights" role="tabpanel" hidden>
+      <div class="admin-analytics-panel admin-analytics-retired" id="admin-analytics-insights" role="tabpanel" aria-hidden="true" hidden>
         <div class="admin-report-intro">
           <div>
             <h3 class="h-sm">Business Insights</h3>

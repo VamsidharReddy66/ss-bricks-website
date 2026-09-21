@@ -8,11 +8,33 @@ function startOfUtcDay(date) {
 
 function rangeStart(range, now = new Date()) {
   const today = startOfUtcDay(now);
+  if (range === 'LAST_7_DAYS') return new Date(today.getTime() - (6 * DAY_MS));
   if (range === 'LAST_30_DAYS') return new Date(today.getTime() - (29 * DAY_MS));
   if (range === 'LAST_90_DAYS') return new Date(today.getTime() - (89 * DAY_MS));
   if (range === 'LAST_6_MONTHS') return new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() - 5, 1));
   if (range === 'THIS_YEAR') return new Date(Date.UTC(today.getUTCFullYear(), 0, 1));
   return null;
+}
+
+function rangeWindow(range, now = new Date()) {
+  const start = rangeStart(range, now);
+  if (!start) return { start: null, previousStart: null, previousEnd: null };
+  if (range === 'LAST_6_MONTHS') {
+    return {
+      start,
+      previousStart: new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() - 6, 1)),
+      previousEnd: start,
+    };
+  }
+  if (range === 'THIS_YEAR') {
+    return {
+      start,
+      previousStart: new Date(Date.UTC(start.getUTCFullYear() - 1, 0, 1)),
+      previousEnd: new Date(Date.UTC(now.getUTCFullYear() - 1, now.getUTCMonth(), now.getUTCDate() + 1)),
+    };
+  }
+  const duration = startOfUtcDay(now).getTime() - start.getTime() + DAY_MS;
+  return { start, previousStart: new Date(start.getTime() - duration), previousEnd: start };
 }
 
 function number(value) {
@@ -50,6 +72,45 @@ function monthLabel(key) {
     year: '2-digit',
     timeZone: 'UTC',
   });
+}
+
+function dayKey(value) {
+  return new Date(value).toISOString().slice(0, 10);
+}
+
+function dailySalesSeries(records, start, now = new Date()) {
+  if (!start) return [];
+  const end = startOfUtcDay(now);
+  const days = new Map();
+  const cursor = new Date(start);
+  while (cursor <= end) {
+    const key = dayKey(cursor);
+    days.set(key, {
+      key,
+      label: cursor.toLocaleDateString('en-IN', { weekday: 'short', timeZone: 'UTC' }),
+      dateLabel: cursor.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }),
+      invoiced: 0,
+    });
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
+  }
+  records.forEach((record) => {
+    if (!record.saleDate) return;
+    const row = days.get(dayKey(record.saleDate));
+    if (row) row.invoiced += number(record.invoicedAmount);
+  });
+  return [...days.values()];
+}
+
+function periodTrend(current, previous) {
+  if (!previous) return { current, previous, available: false, changePercent: null, direction: 'neutral' };
+  const changePercent = ((current - previous) / previous) * 100;
+  return {
+    current,
+    previous,
+    available: true,
+    changePercent,
+    direction: changePercent > 0 ? 'up' : changePercent < 0 ? 'down' : 'neutral',
+  };
 }
 
 function monthSeries(records, start, now = new Date()) {
@@ -98,13 +159,21 @@ function salesProductBreakdown(records, limit = 8) {
       quantity: 0,
       pricedRecords: 0,
       unitPriceTotal: 0,
+      weightedPriceTotal: 0,
+      weightedQuantity: 0,
+      quantityUnits: new Set(),
     };
     row.records += 1;
     row.value += number(record.invoicedAmount);
     row.quantity += number(record.quantity);
+    if (record.quantityUnit) row.quantityUnits.add(String(record.quantityUnit).trim().toLowerCase());
     if (record.unitPrice !== null && record.unitPrice !== undefined) {
       row.pricedRecords += 1;
       row.unitPriceTotal += number(record.unitPrice);
+      if (number(record.quantity) > 0) {
+        row.weightedPriceTotal += number(record.unitPrice) * number(record.quantity);
+        row.weightedQuantity += number(record.quantity);
+      }
     }
     rows.set(key, row);
   });
@@ -114,7 +183,10 @@ function salesProductBreakdown(records, limit = 8) {
       records: row.records,
       value: row.value,
       quantity: row.quantity,
-      averageUnitPrice: row.pricedRecords ? row.unitPriceTotal / row.pricedRecords : null,
+      quantityUnit: row.quantityUnits.size === 1 ? [...row.quantityUnits][0] : null,
+      averageUnitPrice: row.quantityUnits.size <= 1 && row.weightedQuantity
+        ? row.weightedPriceTotal / row.weightedQuantity
+        : null,
       pricedRecords: row.pricedRecords,
     }))
     .sort((a, b) => b.value - a.value)
@@ -280,7 +352,26 @@ function emptyReport(reason = null) {
       excludesManualRecords: true,
     },
     overview: { monthlyPerformance: [], outflowComposition: [] },
-    sales: { records: 0, invoicedAmount: 0, averageInvoiceValue: 0, uniqueCustomers: 0, pricedRecords: 0, collectionsAvailable: false, monthly: [], products: [], customers: [], recent: [] },
+    sales: {
+      records: 0,
+      invoicedAmount: 0,
+      averageInvoiceValue: 0,
+      uniqueCustomers: 0,
+      trends: {},
+      pricedRecords: 0,
+      collectionsAvailable: false,
+      netProfitAvailable: false,
+      grossMarginAvailable: false,
+      customerMixAvailable: false,
+      outstandingAvailable: false,
+      chartGranularity: 'MONTH',
+      chart: [],
+      monthly: [],
+      availableMonths: [],
+      products: [],
+      customers: [],
+      recent: [],
+    },
     finance: { factoryExpenses: 0, materialPurchases: 0, driverBatta: 0, labourPayments: 0, recordedOutflows: 0, pendingPurchaseValue: 0, receiptReferences: 0, manualLedgerCollections: 0, manualLedgerReceivables: 0, monthly: [], outflowComposition: [], expenses: [], materials: [], vendors: [], purchaseStatuses: [], recentExpenses: [], recentPurchases: [], recentReceipts: [] },
     operations: { productionUnits: 0, productionDays: 0, productionLineItems: 0, averageOutputPerEntry: 0, noProductionDays: 0, sundayRows: 0, pendingPurchases: 0, monthlyProduction: [], monthlyActivity: [], products: [], materials: [], noProductionReasons: [], recentProduction: [] },
     labour: { paymentRecords: 0, paymentObligation: 0, averagePayment: 0, statedPendingAmount: 0, pendingRecords: 0, monthly: [], work: [], paymentMethods: [], paidBy: [], recent: [], employeeMetricsAvailable: false },
@@ -292,11 +383,18 @@ function emptyReport(reason = null) {
 }
 
 async function getBusinessAnalytics(range, now = new Date()) {
-  const start = rangeStart(range, now);
+  const { start, previousStart, previousEnd } = rangeWindow(range, now);
   try {
     const where = workbookWhere(start);
-    const [sales, receipts, expenses, purchases, production, labour, latestImport] = await Promise.all([
-      prisma.ledgerSale.findMany({ where, orderBy: { reportingMonth: 'asc' }, include: { customer: { select: { displayName: true } }, sourceRow: { select: { sheetName: true, rowNumber: true } } } }),
+    const salesStart = start ? new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), 1)) : null;
+    const previousSalesStart = previousStart
+      ? new Date(Date.UTC(previousStart.getUTCFullYear(), previousStart.getUTCMonth(), 1))
+      : null;
+    const [sales, previousSalesRaw, receipts, expenses, purchases, production, labour, latestImport] = await Promise.all([
+      prisma.ledgerSale.findMany({ where: workbookWhere(salesStart), orderBy: { reportingMonth: 'asc' }, include: { customer: { select: { displayName: true } }, sourceRow: { select: { sheetName: true, rowNumber: true } } } }),
+      previousStart
+        ? prisma.ledgerSale.findMany({ where: workbookWhere(previousSalesStart), orderBy: { reportingMonth: 'asc' }, include: { customer: { select: { displayName: true } } } })
+        : Promise.resolve([]),
       prisma.ledgerReceipt.findMany({ where, orderBy: { reportingMonth: 'asc' }, include: { customer: { select: { displayName: true } }, sale: { select: { customerName: true } }, sourceRow: { select: { sheetName: true, rowNumber: true } } } }),
       prisma.expenseEntry.findMany({ where, orderBy: { reportingMonth: 'asc' }, include: { sourceRow: { select: { sheetName: true, rowNumber: true } } } }),
       prisma.materialPurchase.findMany({ where, orderBy: { reportingMonth: 'asc' }, include: { sourceRow: { select: { sheetName: true, rowNumber: true } } } }),
@@ -309,10 +407,17 @@ async function getBusinessAnalytics(range, now = new Date()) {
       }),
     ]);
 
-    const normalizedSales = sales.map((sale) => ({
+    const normalizeSale = (sale) => ({
       ...sale,
       customerName: sale.customer?.displayName || sale.customerName,
-    }));
+    });
+    const inWindow = (sale, lower, upper = null) => {
+      const value = new Date(sale.saleDate || sale.reportingMonth);
+      return (!lower || value >= lower) && (!upper || value < upper);
+    };
+    const normalizedSales = sales.map(normalizeSale).filter((sale) => inWindow(sale, start));
+    const previousSales = previousSalesRaw.map(normalizeSale)
+      .filter((sale) => inWindow(sale, previousStart, previousEnd));
     const allRecords = [...normalizedSales, ...expenses, ...purchases, ...production, ...labour];
     const months = monthSeries(allRecords, start, now);
     const monthly = new Map(months.map((key) => [key, {
@@ -365,8 +470,27 @@ async function getBusinessAnalytics(range, now = new Date()) {
       { name: 'Labour obligations', value: labourPayments, records: labour.length },
     ];
     const productionRows = production.filter((row) => row.recordType === 'PRODUCTION');
+    const productionMixMap = new Map(monthlyRows.map((row) => [row.key, {
+      key: row.key,
+      label: row.label,
+      total: 0,
+      segments: new Map(),
+    }]));
+    productionRows.forEach((row) => {
+      const bucket = productionMixMap.get(monthKey(row.reportingMonth));
+      if (!bucket || !row.productName) return;
+      const quantity = number(row.quantity);
+      bucket.total += quantity;
+      bucket.segments.set(row.productName, (bucket.segments.get(row.productName) || 0) + quantity);
+    });
     const activeProductionDates = uniqueCount(productionRows.filter((row) => row.recordDate), 'recordDate');
     const salesProducts = salesProductBreakdown(normalizedSales);
+    const currentSales = sum(normalizedSales, 'invoicedAmount');
+    const previousSalesValue = sum(previousSales, 'invoicedAmount');
+    const currentAverage = average(normalizedSales, 'invoicedAmount');
+    const previousAverage = average(previousSales, 'invoicedAmount');
+    const currentCustomers = uniqueCount(normalizedSales, 'customerName');
+    const previousCustomers = uniqueCount(previousSales, 'customerName');
 
     const report = {
       available: true,
@@ -387,14 +511,32 @@ async function getBusinessAnalytics(range, now = new Date()) {
       },
       sales: {
         records: normalizedSales.length,
-        invoicedAmount: sum(normalizedSales, 'invoicedAmount'),
-        averageInvoiceValue: average(normalizedSales, 'invoicedAmount'),
-        uniqueCustomers: uniqueCount(normalizedSales, 'customerName'),
+        invoicedAmount: currentSales,
+        averageInvoiceValue: currentAverage,
+        uniqueCustomers: currentCustomers,
+        trends: {
+          sales: periodTrend(currentSales, previousSalesValue),
+          averageInvoiceValue: periodTrend(currentAverage, previousAverage),
+          uniqueCustomers: periodTrend(currentCustomers, previousCustomers),
+        },
         pricedRecords: normalizedSales.filter((row) => row.unitPrice !== null && row.unitPrice !== undefined).length,
         missingSaleDates: normalizedSales.filter((row) => !row.saleDate).length,
         collectionsAvailable: false,
+        netProfitAvailable: false,
+        netProfitReason: 'A complete cost-of-goods and accrual ledger is not available in the workbook.',
+        grossMarginAvailable: false,
+        grossMarginReason: 'Production costs are not allocated to individual products or sales.',
+        customerMixAvailable: false,
+        customerMixReason: 'Customer type is not recorded in the workbook.',
+        outstandingAvailable: false,
+        outstandingReason: 'Historical outstanding values are cumulative or combined and cannot be assigned reliably to invoices.',
         confirmedManualReceipts: 0,
         monthly: monthlyRows.map(({ key, label, invoiced }) => ({ key, label, invoiced })),
+        chartGranularity: range === 'LAST_7_DAYS' ? 'DAY' : 'MONTH',
+        chart: range === 'LAST_7_DAYS'
+          ? dailySalesSeries(normalizedSales, start, now)
+          : monthlyRows.map(({ key, label, invoiced }) => ({ key, label, invoiced })),
+        availableMonths: monthlyRows.filter((row) => row.invoiced > 0).map(({ key, label }) => ({ key, label })),
         products: salesProducts,
         customers: breakdown(normalizedSales, 'customerName', 'invoicedAmount', 10),
         recent: recent(normalizedSales, 'saleDate', ['quantity', 'unitPrice', 'driverBatta', 'invoicedAmount']),
@@ -410,11 +552,13 @@ async function getBusinessAnalytics(range, now = new Date()) {
         monthly: monthlyRows.map(({ key, label, expenses: factory, materials, driverBatta: batta, labour: labourValue, recordedOutflows: total }) => ({ key, label, factory, materials, driverBatta: batta, labour: labourValue, total })),
         outflowComposition,
         expenses: breakdown(expenses, 'description', 'amount'),
+        expenseCategories: breakdown(expenses, 'category', 'amount'),
         materials: breakdown(purchases, 'materialName', 'purchaseAmount'),
         vendors: breakdown(purchases, 'vendorName', 'purchaseAmount'),
         purchaseStatuses: breakdown(purchases, 'paymentStatus', 'purchaseAmount'),
         recentExpenses: recent(expenses, 'expenseDate', ['amount']),
         recentPurchases: recent(purchases, 'purchaseDate', ['unitPrice', 'quantity', 'purchaseAmount', 'driverBatta']),
+        payables: recent(purchases.filter((row) => row.paymentStatus === 'PENDING'), 'purchaseDate', ['purchaseAmount', 'driverBatta']),
         manualLedgerCollections: 0,
         manualLedgerReceivables: 0,
         recentReceipts: recent(receipts.map((receipt) => ({
@@ -433,6 +577,12 @@ async function getBusinessAnalytics(range, now = new Date()) {
         sundayRows: production.filter((row) => row.recordType === 'SUNDAY').length,
         pendingPurchases: purchases.filter((row) => row.paymentStatus === 'PENDING').length,
         monthlyProduction: monthlyRows.map(({ key, label, production: value }) => ({ key, label, production: value })),
+        productionMix: [...productionMixMap.values()].map((row) => ({
+          key: row.key,
+          label: row.label,
+          total: row.total,
+          segments: [...row.segments.entries()].map(([product, quantity]) => ({ product, quantity })),
+        })),
         monthlyActivity: monthlyRows.map(({ key, label, productionEntries, noProduction, sundays }) => ({ key, label, productionEntries, noProduction, sundays })),
         products: breakdown(productionRows, 'productName', 'quantity'),
         materials: breakdown(purchases, 'materialName', 'quantity'),
@@ -487,9 +637,12 @@ module.exports = {
     average,
     breakdown,
     buildInsights,
+    dailySalesSeries,
     monthKey,
     monthSeries,
+    periodTrend,
     rangeStart,
+    rangeWindow,
     referenceCoverage,
     salesProductBreakdown,
     uniqueCount,

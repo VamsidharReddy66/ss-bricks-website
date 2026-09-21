@@ -12,6 +12,7 @@ function startOfUtcDay(date) {
 
 function rangeStart(range, now = new Date()) {
   const today = startOfUtcDay(now);
+  if (range === 'LAST_7_DAYS') return new Date(today.getTime() - (6 * DAY_MS));
   if (range === 'LAST_30_DAYS') return new Date(today.getTime() - (29 * DAY_MS));
   if (range === 'LAST_90_DAYS') return new Date(today.getTime() - (89 * DAY_MS));
   if (range === 'LAST_6_MONTHS') {

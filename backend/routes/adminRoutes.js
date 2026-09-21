@@ -35,6 +35,7 @@ router.use(requireAdminAuth);
 
 router.get('/dashboard', adminController.dashboard);
 router.get('/analytics', analyticsController.analytics);
+router.get('/marketing-analytics', analyticsController.marketingAnalytics);
 router.get('/business-imports', businessController.listImports);
 router.post('/business-import/preview', upload.single('file'), businessController.previewImport);
 router.post('/business-import/commit', upload.single('file'), businessController.commitImport);

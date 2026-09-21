@@ -1,4 +1,5 @@
 const analyticsService = require('../services/analyticsService');
+const marketingAnalyticsService = require('../services/marketingAnalyticsService');
 const offlineSalesService = require('../services/offlineSalesService');
 const salesGridService = require('../services/salesGridService');
 const {
@@ -20,6 +21,17 @@ async function analytics(req, res, next) {
     if (!parsed.success) return validationFailure(res, parsed.error);
     const result = await analyticsService.getAnalytics(parsed.data);
     return successResponse(res, 200, 'Analytics fetched successfully.', result);
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function marketingAnalytics(req, res, next) {
+  try {
+    const parsed = analyticsQuerySchema.safeParse(req.query);
+    if (!parsed.success) return validationFailure(res, parsed.error);
+    const result = await marketingAnalyticsService.getMarketingAnalytics(parsed.data.range);
+    return successResponse(res, 200, 'Marketing analytics fetched successfully.', result);
   } catch (error) {
     return next(error);
   }
@@ -104,6 +116,7 @@ async function deleteSale(req, res, next) {
 
 module.exports = {
   analytics,
+  marketingAnalytics,
   createSale,
   deleteSale,
   listSales,

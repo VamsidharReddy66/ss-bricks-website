@@ -157,7 +157,8 @@ const listBusinessRecordsSchema = z.object({
   search: z.string().trim().max(120).default(''),
   state: z.enum(['ACTIVE', 'VOIDED', 'ALL']).default('ACTIVE'),
   origin: z.enum(['XLSX_IMPORT', 'MANUAL', 'ALL']).default('ALL'),
-  range: z.enum(['LAST_30_DAYS', 'LAST_90_DAYS', 'LAST_6_MONTHS', 'THIS_YEAR', 'ALL']).default('ALL'),
+  range: z.enum(['LAST_7_DAYS', 'LAST_30_DAYS', 'LAST_90_DAYS', 'LAST_6_MONTHS', 'THIS_YEAR', 'ALL']).default('ALL'),
+  month: z.union([z.literal('ALL'), z.string().regex(/^\d{4}-\d{2}$/, 'Month must use YYYY-MM format.')]).default('ALL'),
 });
 
 const recordTypeSchema = z.enum(Object.keys(recordSchemas));

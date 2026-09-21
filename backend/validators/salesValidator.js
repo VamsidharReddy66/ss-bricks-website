@@ -153,7 +153,7 @@ const salesGridUpdateSchema = z.object({
   ])).min(1, 'Change at least one sales record.').max(100, 'Save no more than 100 sales records at once.'),
 }).strict();
 
-const analyticsRanges = ['LAST_30_DAYS', 'LAST_90_DAYS', 'LAST_6_MONTHS', 'THIS_YEAR', 'ALL'];
+const analyticsRanges = ['LAST_7_DAYS', 'LAST_30_DAYS', 'LAST_90_DAYS', 'LAST_6_MONTHS', 'THIS_YEAR', 'ALL'];
 
 const analyticsQuerySchema = z.object({
   range: z.enum(analyticsRanges).default('LAST_6_MONTHS'),

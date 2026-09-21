@@ -58,15 +58,38 @@ test('business analytics calculates product revenue and recorded price summaries
     { productName: 'Paver Blocks', invoicedAmount: 4000, quantity: 1, unitPrice: null },
   ]);
 
-  assert.deepEqual(rows[0], {
-    name: '8-inch Cement Blocks',
-    records: 2,
-    value: 22000,
-    quantity: 2.2,
-    averageUnitPrice: 21,
-    pricedRecords: 2,
-  });
+  assert.equal(rows[0].name, '8-inch Cement Blocks');
+  assert.equal(rows[0].records, 2);
+  assert.equal(rows[0].value, 22000);
+  assert.equal(rows[0].quantity, 2.2);
+  assert.equal(rows[0].quantityUnit, null);
+  assert.ok(Math.abs(rows[0].averageUnitPrice - 21.090909) < 0.000001);
+  assert.equal(rows[0].pricedRecords, 2);
   assert.equal(rows[1].averageUnitPrice, null);
+});
+
+test('builds exact seven-day sales series and prior-period comparisons', () => {
+  const now = new Date('2026-09-11T12:00:00.000Z');
+  const start = analyticsPrivate.rangeStart('LAST_7_DAYS', now);
+  assert.equal(start.toISOString(), '2026-09-05T00:00:00.000Z');
+
+  const rows = analyticsPrivate.dailySalesSeries([
+    { saleDate: new Date('2026-09-05T00:00:00.000Z'), invoicedAmount: 1200 },
+    { saleDate: new Date('2026-09-11T00:00:00.000Z'), invoicedAmount: 800 },
+  ], start, now);
+  assert.equal(rows.length, 7);
+  assert.equal(rows[0].invoiced, 1200);
+  assert.equal(rows[6].invoiced, 800);
+  assert.equal(rows.slice(1, 6).reduce((total, row) => total + row.invoiced, 0), 0);
+
+  assert.deepEqual(analyticsPrivate.periodTrend(10, 0), {
+    current: 10,
+    previous: 0,
+    available: false,
+    changePercent: null,
+    direction: 'neutral',
+  });
+  assert.equal(analyticsPrivate.periodTrend(120, 100).changePercent, 20);
 });
 
 test('reference coverage explains every unavailable reference metric from missing workbook fields', () => {
@@ -131,9 +154,10 @@ test('business insights prioritize actionable workbook signals with department o
 });
 
 test('business log queries accept an explicit workbook-only origin', () => {
-  const query = listBusinessRecordsSchema.parse({ origin: 'XLSX_IMPORT' });
+  const query = listBusinessRecordsSchema.parse({ origin: 'XLSX_IMPORT', month: '2026-07' });
   assert.equal(query.origin, 'XLSX_IMPORT');
   assert.equal(query.state, 'ACTIVE');
+  assert.equal(query.month, '2026-07');
 });
 
 test('accepts create payloads for every visible business log', () => {
