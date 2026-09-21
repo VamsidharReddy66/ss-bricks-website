@@ -3991,24 +3991,28 @@ body.admin-dark-theme .accounts-expense-table th { background: #26231f; }
 @media (max-width: 650px) { .accounts-kpi-grid { grid-template-columns: 1fr; } .accounts-log-head { align-items: flex-start; flex-direction: column; } }
 
 /* HR Management reference dashboard */
-.hr-reference-dashboard { display: grid; gap: 1.5rem; color: #212020; }
+#admin-view-analytics.hr-reference-active .admin-analytics-head > div:first-child,
+#admin-view-analytics.hr-reference-active [data-open-business-import] { display: none; }
+#admin-view-analytics.hr-reference-active .admin-analytics-actions { margin-left: auto; }
+.hr-reference-dashboard { display: grid; gap: 1.5rem; color: #212020; font-family: "Helvetica Neue", Arial, Helvetica, sans-serif; }
 .hr-executive-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 1rem; }
-.hr-group-panel { background: #fff; border: 1px solid #e2ded7; border-radius: 10px; box-shadow: 0 5px 14px rgba(33,32,32,.08); padding: 1.4rem; min-width: 0; }
-.hr-group-panel > h3 { font-size: 1.6rem; margin: 0; }
+.hr-group-panel { background: #fff; border: 1px solid #e2ded7; border-radius: 10px; box-shadow: 0 5px 14px rgba(33,32,32,.08); padding: 1.2rem; min-width: 0; }
+.hr-group-panel > h3 { font-size: 1.35rem; margin: 0 0 1rem; }
 .hr-scope { color: #707070; font-size: .8rem; margin: .35rem 0 1rem; }
 .hr-kpi-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 1rem; }
-.hr-kpi { min-height: 145px; background: #eceae4; border: 1px solid #ddd8cf; border-radius: 8px; padding: 1.1rem; display: flex; flex-direction: column; }
+.hr-kpi { min-height: 125px; background: #eceae4; border: 1px solid #ddd8cf; border-radius: 8px; padding: 1rem; display: flex; flex-direction: column; }
 .hr-kpi span { font-weight: 700; }
-.hr-kpi strong { font-size: 1.35rem; margin: auto 0 .45rem; }
+.hr-kpi strong { font-size: 1.35rem; margin: auto 0; overflow-wrap: anywhere; }
 .hr-kpi.available strong { color: #126b0a; font-size: clamp(1.7rem,3vw,2.4rem); }
 .hr-kpi small { color: #5d5853; line-height: 1.35; }
-.hr-feedback-panel { background: #eceae4; border-radius: 8px; margin-top: 1rem; padding: 1rem; min-height: 170px; }
+.hr-feedback-panel { background: #eceae4; border-radius: 8px; margin-top: 1rem; padding: 1rem; min-height: 150px; }
 .hr-feedback-panel h4 { margin: 0 0 .8rem; }
-.hr-empty-feedback { min-height: 100px; border: 1px solid #12af00; background: #efffee; color: #185e12; border-radius: 6px; display: grid; place-content: center; gap: .35rem; text-align: center; padding: 1rem; }
+.hr-empty-feedback { min-height: 40px; border: 1px solid #12af00; background: #efffee; color: #185e12; border-radius: 6px; display: grid; place-content: center; text-align: center; padding: .65rem 1rem; }
 .hr-empty-feedback.warning { border-color: #cf004e; background: #ffe1ec; color: #8f0037; }
 .hr-empty-feedback span { font-size: .82rem; }
-.hr-blue-collar-layout { display: grid; grid-template-columns: 1.2fr .8fr; gap: 1rem; }
+.hr-blue-collar-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
 .hr-blue-collar-layout .hr-feedback-panel { margin-top: 0; }
+.hr-feedback-stack { display: grid; gap: .75rem; }
 .hr-labour-log { padding: 1.4rem; }
 body.admin-dark-theme .hr-reference-dashboard { color: #f6f2eb; }
 body.admin-dark-theme .hr-group-panel { background: #1a1917; border-color: #36332f; }

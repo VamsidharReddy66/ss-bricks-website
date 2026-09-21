@@ -951,23 +951,22 @@
   }
 
   function renderHrAnalytics(report) {
-    const unavailableTile = (name, reason) => `<article class="hr-kpi unavailable"><span>${escapeHtml(name)}</span><strong>Unavailable</strong><small>${escapeHtml(reason)}</small></article>`;
+    const unavailableTile = (name) => `<article class="hr-kpi unavailable"><span>${escapeHtml(name)}</span><strong>Unavailable</strong></article>`;
     const executiveTiles = [
-      unavailableTile('Attendance', 'No attendance or work-calendar records.'),
-      unavailableTile('Salary Payable', 'No employee payroll runs or salary records.'),
-      unavailableTile('Tasks Completed', 'No task-assignment workflow is recorded.'),
-      unavailableTile('Task Efficiency', 'No approved task-efficiency inputs or policy.'),
+      unavailableTile('Attendance'),
+      unavailableTile('Salary Payable'),
+      unavailableTile('Tasks Completed'),
+      unavailableTile('Task Efficiency'),
     ].join('');
     document.getElementById('admin-hr-production-kpis').innerHTML = executiveTiles;
     document.getElementById('admin-hr-sales-kpis').innerHTML = executiveTiles;
     const labour = report.labour || {};
     document.getElementById('admin-hr-worker-kpis').innerHTML = `
-      ${unavailableTile('Number of Staff', 'Worker identities and employment status are not recorded.')}
-      ${unavailableTile('Number of Working Days', 'No shift calendar, attendance, holidays, or leave records.')}
-      <article class="hr-kpi available"><span>Wages Payable</span><strong>${escapeHtml(money(labour.statedPendingAmount || 0))}</strong><small>Pending amount stated in workbook rows; not a payroll calculation</small></article>
-      ${unavailableTile('Production Efficiency', 'Worker-group targets and output attribution are not recorded.')}
+      ${unavailableTile('No. of Staff')}
+      ${unavailableTile('No. of Working Days')}
+      <article class="hr-kpi available"><span>Wages Payable</span><strong>${escapeHtml(money(labour.statedPendingAmount || 0))}</strong></article>
+      ${unavailableTile('Production Efficiency')}
     `;
-    document.getElementById('admin-hr-coverage').innerHTML = `<strong>HR scope:</strong> ${Number(labour.paymentRecords || 0).toLocaleString('en-IN')} aggregate labour-payment records and ${escapeHtml(money(labour.paymentObligation || 0))} in recorded obligations are available. Employee-level HR, payroll, attendance, task, target, and feedback data is not present and is not inferred.`;
   }
 
   function renderExecutiveOverview(report) {
@@ -2142,6 +2141,7 @@
     analyticsView?.classList.toggle('marketing-reference-active', isMarketing);
     analyticsView?.classList.toggle('operations-reference-active', name === 'operations');
     analyticsView?.classList.toggle('accounts-reference-active', name === 'accounts');
+    analyticsView?.classList.toggle('hr-reference-active', name === 'hr');
     document.querySelectorAll('[data-analytics-tab]').forEach((button) => {
       const active = button.dataset.analyticsTab === name;
       button.classList.toggle('active', active);
