@@ -1154,7 +1154,8 @@
     renderHorizontalChart('admin-labour-work-bars', report.labour.work || [], { formatter: compactMoney });
 
     document.getElementById('admin-finance-coverage').innerHTML = '<strong>Scope note:</strong> Outflows are recorded ledger totals. Profit, cash balance, bank balance, and official historical receivables are unavailable because the source does not contain a complete accounting ledger or reliable receipt allocation.';
-    document.getElementById('admin-operations-coverage').innerHTML = '<strong>Scope note:</strong> Production output and no-production reasons are available. Inventory, capacity utilization, material consumption, and machine downtime hours are not present in the source and are not estimated.';
+    const operationsCoverage = document.getElementById('admin-operations-coverage');
+    if (operationsCoverage) operationsCoverage.textContent = '';
     renderBusinessLogs(report);
   }
 
@@ -2138,6 +2139,7 @@
     analyticsView?.classList.toggle('sales-active', isSales);
     analyticsView?.classList.toggle('overview-reference-active', name === 'overview');
     analyticsView?.classList.toggle('marketing-reference-active', isMarketing);
+    analyticsView?.classList.toggle('operations-reference-active', name === 'operations');
     document.querySelectorAll('[data-analytics-tab]').forEach((button) => {
       const active = button.dataset.analyticsTab === name;
       button.classList.toggle('active', active);

@@ -3908,15 +3908,20 @@ body.admin-dark-theme .marketing-lead-table th { background: #26231f; }
 @media (max-width: 560px) { .marketing-kpi-grid, .marketing-lead-filters, .marketing-donut-layout { grid-template-columns: 1fr; } }
 
 /* Operations reference dashboard */
-.operations-reference-dashboard { display: grid; gap: 1.5rem; color: #212020; }
-.operations-summary-grid { display: grid; grid-template-columns: 1.15fr .98fr 1fr; gap: 1.25rem; }
+#admin-view-analytics.operations-reference-active .admin-analytics-head > div:first-child,
+#admin-view-analytics.operations-reference-active [data-open-business-import] { display: none; }
+#admin-view-analytics.operations-reference-active .admin-analytics-actions { margin-left: auto; }
+.operations-reference-dashboard { display: grid; gap: 1rem; color: #212020; font-family: "Helvetica Neue", Arial, Helvetica, sans-serif; }
+.operations-summary-grid { display: grid; grid-template-columns: 1.15fr .98fr 1fr; gap: 1rem; }
 .operations-reference-card { background: #fff; border: 1px solid #e2ded7; border-radius: 8px; box-shadow: 0 5px 14px rgba(33,32,32,.08); padding: 1.35rem; }
-.operations-reference-card h3 { font-size: 1.25rem; margin: 0 0 1rem; }
-.operations-unavailable { min-height: 230px; display: grid; align-content: center; text-align: center; padding: 1.5rem; border: 1px dashed #b8b2aa; background: #f5f1ea; }
-.operations-unavailable strong { font-size: 1.2rem; }
+.operations-reference-card h3 { font-size: 1rem; margin: 0 0 .75rem; }
+.operations-unavailable { min-height: 180px; display: grid; align-content: center; text-align: center; padding: 1.25rem; background: #f5f1ea; }
+.operations-unavailable strong { font-size: 1rem; }
 .operations-unavailable p { color: #5d5853; line-height: 1.55; margin: .65rem auto 0; max-width: 36ch; }
-.operations-cost-card { min-height: 360px; }
-.operations-cost-card .operations-unavailable { min-height: 270px; }
+.operations-production-card { min-height: 490px; }
+.operations-production-card .admin-line-chart { min-height: 405px; }
+.operations-cost-card { min-height: 320px; }
+.operations-cost-card .operations-unavailable { min-height: 245px; }
 .operations-log-card .admin-table-wrap { min-height: 360px; max-height: 590px; overflow: auto; background: #f5f1ea; }
 .operations-log-card .admin-table th { position: sticky; top: 0; z-index: 1; background: #eceae4; }
 body.admin-dark-theme .operations-reference-dashboard { color: #f6f2eb; }

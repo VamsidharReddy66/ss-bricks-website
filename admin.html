@@ -541,56 +541,39 @@
       <div class="admin-analytics-panel" id="admin-analytics-operations" role="tabpanel" hidden>
         <div class="operations-reference-dashboard">
           <div class="operations-summary-grid">
-            <article class="operations-reference-card"><h3>Closing Stock</h3><div class="operations-unavailable"><strong>Not available</strong><p>Opening stock, dispatches, adjustments, and usable closing-stock snapshots are not recorded.</p></div></article>
-            <article class="operations-reference-card"><h3>Capacity Utilisation</h3><div class="operations-unavailable"><strong>Not available</strong><p>Rated line capacity and qualifying shifts are not recorded.</p></div></article>
-            <article class="operations-reference-card"><h3>Inventory</h3><div class="operations-unavailable"><strong>Status unavailable</strong><p>Purchases are recorded, but current quantities, reorder points, safety stock, and target stock are not.</p></div></article>
+            <article class="operations-reference-card"><h3>Closing Stock</h3><div class="operations-unavailable"><strong>Unavailable</strong></div></article>
+            <article class="operations-reference-card"><h3>Capacity Utilisation</h3><div class="operations-unavailable"><strong>Unavailable</strong></div></article>
+            <article class="operations-reference-card"><h3>Inventory</h3><div class="operations-unavailable"><strong>Unavailable</strong></div></article>
           </div>
-          <div class="admin-stats-grid admin-analytics-stats" id="admin-operations-stats"></div>
 
-        <div class="admin-analytics-grid">
-          <article class="admin-data-panel admin-data-panel-wide">
-            <div class="admin-data-panel-head"><div><h3 class="h-sm" id="admin-production-mix-title">Production Mix</h3><p class="body-sm text-muted">Completed workbook production grouped by the selected period.</p></div></div>
+        <div class="operations-production-section">
+          <article class="operations-reference-card operations-production-card">
+            <div class="admin-data-panel-head"><div><h3 class="h-sm" id="admin-production-mix-title">Monthly Production Mix</h3></div></div>
             <div class="admin-line-chart" id="admin-production-trend-chart"></div>
-          </article>
-          <article class="admin-data-panel">
-            <div class="admin-data-panel-head"><div><h3 class="h-sm">Production by Product</h3><p class="body-sm text-muted">Output units grouped by normalized product.</p></div></div>
-            <div class="admin-horizontal-chart compact" id="admin-production-product-bars"></div>
           </article>
         </div>
 
         <article class="operations-reference-card operations-cost-card">
           <h3>Cost per 1,000 Units: Actual vs Standard</h3>
-          <div class="operations-unavailable"><strong>Cost comparison unavailable</strong><p>The workbook does not allocate material, labour, power, and overhead by product and contains no approved standard-cost versions. Recorded purchase and labour totals are not treated as product cost.</p></div>
+          <div class="operations-unavailable"><strong>Unavailable</strong></div>
         </article>
 
-        <div class="admin-analytics-grid">
-          <article class="admin-data-panel admin-data-panel-wide">
-            <div class="admin-data-panel-head"><div><h3 class="h-sm">Monthly Activity Mix</h3><p class="body-sm text-muted">Production entries, explicit no-production rows, and Sundays.</p></div></div>
-            <div class="admin-column-chart" id="admin-production-activity-chart"></div>
-          </article>
-          <article class="admin-data-panel">
-            <div class="admin-data-panel-head"><div><h3 class="h-sm">No-production Reasons</h3><p class="body-sm text-muted">Reasons exactly as recorded in the workbook.</p></div></div>
-            <div class="admin-breakdown-list" id="admin-no-production-reasons"></div>
-          </article>
-        </div>
-
-        <article class="admin-data-panel admin-report-panel">
-          <div class="admin-data-panel-head"><div><h3 class="h-sm">Production Log</h3><p class="body-sm text-muted">Workbook production and separately labeled manual production, Sunday, or no-production entries.</p></div><div class="admin-log-controls"><select class="form-select admin-log-origin" data-business-log-origin="production" aria-label="Production log source"><option value="ALL">All sources</option><option value="XLSX_IMPORT">Workbook only</option><option value="MANUAL">Manual only</option></select><input class="form-input admin-log-search" type="search" data-business-log-search="production" placeholder="Search production" /><button class="btn btn-maroon btn-sm" type="button" data-open-business-record="production">Add Production</button></div></div>
+        <article class="operations-reference-card admin-report-panel operations-log-card">
+          <div class="admin-data-panel-head"><div><h3 class="h-sm">Production Log</h3></div><div class="admin-log-controls"><select class="form-select admin-log-origin" data-business-log-origin="production" aria-label="Production log source"><option value="ALL">All sources</option><option value="XLSX_IMPORT">Workbook only</option><option value="MANUAL">Manual only</option></select><input class="form-input admin-log-search" type="search" data-business-log-search="production" placeholder="Search production" /><button class="btn btn-dark btn-sm" type="button" data-open-business-record="production">Add Entry</button></div></div>
           <div class="admin-table-wrap admin-table-flat"><table class="admin-table admin-analytics-table">
             <thead><tr><th>Date</th><th>Type</th><th>Product / Reason</th><th>Quantity</th><th>Source</th><th>Actions</th></tr></thead>
             <tbody id="admin-production-log"></tbody>
           </table></div><div class="admin-pagination" data-business-log-pagination="production"></div>
         </article>
 
-        <article class="admin-data-panel admin-report-panel operations-log-card">
-          <div class="admin-data-panel-head"><div><h3 class="h-sm">Inventory Log</h3><p class="body-sm text-muted">Material purchases. Quantity and price are displayed exactly as normalized; unsupported unit conversions are not inferred.</p></div><div class="admin-log-controls"><select class="form-select admin-log-origin" data-business-log-origin="purchases" aria-label="Inventory log source"><option value="ALL">All sources</option><option value="XLSX_IMPORT">Workbook only</option><option value="MANUAL">Manual only</option></select><input class="form-input admin-log-search" type="search" data-business-log-search="purchases" placeholder="Search materials or vendors" /><button class="btn btn-maroon btn-sm" type="button" data-open-business-record="purchases">Add Entry</button></div></div>
+        <article class="operations-reference-card admin-report-panel operations-log-card">
+          <div class="admin-data-panel-head"><div><h3 class="h-sm">Inventory Log</h3></div><div class="admin-log-controls"><select class="form-select admin-log-origin" data-business-log-origin="purchases" aria-label="Inventory log source"><option value="ALL">All sources</option><option value="XLSX_IMPORT">Workbook only</option><option value="MANUAL">Manual only</option></select><input class="form-input admin-log-search" type="search" data-business-log-search="purchases" placeholder="Search materials or vendors" /><button class="btn btn-dark btn-sm" type="button" data-open-business-record="purchases">Add Entry</button></div></div>
           <div class="admin-table-wrap admin-table-flat"><table class="admin-table admin-analytics-table">
             <thead><tr><th>Date</th><th>Material</th><th>Price per Unit</th><th>Quantity</th><th>Recorded Total</th><th>Vendor</th><th>Source</th><th>Actions</th></tr></thead>
             <tbody id="admin-operations-inventory-log"></tbody>
           </table></div>
         </article>
 
-        <div class="admin-availability-note" id="admin-operations-coverage"></div>
         </div>
 
         <div class="admin-analytics-grid" data-application-operations hidden>
