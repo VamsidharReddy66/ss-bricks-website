@@ -4,6 +4,7 @@ const adminService = require('../services/adminService');
 const leadService = require('../services/leadService');
 const leadImportService = require('../services/leadImportService');
 const productService = require('../services/productService');
+const quoteService = require('../services/quoteService');
 const {
   leadActivitySchema,
   leadCreateSchema,
@@ -139,6 +140,20 @@ async function getLead(req, res, next) {
           message: error.message,
         },
       ]);
+    }
+    return next(error);
+  }
+}
+
+async function regenerateQuotationPdf(req, res, next) {
+  try {
+    const pdf = await quoteService.regenerateQuotePdf(req.params.id, req.admin.id);
+    return successResponse(res, 200, 'Quotation PDF regenerated successfully.', {
+      pdf: { fileName: pdf.fileName, pdfUrl: pdf.pdfUrl },
+    });
+  } catch (error) {
+    if ([404, 409].includes(error.statusCode)) {
+      return errorResponse(res, error.statusCode, error.message, [{ field: 'pdf', message: error.message }]);
     }
     return next(error);
   }
@@ -361,6 +376,7 @@ module.exports = {
   listQuotes,
   login,
   previewLeadImport,
+  regenerateQuotationPdf,
   updateLead,
   updateLeadNotes,
   updateLeadPriority,

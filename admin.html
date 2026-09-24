@@ -1076,6 +1076,18 @@
 
     <div class="admin-detail-grid" id="admin-lead-detail-grid"></div>
 
+    <section class="admin-quotation-artifact" aria-labelledby="admin-quotation-artifact-title">
+      <div class="admin-section-head">
+        <div><h3 class="h-sm" id="admin-quotation-artifact-title">Quotation PDF</h3></div>
+        <div class="admin-action-row compact">
+          <a class="btn btn-outline btn-sm" id="admin-download-quotation" href="#" target="_blank" rel="noopener" hidden>Download PDF</a>
+          <button class="btn btn-outline btn-sm" id="admin-regenerate-quotation" type="button">Regenerate PDF</button>
+        </div>
+      </div>
+      <div class="admin-detail-grid" id="admin-quotation-summary"></div>
+      <div class="form-success" id="admin-quotation-status" role="alert" aria-live="polite"></div>
+    </section>
+
     <form id="admin-lead-edit-form" novalidate>
       <input type="hidden" id="edit-lead-id" />
       <div class="admin-section-head">

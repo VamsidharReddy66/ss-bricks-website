@@ -3,6 +3,8 @@ const { prisma } = require('../config/database');
 const { localDateKey, parseDateOnly } = require('../utils/date');
 const { isUniqueConstraintError } = require('../utils/prisma');
 const productService = require('./productService');
+const { calculateQuotation } = require('./quotationPricingService');
+const { generateAndStoreQuotePdf } = require('./pdfService');
 
 async function nextEnquiryNumber(tx, attempt = 0) {
   const prefix = `SSB-${localDateKey()}-`;
@@ -50,12 +52,24 @@ async function persistQuote(payload, attempt = 0, options = {}) {
         enquiryNumber,
         customerId: customer.id,
         product: payload.product,
+        productId: options.pricing.productId,
         quantity: payload.quantity,
+        quotedUnitPrice: options.pricing.unitPrice,
+        lineAmount: options.pricing.lineAmount,
+        subtotal: options.pricing.subtotal,
+        cgstRate: options.pricing.cgstRate,
+        cgstAmount: options.pricing.cgstAmount,
+        sgstRate: options.pricing.sgstRate,
+        sgstAmount: options.pricing.sgstAmount,
+        igstRate: options.pricing.igstRate,
+        igstAmount: options.pricing.igstAmount,
+        grandTotal: options.pricing.grandTotal,
+        amountInWords: options.pricing.amountInWords,
         deliveryDate: parseDateOnly(payload.deliveryDate),
         message: payload.message,
         source: 'WEBSITE',
         priority: 'MEDIUM',
-        finalAmount: options.finalAmount,
+        finalAmount: options.finalAmount || options.pricing.grandTotal,
         paymentToken: options.paymentToken,
         paymentEnabledAt: options.paymentToken ? new Date() : undefined,
         activities: {
@@ -70,6 +84,18 @@ async function persistQuote(payload, attempt = 0, options = {}) {
         enquiryNumber: true,
         product: true,
         quantity: true,
+        productId: true,
+        quotedUnitPrice: true,
+        lineAmount: true,
+        subtotal: true,
+        cgstRate: true,
+        cgstAmount: true,
+        sgstRate: true,
+        sgstAmount: true,
+        igstRate: true,
+        igstAmount: true,
+        grandTotal: true,
+        amountInWords: true,
         deliveryDate: true,
         status: true,
         source: true,
@@ -95,8 +121,8 @@ async function persistQuote(payload, attempt = 0, options = {}) {
 }
 
 async function createQuote(payload) {
-  const productExists = await productService.ensureQuoteProductExists(payload.product);
-  if (!productExists) {
+  const product = await productService.getQuoteProductPricing(payload.product);
+  if (!product) {
     const error = new Error('Selected product is not available.');
     error.statusCode = 400;
     error.errors = [
@@ -107,10 +133,11 @@ async function createQuote(payload) {
     ];
     throw error;
   }
+  const pricing = calculateQuotation(product, payload.quantity);
 
   for (let attempt = 0; attempt < 5; attempt += 1) {
     try {
-      return await persistQuote(payload, attempt);
+      return await persistQuote(payload, attempt, { pricing });
     } catch (error) {
       if (!isUniqueConstraintError(error) || attempt === 4) {
         throw error;
@@ -141,6 +168,7 @@ async function createRetailPackQuote(payload) {
     deliveryDate: payload.deliveryDate,
     message: 'Fixed retail pack checkout.',
   };
+  const pricing = calculateQuotation(pack.product, pack.quantity, { forceStandardPrice: true });
 
   for (let attempt = 0; attempt < 5; attempt += 1) {
     try {
@@ -148,6 +176,7 @@ async function createRetailPackQuote(payload) {
         activityNote: 'Lead created from website retail pack checkout.',
         finalAmount: pack.totalPrice,
         paymentToken,
+        pricing,
       });
 
       return {
@@ -248,10 +277,45 @@ async function getQuoteDocument(enquiryNumber) {
   return quote.document;
 }
 
+async function regenerateQuotePdf(quoteId, adminId) {
+  const id = Number(quoteId);
+  if (!Number.isInteger(id) || id <= 0) {
+    const error = new Error('Quotation not found.');
+    error.statusCode = 404;
+    throw error;
+  }
+  const quote = await prisma.quoteRequest.findUnique({
+    where: { id },
+    include: { customer: true },
+  });
+  if (!quote) {
+    const error = new Error('Quotation not found.');
+    error.statusCode = 404;
+    throw error;
+  }
+  if (quote.quotedUnitPrice === null || quote.lineAmount === null || quote.grandTotal === null) {
+    const error = new Error('This lead has no stored quotation price snapshot.');
+    error.statusCode = 409;
+    throw error;
+  }
+
+  const pdf = await generateAndStoreQuotePdf({ customer: quote.customer, quote });
+  await prisma.leadActivity.create({
+    data: {
+      leadId: quote.id,
+      type: 'NOTE',
+      note: `Quotation PDF regenerated from stored price snapshot: ${pdf.fileName}.`,
+      createdBy: adminId,
+    },
+  });
+  return pdf;
+}
+
 module.exports = {
   createQuote,
   createRetailPackQuote,
   getQuoteDocument,
   getQuoteStats,
   listRecentQuotes,
+  regenerateQuotePdf,
 };

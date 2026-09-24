@@ -89,7 +89,7 @@ class NotificationService {
       await this.addActivity(data.quote.id, `PDF generation failed: ${failure}`);
     }
 
-    const recipient = this.emailService.getRecipient();
+    const recipient = this.emailService.getRecipient(data);
     try {
       await this.emailService.sendQuoteNotification(data);
       result.email = { status: 'SUCCESS' };

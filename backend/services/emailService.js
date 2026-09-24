@@ -9,8 +9,8 @@ class EmailService {
     this.createTransport = createTransport;
   }
 
-  getRecipient() {
-    return this.config.recipient || 'UNCONFIGURED';
+  getRecipient(data) {
+    return data?.customer?.email || this.config.recipient || 'UNCONFIGURED';
   }
 
   async sendQuoteNotification(data) {
@@ -24,9 +24,15 @@ class EmailService {
     const transporter = this.createTransport(smtpTransportOptions(this.config));
     const template = createQuoteEmailTemplate(data);
 
+    const recipient = this.getRecipient(data);
+    const adminCopy = this.config.recipient && this.config.recipient !== recipient
+      ? this.config.recipient
+      : undefined;
+
     return transporter.sendMail({
       from: `"SS Bricks Website" <${this.config.user}>`,
-      to: this.config.recipient,
+      to: recipient,
+      ...(adminCopy ? { bcc: adminCopy } : {}),
       subject: template.subject,
       text: template.text,
       html: template.html,

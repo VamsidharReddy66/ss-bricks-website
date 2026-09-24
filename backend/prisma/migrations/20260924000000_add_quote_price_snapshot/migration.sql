@@ -1,0 +1,23 @@
+ALTER TABLE "QuoteRequest"
+ADD COLUMN "product_id" INTEGER,
+ADD COLUMN "quoted_unit_price" DECIMAL(10,2),
+ADD COLUMN "line_amount" DECIMAL(12,2),
+ADD COLUMN "subtotal" DECIMAL(12,2),
+ADD COLUMN "cgst_rate" DECIMAL(5,2) NOT NULL DEFAULT 0,
+ADD COLUMN "cgst_amount" DECIMAL(12,2) NOT NULL DEFAULT 0,
+ADD COLUMN "sgst_rate" DECIMAL(5,2) NOT NULL DEFAULT 0,
+ADD COLUMN "sgst_amount" DECIMAL(12,2) NOT NULL DEFAULT 0,
+ADD COLUMN "igst_rate" DECIMAL(5,2) NOT NULL DEFAULT 0,
+ADD COLUMN "igst_amount" DECIMAL(12,2) NOT NULL DEFAULT 0,
+ADD COLUMN "grand_total" DECIMAL(12,2),
+ADD COLUMN "amount_in_words" VARCHAR(255);
+
+ALTER TABLE "QuoteDocument"
+ADD COLUMN "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;
+
+CREATE INDEX "QuoteRequest_product_id_idx" ON "QuoteRequest"("product_id");
+
+ALTER TABLE "QuoteRequest"
+ADD CONSTRAINT "QuoteRequest_product_id_fkey"
+FOREIGN KEY ("product_id") REFERENCES "Product"("id")
+ON DELETE SET NULL ON UPDATE CASCADE;

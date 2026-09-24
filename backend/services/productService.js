@@ -152,6 +152,23 @@ async function ensureQuoteProductExists(productName) {
   return Boolean(product);
 }
 
+async function getQuoteProductPricing(productName) {
+  return prisma.product.findFirst({
+    where: {
+      name: productName,
+      availability: 'IN_STOCK',
+    },
+    select: {
+      id: true,
+      name: true,
+      standardPrice: true,
+      bulkPrice: true,
+      bulkQuantity: true,
+      unit: true,
+    },
+  });
+}
+
 async function updateProduct(productId, payload, adminId) {
   const id = Number(productId);
   if (!Number.isInteger(id) || id <= 0) {
@@ -277,6 +294,7 @@ async function getProductStats() {
 module.exports = {
   ensureDefaultProducts,
   ensureQuoteProductExists,
+  getQuoteProductPricing,
   getProductBySlug,
   getRetailPackBySlug,
   getProductStats,

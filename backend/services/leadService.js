@@ -45,6 +45,7 @@ function compactNote(note) {
 function leadInclude(activityTake) {
   return {
     customer: true,
+    document: true,
     payments: {
       take: 10,
       orderBy: {
@@ -107,6 +108,15 @@ function serializeLead(lead) {
     nextFollowUpDate: lead.nextFollowUpDate,
     crmNotes: lead.crmNotes,
     finalAmount: lead.finalAmount === null ? null : Number(lead.finalAmount),
+    quotedUnitPrice: lead.quotedUnitPrice === null ? null : Number(lead.quotedUnitPrice),
+    lineAmount: lead.lineAmount === null ? null : Number(lead.lineAmount),
+    grandTotal: lead.grandTotal === null ? null : Number(lead.grandTotal),
+    amountInWords: lead.amountInWords,
+    pdfUrl: lead.pdfUrl,
+    pdfStatus: lead.document ? 'GENERATED' : 'NOT_GENERATED',
+    pdfFileName: lead.document?.fileName || null,
+    pdfGeneratedAt: lead.document?.updatedAt || lead.document?.createdAt || null,
+    quotationSnapshotReady: lead.quotedUnitPrice !== null && lead.grandTotal !== null,
     paymentUrl: lead.paymentToken ? `/payment.html?token=${lead.paymentToken}` : null,
     paymentStatus: lead.payments?.find((payment) => payment.status === 'SUCCESS')?.status
       || lead.payments?.[0]?.status

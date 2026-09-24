@@ -51,6 +51,7 @@ router.delete('/sales/:id', analyticsController.deleteSale);
 router.get('/leads', adminController.listQuotes);
 router.post('/leads', adminController.createLead);
 router.get('/leads/:id', adminController.getLead);
+router.post('/leads/:id/quotation-pdf/regenerate', adminController.regenerateQuotationPdf);
 router.put('/leads/:id/payment', paymentController.configureQuotation);
 router.put('/leads/:id', adminController.updateLead);
 router.post('/leads/:id/activities', adminController.addLeadActivity);

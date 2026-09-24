@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { createQuotePdfBuffer } = require('../services/pdfService');
+const { createQuotePdfBuffer, generateAndStoreQuotePdf } = require('../services/pdfService');
 const { GoogleSheetsService, __private: sheetsPrivate } = require('../services/googleSheetsService');
 
 const quoteData = {
@@ -19,16 +19,46 @@ const quoteData = {
     status: 'NEW',
     source: 'WEBSITE',
     createdAt: new Date('2026-07-15T08:15:00.000Z'),
+    quotedUnitPrice: 8.1,
+    lineAmount: 121500,
+    subtotal: 121500,
+    cgstRate: 0,
+    cgstAmount: 0,
+    sgstRate: 0,
+    sgstAmount: 0,
+    igstRate: 0,
+    igstAmount: 0,
+    grandTotal: 121500,
+    amountInWords: 'One Lakh Twenty One Thousand Five Hundred Rupees Only',
   },
 };
 
-test('generates a selectable PDF buffer for a quote', () => {
-  const pdf = createQuotePdfBuffer(quoteData);
+test('generates a searchable reference-template PDF for a quote', async () => {
+  const pdf = await createQuotePdfBuffer(quoteData);
 
   assert.equal(Buffer.isBuffer(pdf), true);
-  assert.equal(pdf.slice(0, 8).toString(), '%PDF-1.4');
+  assert.match(pdf.slice(0, 8).toString(), /^%PDF-1\./);
   assert.match(pdf.toString('latin1'), /\/Helvetica/);
   assert.match(pdf.toString('latin1'), /trailer/);
+});
+
+test('stores one canonical quotation PDF for download and email reuse', async () => {
+  const calls = { upsert: null, update: null };
+  const prismaClient = {
+    quoteDocument: {
+      upsert: async (payload) => { calls.upsert = payload; },
+    },
+    quoteRequest: {
+      update: async (payload) => { calls.update = payload; },
+    },
+  };
+
+  const result = await generateAndStoreQuotePdf(quoteData, prismaClient);
+  assert.equal(result.fileName, 'quotation-SSB-20260715-0008.pdf');
+  assert.equal(result.pdfUrl, '/api/quotes/SSB-20260715-0008/pdf');
+  assert.equal(Buffer.isBuffer(result.content), true);
+  assert.equal(calls.upsert.create.content, result.content);
+  assert.equal(calls.update.data.pdfUrl, result.pdfUrl);
 });
 
 test('maps Google Sheet headers dynamically by known names', () => {

@@ -2603,6 +2603,8 @@
     hideStatus(leadNotesStatus);
     hideStatus(leadNoteStatus);
     hideStatus(paymentStatus);
+    const quotationStatus = document.getElementById('admin-quotation-status');
+    hideStatus(quotationStatus);
 
     document.getElementById('admin-lead-detail-grid').innerHTML = [
       detailItem('Customer Details', lead.customerName),
@@ -2620,6 +2622,20 @@
       detailItem('Next Follow-up', dateOnly(lead.nextFollowUpDate)),
       detailItem('Assigned To', lead.assignedTo),
       detailItem('CRM Notes', lead.crmNotes),
+    ].join('');
+
+    const quotationDownload = document.getElementById('admin-download-quotation');
+    const quotationRegenerate = document.getElementById('admin-regenerate-quotation');
+    quotationDownload.hidden = !lead.pdfUrl;
+    quotationDownload.href = lead.pdfUrl || '#';
+    quotationRegenerate.disabled = !lead.quotationSnapshotReady;
+    quotationRegenerate.dataset.leadId = lead.id;
+    document.getElementById('admin-quotation-summary').innerHTML = [
+      detailItem('PDF Status', label(lead.pdfStatus)),
+      detailItem('Generated At', dateTime(lead.pdfGeneratedAt)),
+      detailItem('Filename', lead.pdfFileName),
+      detailItem('Quoted Unit Price', lead.quotedUnitPrice === null ? 'Unavailable' : money(lead.quotedUnitPrice)),
+      detailItem('Grand Total', lead.grandTotal === null ? 'Unavailable' : money(lead.grandTotal)),
     ].join('');
 
     const amountInput = document.getElementById('admin-payment-amount');
@@ -2985,6 +3001,20 @@
     if (event.target.closest('[data-toggle-timeline]')) {
       showAllTimeline = !showAllTimeline;
       if (activeLead) renderLeadDetail(activeLead);
+      return;
+    }
+
+    const regenerateQuotationButton = event.target.closest('#admin-regenerate-quotation');
+    if (regenerateQuotationButton && !regenerateQuotationButton.disabled) {
+      const quotationStatus = document.getElementById('admin-quotation-status');
+      regenerateQuotationButton.disabled = true;
+      api(`/api/admin/leads/${regenerateQuotationButton.dataset.leadId}/quotation-pdf/regenerate`, { method: 'POST' })
+        .then(() => openLeadDetail(regenerateQuotationButton.dataset.leadId))
+        .then(() => showToast('Quotation PDF regenerated'))
+        .catch((error) => {
+          showStatus(quotationStatus, error.errors?.[0]?.message || error.message, true);
+          regenerateQuotationButton.disabled = false;
+        });
       return;
     }
 

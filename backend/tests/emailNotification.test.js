@@ -168,3 +168,31 @@ test('EmailService sends text and professional HTML content to the configured re
   assert.match(mail.html, /<table/);
   assert.match(mail.html, /Need delivery before weekend\./);
 });
+
+test('EmailService sends the canonical quotation PDF to the customer and copies the configured recipient', async () => {
+  let mail;
+  const service = new EmailService({
+    config: completeConfig,
+    createTransport: () => ({
+      sendMail: async (message) => {
+        mail = message;
+        return { messageId: 'customer-message-id' };
+      },
+    }),
+  });
+  const pdf = Buffer.from('%PDF-1.7 canonical quotation');
+  await service.sendQuoteNotification({
+    ...quoteData,
+    customer: { ...quoteData.customer, email: 'customer@example.test' },
+    pdf: {
+      fileName: 'quotation-SSB-20260703-0008.pdf',
+      content: pdf,
+      contentType: 'application/pdf',
+    },
+  });
+
+  assert.equal(mail.to, 'customer@example.test');
+  assert.equal(mail.bcc, completeConfig.recipient);
+  assert.equal(mail.attachments[0].filename, 'quotation-SSB-20260703-0008.pdf');
+  assert.equal(mail.attachments[0].content, pdf);
+});
