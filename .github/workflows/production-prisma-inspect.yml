@@ -1,0 +1,579 @@
+name: Inspect production Prisma schema
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-prisma-inspection
+  cancel-in-progress: false
+
+jobs:
+  inspect:
+    name: Read-only production database inspection
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+
+    steps:
+      - name: Check out reviewed application commit
+        uses: actions/checkout@v4
+        with:
+          ref: 7496f570a559b7da9ed1af92eb5160f8150a65a2
+          persist-credentials: false
+
+      - name: Verify reviewed commit and migration checksum
+        shell: bash
+        run: |
+          set +x
+          set -euo pipefail
+          expected_sha="7496f570a559b7da9ed1af92eb5160f8150a65a2"
+          expected_checksum="226726A9BBC543518129AA5686E868F81024E0C0E642D54F2820755CB0F79A3D"
+          migration_file="backend/prisma/migrations/20260926000000_add_wanamaste_delivery_claim/migration.sql"
+          actual_sha="$(git rev-parse HEAD)"
+
+          if [[ "$actual_sha" != "$expected_sha" ]]; then
+            echo "::error::Checked-out commit does not match the reviewed production commit."
+            exit 1
+          fi
+
+          if [[ ! -f "$migration_file" ]]; then
+            echo "::error::Reviewed WAnamaste migration file is missing."
+            exit 1
+          fi
+
+          actual_checksum="$(sha256sum "$migration_file" | awk '{print toupper($1)}')"
+          if [[ "$actual_checksum" != "$expected_checksum" ]]; then
+            echo "::error::Reviewed WAnamaste migration checksum does not match."
+            exit 1
+          fi
+
+          echo "Reviewed commit and migration checksum verified."
+
+      - name: Verify PostgreSQL client
+        shell: bash
+        run: |
+          set +x
+          set -euo pipefail
+          if ! command -v psql >/dev/null 2>&1; then
+            echo "::error::A PostgreSQL client is unavailable; inspection stopped safely."
+            exit 1
+          fi
+          echo "PostgreSQL client is available."
+
+      - name: Inspect production metadata in read-only transactions
+        shell: bash
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          set +x
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require('fs');
+          const path = require('path');
+          const { spawnSync } = require('child_process');
+
+          const reviewedCommit = '7496f570a559b7da9ed1af92eb5160f8150a65a2';
+          const pendingMigrationNames = [
+            '20260714000000_add_quote_distribution_pipeline',
+            '20260714010000_repair_quote_distribution_schema',
+            '20260717000000_add_material_calculator',
+            '20260718000000_add_test_payments',
+            '20260729000000_sync_calculator_catalogue_dimensions',
+            '20260729170000_add_offline_sales_analytics',
+            '20260830000000_add_business_analytics_data',
+            '20260924000000_add_quote_price_snapshot',
+            '20260926000000_add_wanamaste_delivery_claim',
+          ];
+          const relevantTables = [
+            'QuoteRequest', 'QuoteDocument', 'NotificationLog', 'Admin', 'Product', 'Customer',
+            'brick_types', 'wall_thickness', 'payments', 'payment_receipts', 'offline_sales',
+            'business_import_batches', 'business_import_rows', 'ledger_customers',
+            'business_vendors', 'ledger_sales', 'ledger_receipts', 'expense_entries',
+            'material_purchases', 'production_records', 'labour_payments', 'business_events',
+            'business_audit_logs', 'whatsapp_recovery_audits',
+          ];
+          const relevantEnums = new Set([
+            'NotificationType', 'NotificationStatus', 'CalculatorMeasurementUnit', 'PaymentStatus',
+            'ImportBatchStatus', 'ImportRowStatus', 'BusinessOrigin', 'DataConfidence',
+            'BusinessRecordState', 'ProductionRecordType', 'BusinessEventType',
+            'BusinessImpact', 'BusinessEventStatus', 'BusinessAuditAction',
+          ]);
+
+          function safeFailure(message) {
+            console.log('PRODUCTION DATABASE INSPECTION');
+            console.log('==============================');
+            console.log('Target: Production database');
+            console.log('Mutation: NONE');
+            console.log('WAnamaste calls: 0');
+            console.log('WhatsApp messages: 0');
+            console.log('Migration applied: NO');
+            console.log('');
+            console.log(`Inspection stopped safely: ${message}`);
+            console.log('RECOMMENDATION: E. INSUFFICIENT READ-ONLY EVIDENCE');
+          }
+
+          function connectionEnvironment() {
+            if (!process.env.DATABASE_URL) throw new Error('Production DATABASE_URL is not configured.');
+            let parsed;
+            try {
+              parsed = new URL(process.env.DATABASE_URL);
+            } catch (_error) {
+              throw new Error('Production DATABASE_URL is invalid.');
+            }
+            if (!['postgres:', 'postgresql:'].includes(parsed.protocol)) {
+              throw new Error('Production DATABASE_URL is not PostgreSQL.');
+            }
+
+            const env = { ...process.env };
+            delete env.DATABASE_URL;
+            env.PGHOST = decodeURIComponent(parsed.hostname);
+            env.PGPORT = parsed.port || '5432';
+            env.PGUSER = decodeURIComponent(parsed.username);
+            env.PGPASSWORD = decodeURIComponent(parsed.password);
+            env.PGDATABASE = decodeURIComponent(parsed.pathname.replace(/^\//, ''));
+            env.PGSSLMODE = parsed.searchParams.get('sslmode') || 'require';
+            env.PGOPTIONS = '-c default_transaction_read_only=on -c statement_timeout=30000 -c lock_timeout=5000';
+            return env;
+          }
+
+          function guardReadOnlySql(sql) {
+            const withoutComments = sql.replace(/--.*$/gm, '');
+            const withoutStrings = withoutComments.replace(/'(?:''|[^'])*'/gs, "''");
+            const forbidden = /\b(INSERT|UPDATE|DELETE|ALTER|CREATE|DROP|TRUNCATE|VACUUM|ANALYZE|CALL|DO|COPY|GRANT|REVOKE|COMMENT|REFRESH|REINDEX|CLUSTER|MERGE)\b/i;
+            if (forbidden.test(withoutStrings)) {
+              throw new Error('Inspection SQL failed the mutation-keyword guard.');
+            }
+            if (!/SET\s+TRANSACTION\s+READ\s+ONLY/i.test(withoutStrings)) {
+              throw new Error('Inspection SQL does not establish a read-only transaction.');
+            }
+            const statements = withoutStrings.split(';').map((value) => value.trim()).filter(Boolean);
+            const allowed = /^(BEGIN|SET\s+TRANSACTION\s+READ\s+ONLY|SELECT|WITH|ROLLBACK)\b/i;
+            if (statements.some((statement) => !allowed.test(statement))) {
+              throw new Error('Inspection SQL contains a non-allowlisted statement.');
+            }
+          }
+
+          const childEnv = connectionEnvironment();
+          function query(sql) {
+            guardReadOnlySql(sql);
+            const result = spawnSync('psql', [
+              '-X', '--no-psqlrc', '--quiet', '--no-align', '--tuples-only',
+              '--set', 'ON_ERROR_STOP=1',
+            ], {
+              env: childEnv,
+              input: sql,
+              encoding: 'utf8',
+              maxBuffer: 10 * 1024 * 1024,
+            });
+            if (result.status !== 0) {
+              throw new Error('A read-only PostgreSQL metadata query failed.');
+            }
+            return result.stdout.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+          }
+
+          function sqlString(value) {
+            return `'${String(value).replaceAll("'", "''")}'`;
+          }
+          const tableValues = relevantTables.map((name) => `(${sqlString(name)})`).join(',\n');
+          const tableList = relevantTables.map(sqlString).join(', ');
+          const enumList = [...relevantEnums].map(sqlString).join(', ');
+
+          const metadataSql = `
+          BEGIN;
+          SET TRANSACTION READ ONLY;
+          SELECT 'READ_ONLY_GUARD|' || current_setting('transaction_read_only');
+          SELECT 'MIGRATIONS|' || COALESCE((
+            SELECT jsonb_agg(to_jsonb(m))::text
+            FROM (
+              SELECT migration_name, started_at, finished_at, rolled_back_at,
+                     applied_steps_count,
+                     CASE WHEN COALESCE(logs, '') = '' THEN false ELSE true END AS logs_present
+              FROM "_prisma_migrations"
+              ORDER BY started_at, migration_name
+            ) m
+          ), '[]');
+          SELECT 'TABLES|' || COALESCE((
+            SELECT jsonb_agg(to_jsonb(t))::text
+            FROM (
+              SELECT wanted.table_name,
+                     to_regclass(format('%I.%I', current_schema(), wanted.table_name)) IS NOT NULL AS exists
+              FROM (VALUES ${tableValues}) AS wanted(table_name)
+              ORDER BY wanted.table_name
+            ) t
+          ), '[]');
+          SELECT 'COLUMNS|' || COALESCE((
+            SELECT jsonb_agg(to_jsonb(c))::text
+            FROM (
+              SELECT table_name, column_name, data_type, udt_name,
+                     is_nullable, column_default, ordinal_position
+              FROM information_schema.columns
+              WHERE table_schema = current_schema()
+                AND table_name IN (${tableList})
+              ORDER BY table_name, ordinal_position
+            ) c
+          ), '[]');
+          SELECT 'CONSTRAINTS|' || COALESCE((
+            SELECT jsonb_agg(to_jsonb(k))::text
+            FROM (
+              SELECT tbl.relname AS table_name, con.conname AS constraint_name,
+                     con.contype AS constraint_type,
+                     pg_get_constraintdef(con.oid, true) AS definition
+              FROM pg_catalog.pg_constraint con
+              JOIN pg_catalog.pg_class tbl ON tbl.oid = con.conrelid
+              JOIN pg_catalog.pg_namespace n ON n.oid = tbl.relnamespace
+              WHERE n.nspname = current_schema()
+                AND tbl.relname IN (${tableList})
+              ORDER BY tbl.relname, con.conname
+            ) k
+          ), '[]');
+          SELECT 'INDEXES|' || COALESCE((
+            SELECT jsonb_agg(to_jsonb(i))::text
+            FROM (
+              SELECT tablename AS table_name, indexname AS index_name, indexdef AS definition
+              FROM pg_catalog.pg_indexes
+              WHERE schemaname = current_schema()
+                AND tablename IN (${tableList})
+              ORDER BY tablename, indexname
+            ) i
+          ), '[]');
+          SELECT 'ENUMS|' || COALESCE((
+            SELECT jsonb_agg(to_jsonb(e))::text
+            FROM (
+              SELECT typ.typname AS enum_name, enum.enumlabel AS enum_value,
+                     enum.enumsortorder AS sort_order
+              FROM pg_catalog.pg_type typ
+              JOIN pg_catalog.pg_enum enum ON enum.enumtypid = typ.oid
+              JOIN pg_catalog.pg_namespace n ON n.oid = typ.typnamespace
+              WHERE n.nspname = current_schema()
+                AND typ.typname IN (${enumList})
+              ORDER BY typ.typname, enum.enumsortorder
+            ) e
+          ), '[]');
+          ROLLBACK;
+          `;
+
+          function parseMarked(lines) {
+            const result = {};
+            for (const line of lines) {
+              const separator = line.indexOf('|');
+              if (separator < 0) continue;
+              const key = line.slice(0, separator);
+              const value = line.slice(separator + 1);
+              result[key] = key === 'READ_ONLY_GUARD' ? value : JSON.parse(value);
+            }
+            return result;
+          }
+
+          try {
+            const metadata = parseMarked(query(metadataSql));
+            if (metadata.READ_ONLY_GUARD !== 'on') {
+              throw new Error('PostgreSQL did not confirm read-only transaction mode.');
+            }
+            for (const key of ['MIGRATIONS', 'TABLES', 'COLUMNS', 'CONSTRAINTS', 'INDEXES', 'ENUMS']) {
+              if (!Array.isArray(metadata[key])) throw new Error(`Required ${key.toLowerCase()} metadata is unavailable.`);
+            }
+
+            const tableExists = new Map(metadata.TABLES.map((row) => [row.table_name, row.exists]));
+            const existingTables = relevantTables.filter((name) => tableExists.get(name));
+            const countParts = existingTables.map((name) =>
+              `SELECT ${sqlString(name)} AS table_name, COUNT(*)::text AS row_count FROM "${name.replaceAll('"', '""')}"`);
+            let counts = [];
+            if (countParts.length) {
+              const countSql = `
+              BEGIN;
+              SET TRANSACTION READ ONLY;
+              SELECT 'READ_ONLY_GUARD|' || current_setting('transaction_read_only');
+              SELECT 'COUNTS|' || COALESCE((SELECT jsonb_agg(to_jsonb(c))::text FROM (${countParts.join('\nUNION ALL\n')}) c), '[]');
+              ROLLBACK;
+              `;
+              const countResult = parseMarked(query(countSql));
+              if (countResult.READ_ONLY_GUARD !== 'on') throw new Error('Count session was not read-only.');
+              counts = countResult.COUNTS || [];
+            }
+
+            let calculator = { bricks: [], thicknesses: [] };
+            const calculatorParts = [];
+            if (tableExists.get('brick_types')) {
+              calculatorParts.push(`SELECT 'BRICKS|' || COALESCE(jsonb_agg(jsonb_build_object(
+                'name', "name", 'length', "length"::text, 'width', "width"::text,
+                'height', "height"::text, 'unit', "dimension_unit"::text,
+                'price', "price_per_piece"::text, 'waste', "default_waste_percent"::text,
+                'active', "is_active") ORDER BY "name")::text, '[]') FROM "brick_types"`);
+            }
+            if (tableExists.get('wall_thickness')) {
+              calculatorParts.push(`SELECT 'THICKNESSES|' || COALESCE(jsonb_agg(jsonb_build_object(
+                'name', "display_name", 'value', "thickness_value"::text,
+                'unit', "unit"::text, 'active', "is_active") ORDER BY "thickness_value")::text, '[]') FROM "wall_thickness"`);
+            }
+            if (calculatorParts.length) {
+              const calculatorSql = `BEGIN; SET TRANSACTION READ ONLY;
+                SELECT 'READ_ONLY_GUARD|' || current_setting('transaction_read_only');
+                ${calculatorParts.join(';\n')}; ROLLBACK;`;
+              const calculatorResult = parseMarked(query(calculatorSql));
+              if (calculatorResult.READ_ONLY_GUARD !== 'on') throw new Error('Calculator session was not read-only.');
+              calculator = {
+                bricks: calculatorResult.BRICKS || [],
+                thicknesses: calculatorResult.THICKNESSES || [],
+              };
+            }
+
+            const columns = new Set(metadata.COLUMNS.map((row) => `${row.table_name}.${row.column_name}`));
+            let notificationDistribution = null;
+            if (tableExists.get('NotificationLog')
+              && columns.has('NotificationLog.deduplication_key')
+              && columns.has('NotificationLog.recovery_attempt_count')) {
+              const distributionSql = `
+              BEGIN;
+              SET TRANSACTION READ ONLY;
+              SELECT 'READ_ONLY_GUARD|' || current_setting('transaction_read_only');
+              SELECT 'NOTIFICATION_DISTRIBUTION|' || jsonb_build_object(
+                'total', COUNT(*)::text,
+                'deduplication_null', COUNT(*) FILTER (WHERE "deduplication_key" IS NULL)::text,
+                'deduplication_non_null', COUNT(*) FILTER (WHERE "deduplication_key" IS NOT NULL)::text,
+                'recovery_zero', COUNT(*) FILTER (WHERE "recovery_attempt_count" = 0)::text,
+                'recovery_non_zero', COUNT(*) FILTER (WHERE "recovery_attempt_count" <> 0)::text
+              )::text FROM "NotificationLog";
+              ROLLBACK;
+              `;
+              const distributionResult = parseMarked(query(distributionSql));
+              if (distributionResult.READ_ONLY_GUARD !== 'on') throw new Error('Notification session was not read-only.');
+              notificationDistribution = distributionResult.NOTIFICATION_DISTRIBUTION || null;
+            }
+
+            const countMap = new Map(counts.map((row) => [row.table_name, row.row_count]));
+            const constraintNames = new Set(metadata.CONSTRAINTS.map((row) => row.constraint_name));
+            const indexNames = new Set(metadata.INDEXES.map((row) => row.index_name));
+            const enumValues = new Map();
+            for (const row of metadata.ENUMS) {
+              if (!enumValues.has(row.enum_name)) enumValues.set(row.enum_name, []);
+              enumValues.get(row.enum_name).push(row.enum_value);
+            }
+
+            const signalExists = (signal) => {
+              const [kind, ...parts] = signal.split(':');
+              const value = parts.join(':');
+              if (kind === 'table') return Boolean(tableExists.get(value));
+              if (kind === 'column') return columns.has(value);
+              if (kind === 'index') return indexNames.has(value);
+              if (kind === 'constraint') return constraintNames.has(value);
+              if (kind === 'enum-type') return enumValues.has(value);
+              if (kind === 'enum-value') {
+                const [enumName, enumValue] = parts;
+                return (enumValues.get(enumName) || []).includes(enumValue);
+              }
+              if (kind === 'config') return calculator.bricks.some((row) => {
+                const expected = value.split('|');
+                return row.name === expected[0] && row.length === expected[1]
+                  && row.width === expected[2] && row.height === expected[3]
+                  && row.unit === expected[4] && row.price === expected[5]
+                  && row.waste === expected[6] && row.active === true;
+              });
+              return false;
+            };
+
+            function extractedSignals(migrationName) {
+              const migrationPath = path.join('backend', 'prisma', 'migrations', migrationName, 'migration.sql');
+              const sql = fs.readFileSync(migrationPath, 'utf8');
+              const signals = [];
+              for (const match of sql.matchAll(/CREATE TABLE(?: IF NOT EXISTS)?\s+"([^"]+)"/gi)) signals.push(`table:${match[1]}`);
+              for (const match of sql.matchAll(/CREATE TYPE\s+"([^"]+)"/gi)) signals.push(`enum-type:${match[1]}`);
+              for (const match of sql.matchAll(/CREATE(?: UNIQUE)? INDEX(?: IF NOT EXISTS)?\s+"([^"]+)"/gi)) signals.push(`index:${match[1]}`);
+              for (const match of sql.matchAll(/CONSTRAINT\s+"([^"]+)"/gi)) signals.push(`constraint:${match[1]}`);
+              for (const match of sql.matchAll(/ALTER TYPE\s+"([^"]+)"\s+ADD VALUE IF NOT EXISTS\s+'([^']+)'/gi)) {
+                signals.push(`enum-value:${match[1]}:${match[2]}`);
+              }
+              return signals;
+            }
+
+            const extraSignals = {
+              '20260714000000_add_quote_distribution_pipeline': [
+                'column:QuoteRequest.pdfUrl',
+                'column:QuoteDocument.quoteRequestId', 'column:QuoteDocument.fileName',
+                'column:QuoteDocument.contentType', 'column:QuoteDocument.content',
+              ],
+              '20260714010000_repair_quote_distribution_schema': [
+                'column:QuoteRequest.pdfUrl',
+                'column:QuoteDocument.quoteRequestId', 'column:QuoteDocument.fileName',
+                'column:QuoteDocument.contentType', 'column:QuoteDocument.content',
+              ],
+              '20260717000000_add_material_calculator': [
+                'enum-value:CalculatorMeasurementUnit:MM',
+                'enum-value:CalculatorMeasurementUnit:CM',
+                'enum-value:CalculatorMeasurementUnit:INCH',
+              ],
+              '20260718000000_add_test_payments': [
+                'column:Customer.email', 'column:QuoteRequest.final_amount',
+                'column:QuoteRequest.payment_token', 'column:QuoteRequest.payment_enabled_at',
+                'enum-value:PaymentStatus:PENDING', 'enum-value:PaymentStatus:SUCCESS',
+                'enum-value:PaymentStatus:FAILED', 'enum-value:PaymentStatus:REFUNDED',
+              ],
+              '20260729000000_sync_calculator_catalogue_dimensions': [
+                'config:Fly Ash Bricks|9|4.5|3|INCH|8.50|0|true',
+                'config:Solid Cement Blocks|12|8|6|INCH|42.00|0|true',
+                'config:Paver Blocks|9|4.5|3|INCH|55.00|0|true',
+                'config:Mud Bricks|9|4.5|3|INCH|12.00|0|true',
+              ],
+              '20260729170000_add_offline_sales_analytics': [],
+              '20260830000000_add_business_analytics_data': [],
+              '20260924000000_add_quote_price_snapshot': [
+                'column:QuoteRequest.product_id', 'column:QuoteRequest.quoted_unit_price',
+                'column:QuoteRequest.line_amount', 'column:QuoteRequest.subtotal',
+                'column:QuoteRequest.cgst_rate', 'column:QuoteRequest.cgst_amount',
+                'column:QuoteRequest.sgst_rate', 'column:QuoteRequest.sgst_amount',
+                'column:QuoteRequest.igst_rate', 'column:QuoteRequest.igst_amount',
+                'column:QuoteRequest.grand_total', 'column:QuoteRequest.amount_in_words',
+                'column:QuoteDocument.updated_at',
+              ],
+              '20260926000000_add_wanamaste_delivery_claim': [
+                'column:NotificationLog.deduplication_key',
+                'column:NotificationLog.recovery_attempt_count',
+                'column:QuoteRequest.idempotency_key',
+                'column:QuoteRequest.request_fingerprint',
+                'constraint:whatsapp_recovery_audits_pkey',
+                'constraint:whatsapp_recovery_audits_quote_request_id_fkey',
+                'constraint:whatsapp_recovery_audits_notification_log_id_fkey',
+                'constraint:whatsapp_recovery_audits_admin_id_fkey',
+              ],
+            };
+
+            const historyByName = new Map();
+            for (const row of metadata.MIGRATIONS) {
+              if (!historyByName.has(row.migration_name)) historyByName.set(row.migration_name, []);
+              historyByName.get(row.migration_name).push(row);
+            }
+            const repositoryMigrations = fs.readdirSync(path.join('backend', 'prisma', 'migrations'))
+              .filter((entry) => fs.existsSync(path.join('backend', 'prisma', 'migrations', entry, 'migration.sql')))
+              .sort();
+            const repositorySet = new Set(repositoryMigrations);
+            const missingFromRepository = [...historyByName.keys()].filter((name) => !repositorySet.has(name));
+            const failedHistory = metadata.MIGRATIONS.filter((row) =>
+              row.rolled_back_at || (!row.finished_at && row.logs_present));
+            const appliedInTimeOrder = metadata.MIGRATIONS
+              .filter((row) => row.finished_at && !row.rolled_back_at && repositorySet.has(row.migration_name))
+              .sort((a, b) => String(a.started_at).localeCompare(String(b.started_at)));
+            const appliedIndexes = appliedInTimeOrder.map((row) => repositoryMigrations.indexOf(row.migration_name));
+            const outOfOrder = appliedIndexes.some((value, index) => index > 0 && value < appliedIndexes[index - 1]);
+
+            const classifications = pendingMigrationNames.map((name) => {
+              const expected = [...new Set([...extractedSignals(name), ...(extraSignals[name] || [])])];
+              const present = expected.filter(signalExists);
+              const attempts = historyByName.get(name) || [];
+              const failed = attempts.some((row) => row.rolled_back_at || (!row.finished_at && row.logs_present));
+              const applied = attempts.some((row) => row.finished_at && !row.rolled_back_at);
+              let classification = 'UNKNOWN';
+              if (failed) classification = 'FAILED_MIGRATION';
+              else if (applied && present.length !== expected.length) classification = 'HISTORY_APPLIED_SCHEMA_MISMATCH';
+              else if (!applied && expected.length > 0 && present.length === 0) classification = 'CLEANLY_PENDING';
+              else if (!applied && expected.length > 0 && present.length === expected.length) classification = 'ALREADY_APPLIED_IN_SCHEMA';
+              else if (!applied && present.length > 0 && present.length < expected.length) classification = 'PARTIALLY_APPLIED';
+              else if (applied && present.length === expected.length) classification = 'ALREADY_APPLIED_IN_SCHEMA';
+              const history = failed ? 'FAILED/ROLLED_BACK' : applied ? 'APPLIED' : 'PENDING';
+              const risk = ['CLEANLY_PENDING'].includes(classification) ? 'MEDIUM' : 'HIGH';
+              return { name, expected: expected.length, present: present.length, history, classification, risk };
+            });
+
+            console.log('PRODUCTION DATABASE INSPECTION');
+            console.log('==============================');
+            console.log('Target: Production database');
+            console.log(`Reviewed commit: ${reviewedCommit}`);
+            console.log('Mutation: NONE');
+            console.log('WAnamaste calls: 0');
+            console.log('WhatsApp messages: 0');
+            console.log('Migration applied: NO');
+            console.log('');
+
+            console.log('A. PRISMA MIGRATION HISTORY');
+            for (const row of metadata.MIGRATIONS) {
+              const status = row.rolled_back_at ? 'ROLLED_BACK' : row.finished_at ? 'FINISHED' : 'UNFINISHED';
+              console.log(`${row.migration_name} | ${status} | started=${row.started_at || '-'} | finished=${row.finished_at || '-'} | rolled_back=${row.rolled_back_at || '-'} | steps=${row.applied_steps_count} | logs=${row.logs_present ? 'PRESENT' : 'NONE'}`);
+            }
+            console.log(`Failed/rolled-back records: ${failedHistory.length}`);
+            console.log(`Applied migration absent from repository: ${missingFromRepository.length ? missingFromRepository.join(', ') : 'NONE'}`);
+            console.log(`Applied out of repository order: ${outOfOrder ? 'YES' : 'NO'}`);
+            console.log('');
+
+            console.log('B. TABLES, COLUMNS, KEYS, AND INDEXES');
+            for (const tableName of relevantTables) {
+              const exists = Boolean(tableExists.get(tableName));
+              const tableColumns = metadata.COLUMNS.filter((row) => row.table_name === tableName)
+                .map((row) => `${row.column_name}:${row.udt_name}:${row.is_nullable === 'YES' ? 'NULL' : 'NOT_NULL'}${row.column_default ? ':DEFAULT' : ''}`);
+              const pks = metadata.CONSTRAINTS.filter((row) => row.table_name === tableName && row.constraint_type === 'p').map((row) => row.constraint_name);
+              const fks = metadata.CONSTRAINTS.filter((row) => row.table_name === tableName && row.constraint_type === 'f').map((row) => `${row.constraint_name}=${row.definition}`);
+              const indexes = metadata.INDEXES.filter((row) => row.table_name === tableName).map((row) => row.index_name);
+              console.log(`${tableName} | ${exists ? 'EXISTS' : 'MISSING'} | rows=${exists ? countMap.get(tableName) ?? 'UNAVAILABLE' : '-'} | columns=${tableColumns.join(',') || '-'} | pk=${pks.join(',') || '-'} | fk=${fks.join(';') || '-'} | indexes=${indexes.join(',') || '-'}`);
+            }
+            console.log('');
+
+            console.log('C. ENUMS');
+            for (const enumName of [...relevantEnums].sort()) {
+              console.log(`${enumName} | ${(enumValues.get(enumName) || []).join(',') || 'MISSING'}`);
+            }
+            console.log('');
+
+            const quoteColumns = new Set([
+              'product_id', 'quoted_unit_price', 'line_amount', 'subtotal', 'cgst_rate', 'cgst_amount',
+              'sgst_rate', 'sgst_amount', 'igst_rate', 'igst_amount', 'grand_total', 'amount_in_words',
+              'idempotency_key', 'request_fingerprint',
+            ]);
+            console.log('D. QUOTEREQUEST MIGRATION COLUMNS');
+            for (const row of metadata.COLUMNS.filter((column) => column.table_name === 'QuoteRequest' && quoteColumns.has(column.column_name))) {
+              const indexed = metadata.INDEXES.some((index) => index.table_name === 'QuoteRequest' && index.definition.includes(`\"${row.column_name}\"`));
+              const foreignKey = metadata.CONSTRAINTS.some((constraint) => constraint.table_name === 'QuoteRequest' && constraint.constraint_type === 'f' && constraint.definition.includes(row.column_name));
+              console.log(`${row.column_name} | type=${row.udt_name} | nullable=${row.is_nullable} | default=${row.column_default || 'NONE'} | indexed=${indexed ? 'YES' : 'NO'} | foreign_key=${foreignKey ? 'YES' : 'NO'}`);
+            }
+            console.log('');
+
+            console.log('E. NOTIFICATIONLOG DELIVERY STATE');
+            const notificationColumns = metadata.COLUMNS.filter((row) => row.table_name === 'NotificationLog' && ['deduplication_key', 'recovery_attempt_count'].includes(row.column_name));
+            console.log(`Columns: ${notificationColumns.map((row) => `${row.column_name}:${row.udt_name}:${row.is_nullable}`).join(',') || 'MISSING'}`);
+            console.log(`NotificationStatus values: ${(enumValues.get('NotificationStatus') || []).join(',') || 'MISSING'}`);
+            console.log(`Deduplication unique index: ${indexNames.has('NotificationLog_deduplication_key_key') ? 'PRESENT' : 'MISSING'}`);
+            console.log(`Distribution: ${notificationDistribution ? JSON.stringify(notificationDistribution) : 'UNAVAILABLE'}`);
+            console.log('');
+
+            console.log('F. QUOTE DOCUMENT');
+            console.log(`updated_at: ${columns.has('QuoteDocument.updated_at') ? 'PRESENT' : 'MISSING'}`);
+            console.log(`indexes: ${metadata.INDEXES.filter((row) => row.table_name === 'QuoteDocument').map((row) => row.index_name).join(',') || 'NONE'}`);
+            console.log(`foreign keys: ${metadata.CONSTRAINTS.filter((row) => row.table_name === 'QuoteDocument' && row.constraint_type === 'f').map((row) => row.constraint_name).join(',') || 'NONE'}`);
+            console.log('');
+
+            console.log('G. CALCULATOR CONFIGURATION');
+            console.log(`brick_types rows: ${calculator.bricks.length}`);
+            for (const row of calculator.bricks) console.log(`brick | ${row.name} | ${row.length}x${row.width}x${row.height} ${row.unit} | price=${row.price} | waste=${row.waste} | active=${row.active}`);
+            console.log(`wall_thickness rows: ${calculator.thicknesses.length}`);
+            for (const row of calculator.thicknesses) console.log(`thickness | ${row.name} | ${row.value} ${row.unit} | active=${row.active}`);
+            console.log('');
+
+            console.log('H. LOCK-RISK ROW COUNTS');
+            for (const tableName of ['QuoteRequest', 'QuoteDocument', 'NotificationLog', 'Product', 'Customer', 'Admin', 'payments', 'payment_receipts', 'offline_sales']) {
+              console.log(`${tableName} | ${tableExists.get(tableName) ? countMap.get(tableName) ?? 'UNAVAILABLE' : 'MISSING'}`);
+            }
+            console.log('');
+
+            console.log('I. MIGRATION DRIFT CLASSIFICATION');
+            console.log('Migration | Prisma History | Schema State | Classification | Risk');
+            for (const row of classifications) {
+              console.log(`${row.name} | ${row.history} | ${row.present}/${row.expected} expected signals | ${row.classification} | ${row.risk}`);
+            }
+            console.log('');
+
+            let recommendation = 'A. SAFE TO APPLY REVIEWED CHAIN';
+            if (classifications.some((row) => row.classification === 'FAILED_MIGRATION') || failedHistory.length) {
+              recommendation = 'D. FAILED MIGRATION DETECTED — DO NOT MIGRATE';
+            } else if (classifications.some((row) => ['PARTIALLY_APPLIED', 'ALREADY_APPLIED_IN_SCHEMA', 'HISTORY_APPLIED_SCHEMA_MISMATCH'].includes(row.classification))) {
+              recommendation = 'C. DRIFT DETECTED — DO NOT MIGRATE';
+            } else if (classifications.some((row) => row.classification === 'UNKNOWN')) {
+              recommendation = 'E. INSUFFICIENT READ-ONLY EVIDENCE';
+            } else if (missingFromRepository.length || outOfOrder) {
+              recommendation = 'B. SAFE TO APPLY ONLY AFTER MANUAL REVIEW';
+            }
+            console.log('RECOMMENDATION');
+            console.log(recommendation);
+          } catch (_error) {
+            safeFailure('Required metadata could not be established without exposing connection details.');
+            process.exitCode = 1;
+          }
+          NODE
