@@ -1,6 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const {
+  htmlMetadata,
   inspectConnection,
   validateConfiguration,
 } = require('../services/wanamasteService');
@@ -73,4 +74,17 @@ test('returns a sanitized network failure without exposing the configured URL', 
   assert.equal(result.connectivity.failureCode, 'DNS_ERROR');
   assert.equal(JSON.stringify(result).includes(configured.apiBaseUrl), false);
   assert.equal(JSON.stringify(result).includes(configured.apiToken), false);
+});
+
+test('extracts only same-origin documentation links from public HTML', () => {
+  const metadata = htmlMetadata(`
+    <html><head><title> WAnamaste API </title></head><body>
+      <a href="/docs/api">API docs</a>
+      <a href="https://external.example/openapi.json">External</a>
+      <a href="/account">Account</a>
+    </body></html>
+  `, new URL('https://api.example.test/'), new URL('https://api.example.test/'));
+
+  assert.equal(metadata.title, 'WAnamaste API');
+  assert.deepEqual(metadata.links, ['/docs/api']);
 });

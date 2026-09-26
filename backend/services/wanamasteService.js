@@ -6,7 +6,12 @@ const DOCUMENTATION_PATHS = Object.freeze([
   'openapi.json',
   'swagger.json',
   'api-docs',
+  'api-docs.json',
   'docs',
+  'swagger',
+  'swagger-ui',
+  'swagger-ui/index.html',
+  '.well-known/openapi.json',
 ]);
 
 function validateConfiguration(config = env.wanamaste) {
@@ -71,6 +76,25 @@ function publicPaths(document) {
   ));
 }
 
+function htmlMetadata(html, pageUrl, baseUrl) {
+  const title = html.match(/<title[^>]*>([^<]*)<\/title>/i)?.[1]?.replace(/\s+/g, ' ').trim() || null;
+  const links = [];
+  const linkPattern = /href\s*=\s*["']([^"']+)["']/gi;
+  let match;
+  while ((match = linkPattern.exec(html)) && links.length < 25) {
+    try {
+      const url = new URL(match[1], pageUrl);
+      const relevant = /(api|docs?|openapi|swagger)/i.test(url.pathname);
+      if (url.origin === baseUrl.origin && relevant && !links.includes(url.pathname)) {
+        links.push(url.pathname);
+      }
+    } catch (_error) {
+      // Ignore malformed page links.
+    }
+  }
+  return { title, links };
+}
+
 function networkFailureCode(error) {
   if (error?.name === 'AbortError' || error?.name === 'TimeoutError') return 'TIMEOUT';
   const code = String(error?.cause?.code || error?.code || '').toUpperCase();
@@ -102,6 +126,8 @@ async function inspectConnection({
       sourcePath: null,
       endpoints: [],
       securitySchemes: [],
+      publicPageMetadata: [],
+      candidateLinks: [],
     },
     credentialValidation: {
       attempted: false,
@@ -128,7 +154,24 @@ async function inspectConnection({
       if (result.connectivity.httpStatus === null) result.connectivity.httpStatus = response.status;
 
       const contentType = String(response.headers.get('content-type') || '').toLowerCase();
-      if (!response.ok || !contentType.includes('json')) continue;
+      if (!response.ok) continue;
+
+      if (contentType.includes('html')) {
+        const html = (await response.text()).slice(0, 262144);
+        const metadata = htmlMetadata(html, response.url || documentationUrl(validation.baseUrl, path), validation.baseUrl);
+        result.documentation.publicPageMetadata.push({
+          path: path || '/',
+          status: response.status,
+          title: metadata.title,
+        });
+        metadata.links.forEach((link) => {
+          if (!result.documentation.candidateLinks.includes(link)) {
+            result.documentation.candidateLinks.push(link);
+          }
+        });
+        continue;
+      }
+      if (!contentType.includes('json')) continue;
 
       const document = await response.json().catch(() => null);
       if (!document || (!document.openapi && !document.swagger) || !document.paths) continue;
@@ -138,6 +181,8 @@ async function inspectConnection({
         sourcePath: path || '/',
         endpoints: publicPaths(document),
         securitySchemes: describeSecuritySchemes(document),
+        publicPageMetadata: result.documentation.publicPageMetadata,
+        candidateLinks: result.documentation.candidateLinks,
       };
       break;
     } catch (error) {
@@ -153,6 +198,7 @@ async function inspectConnection({
 
 module.exports = {
   DOCUMENTATION_PATHS,
+  htmlMetadata,
   inspectConnection,
   validateConfiguration,
 };
