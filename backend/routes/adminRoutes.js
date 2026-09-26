@@ -4,6 +4,7 @@ const path = require('path');
 const adminController = require('../controllers/adminController');
 const analyticsController = require('../controllers/analyticsController');
 const businessController = require('../controllers/businessController');
+const integrationController = require('../controllers/integrationController');
 const paymentController = require('../controllers/paymentController');
 const requireAdminAuth = require('../middleware/requireAdminAuth');
 
@@ -34,6 +35,7 @@ router.post('/login', adminController.login);
 router.use(requireAdminAuth);
 
 router.get('/dashboard', adminController.dashboard);
+router.get('/integrations/wanamaste/status', integrationController.wanamasteStatus);
 router.get('/analytics', analyticsController.analytics);
 router.get('/marketing-analytics', analyticsController.marketingAnalytics);
 router.get('/business-imports', businessController.listImports);

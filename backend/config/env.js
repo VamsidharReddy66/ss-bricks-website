@@ -70,6 +70,11 @@ module.exports = {
     providerUrl: process.env.WHATSAPP_PROVIDER_URL || '',
     accessToken: process.env.WHATSAPP_ACCESS_TOKEN || '',
   },
+  wanamaste: {
+    apiBaseUrl: process.env.WANAMASTE_API_BASE_URL || '',
+    vendorUid: process.env.WANAMASTE_VENDOR_UID || '',
+    apiToken: process.env.WANAMASTE_API_TOKEN || '',
+  },
   razorpay: {
     keyId: process.env.RAZORPAY_KEY_ID || '',
     secret: process.env.RAZORPAY_SECRET || '',
