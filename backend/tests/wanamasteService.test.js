@@ -2,9 +2,12 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const {
   TEST_SEND_CONFIRMATION,
+  buildPublicDocumentUrl,
   buildQuotationTemplateRequest,
   htmlMetadata,
   inspectConnection,
+  normalizeWanamastePhone,
+  sendQuotationTemplate,
   sendControlledTestQuotation,
   validateConfiguration,
 } = require('../services/wanamasteService');
@@ -145,6 +148,70 @@ test('includes the documented optional source phone number id when supplied', ()
 
   assert.equal(request.url, 'https://wanamaste.in/api/vendor%2Fuid/contact/send-template-message');
   assert.equal(request.body.from_phone_number_id, '1234567890');
+});
+
+test('normalizes supported Indian quotation phone formats without guessing another country code', () => {
+  assert.equal(normalizeWanamastePhone('9876543210'), '919876543210');
+  assert.equal(normalizeWanamastePhone('+91 98765 43210'), '919876543210');
+  assert.equal(normalizeWanamastePhone('09876543210'), '919876543210');
+  assert.equal(normalizeWanamastePhone('919876543210'), '919876543210');
+  assert.throws(() => normalizeWanamastePhone('441234567890'), /valid Indian WhatsApp number/);
+  assert.throws(() => normalizeWanamastePhone('12345'), /valid Indian WhatsApp number/);
+});
+
+test('builds the stored relative PDF path against the configured public HTTPS origin', () => {
+  assert.equal(
+    buildPublicDocumentUrl('/api/quotes/SSB-Q-42/pdf', { origin: 'https://ssbricks.example.test' }),
+    'https://ssbricks.example.test/api/quotes/SSB-Q-42/pdf',
+  );
+  assert.throws(
+    () => buildPublicDocumentUrl('/api/quotes/SSB-Q-42/pdf', { origin: 'http://ssbricks.example.test' }),
+    /public HTTPS URL/,
+  );
+  assert.throws(
+    () => buildPublicDocumentUrl('/api/quotes/SSB-Q-42/pdf', { origin: 'https://localhost' }),
+    /public HTTPS URL/,
+  );
+  assert.throws(
+    () => buildPublicDocumentUrl('https://other.example.test/quote.pdf', { origin: 'https://ssbricks.example.test' }),
+    /configured public site origin/,
+  );
+  assert.throws(
+    () => buildPublicDocumentUrl('/api/quotes/SSB-Q-42/pdf', { origin: 'https://preview.vercel.app', deploymentEnvironment: 'preview' }),
+    /disabled for Vercel preview/,
+  );
+});
+
+test('automatic quotation sender uses the same verified request contract exactly once', async () => {
+  const calls = [];
+  const result = await sendQuotationTemplate({
+    phoneNumber: '919876543210',
+    customerName: 'Test Customer',
+    quotationNumber: 'SSB-Q-42',
+    documentUrl: 'https://ssbricks.example.test/api/quotes/SSB-Q-42/pdf',
+    documentName: 'quotation-SSB-Q-42.pdf',
+  }, {
+    config: configured,
+    fetchImpl: async (url, options) => {
+      calls.push({ url, options });
+      return new Response(JSON.stringify({ status: 'accepted' }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      });
+    },
+  });
+
+  assert.equal(calls.length, 1);
+  assert.deepEqual(JSON.parse(calls[0].options.body), {
+    phone_number: '919876543210',
+    template_name: 'quotation_ready',
+    template_language: 'en',
+    header_document: 'https://ssbricks.example.test/api/quotes/SSB-Q-42/pdf',
+    header_document_name: 'quotation-SSB-Q-42.pdf',
+    field_1: 'Test Customer',
+    field_2: 'SSB-Q-42',
+  });
+  assert.equal(result.success, true);
 });
 
 test('rejects undocumented recipient and document URL formats', () => {

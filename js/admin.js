@@ -2636,7 +2636,13 @@
       detailItem('Filename', lead.pdfFileName),
       detailItem('Quoted Unit Price', lead.quotedUnitPrice === null ? 'Unavailable' : money(lead.quotedUnitPrice)),
       detailItem('Grand Total', lead.grandTotal === null ? 'Unavailable' : money(lead.grandTotal)),
+      detailItem('WhatsApp', lead.whatsappStatus === 'SUCCESS' ? 'Sent' : lead.whatsappStatus === 'FAILED' ? 'Failed' : ['PENDING', 'RETRYING'].includes(lead.whatsappStatus) ? 'Pending / Ambiguous' : 'Not sent'),
     ].join('');
+    const whatsappRetry = document.getElementById('admin-retry-whatsapp');
+    whatsappRetry.hidden = !['FAILED', 'PENDING', 'RETRYING'].includes(lead.whatsappStatus) || lead.whatsappRecoveryUsed;
+    whatsappRetry.textContent = lead.whatsappStatus === 'FAILED' ? 'Retry WhatsApp' : 'Review / Retry WhatsApp';
+    whatsappRetry.dataset.leadId = lead.id;
+    whatsappRetry.dataset.status = lead.whatsappStatus;
 
     const amountInput = document.getElementById('admin-payment-amount');
     const linkInput = document.getElementById('admin-payment-link');
@@ -2874,7 +2880,7 @@
     }
   });
 
-  document.addEventListener('click', (event) => {
+  document.addEventListener('click', async (event) => {
     if (event.target.closest('#admin-theme-toggle')) {
       setAdminTheme(document.body.classList.contains('admin-dark-theme') ? 'light' : 'dark');
       return;
@@ -2995,6 +3001,28 @@
     const viewLeadButton = event.target.closest('[data-view-lead]');
     if (viewLeadButton) {
       openLeadDetail(viewLeadButton.dataset.viewLead).catch((error) => showToast(error.message));
+      return;
+    }
+
+    const retryWhatsappButton = event.target.closest('#admin-retry-whatsapp');
+    if (retryWhatsappButton) {
+      const reason = window.prompt('Reason for retrying this quotation WhatsApp delivery:');
+      if (!reason) return;
+      const ambiguous = ['PENDING', 'RETRYING'].includes(retryWhatsappButton.dataset.status);
+      if (ambiguous && !window.confirm('Previous delivery is ambiguous. Resending may result in a duplicate WhatsApp message. Continue?')) return;
+      retryWhatsappButton.disabled = true;
+      try {
+        await api(`/api/admin/quotes/${retryWhatsappButton.dataset.leadId}/whatsapp/retry`, {
+          method: 'POST',
+          body: JSON.stringify({ confirmation: 'RETRY_QUOTATION_WHATSAPP', reason, acknowledgeDuplicateRisk: ambiguous }),
+        });
+        showToast('WhatsApp recovery completed.');
+        await openLeadDetail(retryWhatsappButton.dataset.leadId);
+      } catch (error) {
+        showToast(error.message);
+      } finally {
+        retryWhatsappButton.disabled = false;
+      }
       return;
     }
 

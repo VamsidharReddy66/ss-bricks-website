@@ -140,6 +140,36 @@ function publicHttpsUrl(value, fieldName) {
   return url.href;
 }
 
+function normalizeWanamastePhone(value) {
+  const supplied = requiredString(value, 'phoneNumber');
+  const compact = supplied.replace(/[\s()-]/g, '');
+  const withoutPlus = compact.startsWith('+') ? compact.slice(1) : compact;
+
+  if (/^91[6-9]\d{9}$/.test(withoutPlus)) return withoutPlus;
+  if (/^[6-9]\d{9}$/.test(withoutPlus)) return `91${withoutPlus}`;
+  if (/^0[6-9]\d{9}$/.test(withoutPlus)) return `91${withoutPlus.slice(1)}`;
+
+  throw validationError(
+    'phoneNumber must be a valid Indian WhatsApp number with country code 91 or a valid 10 digit Indian mobile number.',
+    'phoneNumber',
+  );
+}
+
+function buildPublicDocumentUrl(pdfUrl, { origin = env.publicSiteUrl, deploymentEnvironment = env.vercelEnvironment } = {}) {
+  if (deploymentEnvironment === 'preview') {
+    throw validationError('WAnamaste document delivery is disabled for Vercel preview deployments.', 'publicSiteUrl');
+  }
+  const publicOrigin = new URL(publicHttpsUrl(origin, 'publicSiteUrl'));
+  const supplied = requiredString(pdfUrl, 'documentUrl');
+  const documentUrl = new URL(supplied, `${publicOrigin.origin}/`);
+
+  if (documentUrl.origin !== publicOrigin.origin) {
+    throw validationError('documentUrl must use the configured public site origin.', 'documentUrl');
+  }
+
+  return publicHttpsUrl(documentUrl.href, 'documentUrl');
+}
+
 function buildQuotationTemplateRequest({
   config = env.wanamaste,
   phoneNumber,
@@ -230,8 +260,7 @@ async function sanitizedResponseBody(response, sensitiveValues) {
   }
 }
 
-async function sendControlledTestQuotation({
-  confirmation,
+async function sendQuotationTemplate({
   phoneNumber,
   customerName,
   quotationNumber,
@@ -243,13 +272,6 @@ async function sendControlledTestQuotation({
   fetchImpl = globalThis.fetch,
   timeoutMs = 15000,
 } = {}) {
-  if (confirmation !== TEST_SEND_CONFIRMATION) {
-    throw validationError(
-      `confirmation must equal ${TEST_SEND_CONFIRMATION}.`,
-      'confirmation',
-    );
-  }
-
   const request = buildQuotationTemplateRequest({
     config,
     phoneNumber,
@@ -292,6 +314,17 @@ async function sendControlledTestQuotation({
     responseBody: await sanitizedResponseBody(response, sensitiveValues),
     failureCode: response.ok ? null : 'PROVIDER_REJECTED',
   };
+}
+
+async function sendControlledTestQuotation({ confirmation, ...input } = {}, options = {}) {
+  if (confirmation !== TEST_SEND_CONFIRMATION) {
+    throw validationError(
+      `confirmation must equal ${TEST_SEND_CONFIRMATION}.`,
+      'confirmation',
+    );
+  }
+
+  return sendQuotationTemplate(input, options);
 }
 
 function describeSecuritySchemes(document) {
@@ -436,9 +469,12 @@ module.exports = {
   DOCUMENTATION_PATHS,
   QUOTATION_TEMPLATE,
   TEST_SEND_CONFIRMATION,
+  buildPublicDocumentUrl,
   buildQuotationTemplateRequest,
   htmlMetadata,
   inspectConnection,
+  normalizeWanamastePhone,
+  sendQuotationTemplate,
   sendControlledTestQuotation,
   validateConfiguration,
 };

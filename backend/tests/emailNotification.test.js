@@ -44,6 +44,11 @@ function createHarness(sendQuoteNotification) {
         logs.push(data);
         return data;
       },
+      update: async ({ where, data }) => {
+        const log = logs.find((item) => item.deduplicationKey === where.deduplicationKey);
+        if (log) Object.assign(log, data);
+        return log;
+      },
     },
     leadActivity: {
       create: async () => ({}),
@@ -71,8 +76,10 @@ function createHarness(sendQuoteNotification) {
   const googleSheetsService = {
     appendQuote: async () => ({ status: 'SUCCESS' }),
   };
-  const whatsappService = {
-    sendQuoteDocument: async () => ({ status: 'SUCCESS' }),
+  const wanamaste = {
+    normalizeWanamastePhone: (phone) => `91${phone}`,
+    buildPublicDocumentUrl: (pdfUrl) => `https://ssbricks.example.test${pdfUrl}`,
+    sendQuotationTemplate: async () => ({ success: true, httpStatus: 200 }),
   };
 
   return {
@@ -84,7 +91,8 @@ function createHarness(sendQuoteNotification) {
       googleSheetsService,
       logger,
       pdfGenerator,
-      whatsappService,
+      wanamaste,
+      publicSiteUrl: 'https://ssbricks.example.test',
     }),
   };
 }

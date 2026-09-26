@@ -30,6 +30,7 @@ test('controlled WAnamaste test endpoint is admin-only and delegates without a r
 
   const address = server.address();
   const endpoint = `http://127.0.0.1:${address.port}/api/admin/integrations/wanamaste/test-send`;
+  const recoveryEndpoint = `http://127.0.0.1:${address.port}/api/admin/quotes/42/whatsapp/retry`;
   const payload = {
     confirmation: 'SEND_ONE_WANAMASTE_TEST',
     phoneNumber: '919876543210',
@@ -44,6 +45,8 @@ test('controlled WAnamaste test endpoint is admin-only and delegates without a r
     body: JSON.stringify(payload),
   });
   assert.equal(unauthorized.status, 401);
+  const unauthorizedRecovery = await fetch(recoveryEndpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ confirmation: 'RETRY_QUOTATION_WHATSAPP', reason: 'Test recovery' }) });
+  assert.equal(unauthorizedRecovery.status, 401);
   assert.equal(calls.length, 0);
 
   const adminToken = jwt.sign({ id: 'test-admin', email: 'admin@example.test' }, env.jwtSecret, {

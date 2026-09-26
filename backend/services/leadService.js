@@ -46,6 +46,11 @@ function leadInclude(activityTake) {
   return {
     customer: true,
     document: true,
+    notificationLogs: {
+      where: { type: 'WHATSAPP' },
+      orderBy: { createdAt: 'desc' },
+      take: 1,
+    },
     payments: {
       take: 10,
       orderBy: {
@@ -90,6 +95,7 @@ async function nextEnquiryNumber(tx, attempt = 0) {
 }
 
 function serializeLead(lead) {
+  const whatsapp = lead.notificationLogs?.[0] || null;
   return {
     id: lead.id,
     enquiryNumber: lead.enquiryNumber,
@@ -116,6 +122,9 @@ function serializeLead(lead) {
     pdfStatus: lead.document ? 'GENERATED' : 'NOT_GENERATED',
     pdfFileName: lead.document?.fileName || null,
     pdfGeneratedAt: lead.document?.updatedAt || lead.document?.createdAt || null,
+    whatsappStatus: whatsapp?.status || 'NOT_SENT',
+    whatsappFailure: whatsapp?.errorMessage || null,
+    whatsappRecoveryUsed: Boolean(whatsapp?.recoveryAttemptCount),
     quotationSnapshotReady: lead.quotedUnitPrice !== null && lead.grandTotal !== null,
     paymentUrl: lead.paymentToken ? `/payment.html?token=${lead.paymentToken}` : null,
     paymentStatus: lead.payments?.find((payment) => payment.status === 'SUCCESS')?.status

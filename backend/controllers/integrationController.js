@@ -1,5 +1,7 @@
 const wanamasteService = require('../services/wanamasteService');
+const { NotificationService } = require('../services/notificationService');
 const { successResponse, errorResponse } = require('../utils/apiResponse');
+const notificationService = new NotificationService();
 
 async function wanamasteStatus(_req, res, next) {
   try {
@@ -31,4 +33,16 @@ async function wanamasteTestSend(req, res, next) {
   }
 }
 
-module.exports = { wanamasteStatus, wanamasteTestSend };
+async function retryQuoteWhatsapp(req, res, next) {
+  try {
+    const result = await notificationService.retryWanamasteQuotation(req.params.quoteId, req.admin.id, req.body);
+    return successResponse(res, 200, 'Quotation WhatsApp recovery completed.', result);
+  } catch (error) {
+    if ([400, 404, 409].includes(error.statusCode)) {
+      return errorResponse(res, error.statusCode, error.message, [{ field: 'whatsappRecovery', message: error.message }]);
+    }
+    return next(error);
+  }
+}
+
+module.exports = { wanamasteStatus, wanamasteTestSend, retryQuoteWhatsapp };

@@ -53,8 +53,12 @@ async function createQuote(req, res, next) {
       return errorResponse(res, 400, 'Validation failed.', formatZodErrors(parsed.error));
     }
 
-    const result = await quoteService.createQuote(parsed.data);
-    const pdf = await prepareQuoteDistribution(result);
+    const idempotencyKey = String(req.get('Idempotency-Key') || '').trim();
+    if (idempotencyKey && !/^[A-Za-z0-9._:-]{8,100}$/.test(idempotencyKey)) {
+      return errorResponse(res, 400, 'Validation failed.', [{ field: 'idempotencyKey', message: 'Idempotency-Key must be 8 to 100 safe characters.' }]);
+    }
+    const result = await quoteService.createQuote(parsed.data, { idempotencyKey: idempotencyKey || null });
+    const pdf = result.reused ? null : await prepareQuoteDistribution(result);
 
     return successResponse(res, 201, 'Quotation submitted successfully.', {
       enquiryNumber: result.quote.enquiryNumber,
@@ -62,7 +66,8 @@ async function createQuote(req, res, next) {
       status: result.quote.status,
       createdAt: result.quote.createdAt,
       pdfUrl: pdf?.pdfUrl || result.quote.pdfUrl || null,
-      pdfReady: Boolean(pdf),
+      pdfReady: Boolean(pdf || result.quote.pdfUrl),
+      idempotencyReused: Boolean(result.reused),
       distribution: {
         pdf: pdf ? 'SUCCESS' : 'FAILED',
         googleSheet: 'QUEUED',
@@ -71,8 +76,8 @@ async function createQuote(req, res, next) {
       },
     });
   } catch (error) {
-    if (error.statusCode === 400) {
-      return errorResponse(res, 400, 'Validation failed.', error.errors || [
+    if (error.statusCode === 400 || error.statusCode === 409) {
+      return errorResponse(res, error.statusCode, error.statusCode === 409 ? 'Idempotency conflict.' : 'Validation failed.', error.errors || [
         {
           field: 'request',
           message: error.message,

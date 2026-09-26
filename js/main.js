@@ -773,10 +773,14 @@
       }
 
       try {
+        const idempotencyKey = form.dataset.idempotencyKey
+          || (window.crypto?.randomUUID ? window.crypto.randomUUID() : `quote-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+        form.dataset.idempotencyKey = idempotencyKey;
         const response = await fetch(`${API_BASE_URL}/api/quotes`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'Idempotency-Key': idempotencyKey,
           },
           body: JSON.stringify({
             ...payload,
@@ -787,6 +791,7 @@
         const result = await response.json().catch(() => ({}));
 
         if (!response.ok || !result.success) {
+          if (response.status === 409) delete form.dataset.idempotencyKey;
           applyServerErrors(form, result.errors);
           showStatus(form, result.message || 'Unable to submit quotation. Please try again.', true);
           focusFirstInvalidField(form);
@@ -801,6 +806,7 @@
         }
         showStatus(form, `Quotation stored successfully. Enquiry number: ${enquiryNumber}`);
         form.reset();
+        delete form.dataset.idempotencyKey;
       } catch (_error) {
         showStatus(form, 'Unable to reach the server. Your details are still on the form; please try again.', true);
       } finally {

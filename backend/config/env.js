@@ -48,6 +48,9 @@ if (nodeEnv === 'production') {
   if (!process.env.CORS_ORIGIN || corsOrigin.includes('localhost')) {
     productionErrors.push('CORS_ORIGIN must be set to the deployed website URL in production.');
   }
+  if (!process.env.PUBLIC_SITE_URL || !process.env.PUBLIC_SITE_URL.startsWith('https://')) {
+    productionErrors.push('PUBLIC_SITE_URL must be the canonical production HTTPS origin.');
+  }
 
   if (productionErrors.length) {
     throw new Error(`Production environment is not ready: ${productionErrors.join(' ')}`);
@@ -59,6 +62,8 @@ module.exports = {
   port,
   databaseUrl: process.env.DATABASE_URL,
   corsOrigin,
+  publicSiteUrl: process.env.PUBLIC_SITE_URL || corsOrigin,
+  vercelEnvironment: process.env.VERCEL_ENV || null,
   jwtSecret,
   admin: {
     email: process.env.ADMIN_EMAIL || '',

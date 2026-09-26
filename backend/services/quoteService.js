@@ -72,6 +72,8 @@ async function persistQuote(payload, attempt = 0, options = {}) {
         finalAmount: options.finalAmount || options.pricing.grandTotal,
         paymentToken: options.paymentToken,
         paymentEnabledAt: options.paymentToken ? new Date() : undefined,
+        idempotencyKey: options.idempotencyKey,
+        requestFingerprint: options.requestFingerprint,
         activities: {
           create: {
             type: 'CREATED',
@@ -120,7 +122,35 @@ async function persistQuote(payload, attempt = 0, options = {}) {
   });
 }
 
-async function createQuote(payload) {
+function quoteFingerprint(payload) {
+  const canonical = Object.keys(payload).sort().reduce((result, key) => {
+    result[key] = payload[key] ?? null;
+    return result;
+  }, {});
+  return crypto.createHash('sha256').update(JSON.stringify(canonical)).digest('hex');
+}
+
+async function findIdempotentQuote(idempotencyKey) {
+  if (!idempotencyKey) return null;
+  const quote = await prisma.quoteRequest.findUnique({
+    where: { idempotencyKey },
+    include: { customer: true },
+  });
+  return quote ? { customer: quote.customer, quote } : null;
+}
+
+async function createQuote(payload, { idempotencyKey = null } = {}) {
+  const requestFingerprint = idempotencyKey ? quoteFingerprint(payload) : null;
+  const existing = await findIdempotentQuote(idempotencyKey);
+  if (existing) {
+    if (existing.quote.requestFingerprint !== requestFingerprint) {
+      const error = new Error('Idempotency key was already used for a different quotation request.');
+      error.statusCode = 409;
+      throw error;
+    }
+    return { ...existing, reused: true };
+  }
+
   const product = await productService.getQuoteProductPricing(payload.product);
   if (!product) {
     const error = new Error('Selected product is not available.');
@@ -137,8 +167,19 @@ async function createQuote(payload) {
 
   for (let attempt = 0; attempt < 5; attempt += 1) {
     try {
-      return await persistQuote(payload, attempt, { pricing });
+      return await persistQuote(payload, attempt, { pricing, idempotencyKey, requestFingerprint });
     } catch (error) {
+      if (idempotencyKey && isUniqueConstraintError(error)) {
+        const concurrent = await findIdempotentQuote(idempotencyKey);
+        if (concurrent) {
+          if (concurrent.quote.requestFingerprint !== requestFingerprint) {
+            const conflict = new Error('Idempotency key was already used for a different quotation request.');
+            conflict.statusCode = 409;
+            throw conflict;
+          }
+          return { ...concurrent, reused: true };
+        }
+      }
       if (!isUniqueConstraintError(error) || attempt === 4) {
         throw error;
       }
@@ -318,4 +359,5 @@ module.exports = {
   getQuoteStats,
   listRecentQuotes,
   regenerateQuotePdf,
+  quoteFingerprint,
 };
