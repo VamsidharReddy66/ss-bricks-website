@@ -36,6 +36,7 @@ router.use(requireAdminAuth);
 
 router.get('/dashboard', adminController.dashboard);
 router.get('/integrations/wanamaste/status', integrationController.wanamasteStatus);
+router.post('/integrations/wanamaste/test-send', integrationController.wanamasteTestSend);
 router.get('/analytics', analyticsController.analytics);
 router.get('/marketing-analytics', analyticsController.marketingAnalytics);
 router.get('/business-imports', businessController.listImports);
