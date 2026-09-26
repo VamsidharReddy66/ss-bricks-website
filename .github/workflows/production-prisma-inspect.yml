@@ -73,6 +73,7 @@ jobs:
           node <<'NODE'
           const fs = require('fs');
           const path = require('path');
+          const crypto = require('crypto');
           const { spawnSync } = require('child_process');
 
           const reviewedCommit = '7496f570a559b7da9ed1af92eb5160f8150a65a2';
@@ -106,36 +107,69 @@ jobs:
             console.log('PRODUCTION DATABASE INSPECTION');
             console.log('==============================');
             console.log('Target: Production database');
-            console.log('Mutation: NONE');
+            console.log('Production database mutated: NO');
+            console.log('Prisma migration applied: NO');
             console.log('WAnamaste calls: 0');
             console.log('WhatsApp messages: 0');
-            console.log('Migration applied: NO');
             console.log('');
             console.log(`Inspection stopped safely: ${message}`);
             console.log('RECOMMENDATION: E. INSUFFICIENT READ-ONLY EVIDENCE');
           }
 
+          function safeError(message) {
+            const error = new Error(message);
+            error.safeMessage = message;
+            return error;
+          }
+
           function connectionEnvironment() {
-            if (!process.env.DATABASE_URL) throw new Error('Production DATABASE_URL is not configured.');
+            if (!process.env.DATABASE_URL) throw safeError('Production DATABASE_URL is unavailable.');
             let parsed;
             try {
               parsed = new URL(process.env.DATABASE_URL);
             } catch (_error) {
-              throw new Error('Production DATABASE_URL is invalid.');
+              throw safeError('Production DATABASE_URL cannot be parsed as a URL.');
             }
             if (!['postgres:', 'postgresql:'].includes(parsed.protocol)) {
-              throw new Error('Production DATABASE_URL is not PostgreSQL.');
+              throw safeError('Production DATABASE_URL is not a PostgreSQL URL.');
             }
 
             const env = { ...process.env };
             delete env.DATABASE_URL;
-            env.PGHOST = decodeURIComponent(parsed.hostname);
+            env.PGHOST = parsed.hostname;
             env.PGPORT = parsed.port || '5432';
             env.PGUSER = decodeURIComponent(parsed.username);
             env.PGPASSWORD = decodeURIComponent(parsed.password);
             env.PGDATABASE = decodeURIComponent(parsed.pathname.replace(/^\//, ''));
-            env.PGSSLMODE = parsed.searchParams.get('sslmode') || 'require';
-            env.PGOPTIONS = '-c default_transaction_read_only=on -c statement_timeout=30000 -c lock_timeout=5000';
+            env.PGAPPNAME = 'ss-bricks-production-inspection';
+
+            const libpqOptions = {
+              sslmode: 'PGSSLMODE',
+              sslcert: 'PGSSLCERT',
+              sslkey: 'PGSSLKEY',
+              sslrootcert: 'PGSSLROOTCERT',
+              sslcrl: 'PGSSLCRL',
+              sslcrldir: 'PGSSLCRLDIR',
+              sslsni: 'PGSSLSNI',
+              channel_binding: 'PGCHANNELBINDING',
+              target_session_attrs: 'PGTARGETSESSIONATTRS',
+              connect_timeout: 'PGCONNECT_TIMEOUT',
+              keepalives: 'PGKEEPALIVES',
+              keepalives_idle: 'PGKEEPALIVESIDLE',
+              keepalives_interval: 'PGKEEPALIVESINTERVAL',
+              keepalives_count: 'PGKEEPALIVESCOUNT',
+              tcp_user_timeout: 'PGTCPUSER_TIMEOUT',
+            };
+            for (const [urlParameter, environmentName] of Object.entries(libpqOptions)) {
+              const value = parsed.searchParams.get(urlParameter);
+              if (value !== null) env[environmentName] = value;
+            }
+            env.PGSSLMODE ||= 'require';
+            env.PGCONNECT_TIMEOUT ||= '15';
+
+            const providerOptions = parsed.searchParams.get('options');
+            const safetyOptions = '-c default_transaction_read_only=on -c statement_timeout=30000 -c lock_timeout=5000';
+            env.PGOPTIONS = [providerOptions, safetyOptions].filter(Boolean).join(' ');
             return env;
           }
 
@@ -156,8 +190,8 @@ jobs:
             }
           }
 
-          const childEnv = connectionEnvironment();
-          function query(sql) {
+          let childEnv;
+          function query(label, sql) {
             guardReadOnlySql(sql);
             const result = spawnSync('psql', [
               '-X', '--no-psqlrc', '--quiet', '--no-align', '--tuples-only',
@@ -168,8 +202,11 @@ jobs:
               encoding: 'utf8',
               maxBuffer: 10 * 1024 * 1024,
             });
+            if (result.error) {
+              throw safeError(`The ${label} could not start the PostgreSQL client.`);
+            }
             if (result.status !== 0) {
-              throw new Error('A read-only PostgreSQL metadata query failed.');
+              throw safeError(`The ${label} failed; raw client diagnostics were suppressed.`);
             }
             return result.stdout.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
           }
@@ -180,6 +217,17 @@ jobs:
           const tableValues = relevantTables.map((name) => `(${sqlString(name)})`).join(',\n');
           const tableList = relevantTables.map(sqlString).join(', ');
           const enumList = [...relevantEnums].map(sqlString).join(', ');
+
+          const connectivitySql = `
+          BEGIN;
+          SET TRANSACTION READ ONLY;
+          SELECT 'READ_ONLY_GUARD|' || current_setting('transaction_read_only');
+          SELECT 'IDENTITY|' || jsonb_build_object(
+            'server_version_num', current_setting('server_version_num'),
+            'database_name', current_database()
+          )::text;
+          ROLLBACK;
+          `;
 
           const metadataSql = `
           BEGIN;
@@ -268,9 +316,18 @@ jobs:
           }
 
           try {
-            const metadata = parseMarked(query(metadataSql));
+            childEnv = connectionEnvironment();
+            const connectivity = parseMarked(query('read-only connectivity probe', connectivitySql));
+            if (connectivity.READ_ONLY_GUARD !== 'on') {
+              throw safeError('The connectivity probe did not confirm read-only transaction mode.');
+            }
+            if (!connectivity.IDENTITY?.server_version_num || !connectivity.IDENTITY?.database_name) {
+              throw safeError('Sanitized database identity metadata is unavailable.');
+            }
+
+            const metadata = parseMarked(query('read-only schema metadata query', metadataSql));
             if (metadata.READ_ONLY_GUARD !== 'on') {
-              throw new Error('PostgreSQL did not confirm read-only transaction mode.');
+              throw safeError('The metadata query did not confirm read-only transaction mode.');
             }
             for (const key of ['MIGRATIONS', 'TABLES', 'COLUMNS', 'CONSTRAINTS', 'INDEXES', 'ENUMS']) {
               if (!Array.isArray(metadata[key])) throw new Error(`Required ${key.toLowerCase()} metadata is unavailable.`);
@@ -289,21 +346,29 @@ jobs:
               SELECT 'COUNTS|' || COALESCE((SELECT jsonb_agg(to_jsonb(c))::text FROM (${countParts.join('\nUNION ALL\n')}) c), '[]');
               ROLLBACK;
               `;
-              const countResult = parseMarked(query(countSql));
+              const countResult = parseMarked(query('read-only row-count query', countSql));
               if (countResult.READ_ONLY_GUARD !== 'on') throw new Error('Count session was not read-only.');
               counts = countResult.COUNTS || [];
             }
 
+            const columns = new Set(metadata.COLUMNS.map((row) => `${row.table_name}.${row.column_name}`));
+            const hasColumns = (tableName, columnNames) =>
+              columnNames.every((columnName) => columns.has(`${tableName}.${columnName}`));
             let calculator = { bricks: [], thicknesses: [] };
             const calculatorParts = [];
-            if (tableExists.get('brick_types')) {
+            if (tableExists.get('brick_types') && hasColumns('brick_types', [
+              'name', 'length', 'width', 'height', 'dimension_unit',
+              'price_per_piece', 'default_waste_percent', 'is_active',
+            ])) {
               calculatorParts.push(`SELECT 'BRICKS|' || COALESCE(jsonb_agg(jsonb_build_object(
                 'name', "name", 'length', "length"::text, 'width', "width"::text,
                 'height', "height"::text, 'unit', "dimension_unit"::text,
                 'price', "price_per_piece"::text, 'waste', "default_waste_percent"::text,
                 'active', "is_active") ORDER BY "name")::text, '[]') FROM "brick_types"`);
             }
-            if (tableExists.get('wall_thickness')) {
+            if (tableExists.get('wall_thickness') && hasColumns('wall_thickness', [
+              'display_name', 'thickness_value', 'unit', 'is_active',
+            ])) {
               calculatorParts.push(`SELECT 'THICKNESSES|' || COALESCE(jsonb_agg(jsonb_build_object(
                 'name', "display_name", 'value', "thickness_value"::text,
                 'unit', "unit"::text, 'active', "is_active") ORDER BY "thickness_value")::text, '[]') FROM "wall_thickness"`);
@@ -312,7 +377,7 @@ jobs:
               const calculatorSql = `BEGIN; SET TRANSACTION READ ONLY;
                 SELECT 'READ_ONLY_GUARD|' || current_setting('transaction_read_only');
                 ${calculatorParts.join(';\n')}; ROLLBACK;`;
-              const calculatorResult = parseMarked(query(calculatorSql));
+              const calculatorResult = parseMarked(query('read-only calculator query', calculatorSql));
               if (calculatorResult.READ_ONLY_GUARD !== 'on') throw new Error('Calculator session was not read-only.');
               calculator = {
                 bricks: calculatorResult.BRICKS || [],
@@ -320,7 +385,6 @@ jobs:
               };
             }
 
-            const columns = new Set(metadata.COLUMNS.map((row) => `${row.table_name}.${row.column_name}`));
             let notificationDistribution = null;
             if (tableExists.get('NotificationLog')
               && columns.has('NotificationLog.deduplication_key')
@@ -338,7 +402,7 @@ jobs:
               )::text FROM "NotificationLog";
               ROLLBACK;
               `;
-              const distributionResult = parseMarked(query(distributionSql));
+              const distributionResult = parseMarked(query('read-only notification distribution query', distributionSql));
               if (distributionResult.READ_ONLY_GUARD !== 'on') throw new Error('Notification session was not read-only.');
               notificationDistribution = distributionResult.NOTIFICATION_DISTRIBUTION || null;
             }
@@ -467,22 +531,30 @@ jobs:
               if (failed) classification = 'FAILED_MIGRATION';
               else if (applied && present.length !== expected.length) classification = 'HISTORY_APPLIED_SCHEMA_MISMATCH';
               else if (!applied && expected.length > 0 && present.length === 0) classification = 'CLEANLY_PENDING';
-              else if (!applied && expected.length > 0 && present.length === expected.length) classification = 'ALREADY_APPLIED_IN_SCHEMA';
+              else if (!applied && expected.length > 0 && present.length === expected.length) classification = 'ALREADY_APPLIED';
               else if (!applied && present.length > 0 && present.length < expected.length) classification = 'PARTIALLY_APPLIED';
-              else if (applied && present.length === expected.length) classification = 'ALREADY_APPLIED_IN_SCHEMA';
+              else if (applied && present.length === expected.length) classification = 'ALREADY_APPLIED';
               const history = failed ? 'FAILED/ROLLED_BACK' : applied ? 'APPLIED' : 'PENDING';
               const risk = ['CLEANLY_PENDING'].includes(classification) ? 'MEDIUM' : 'HIGH';
-              return { name, expected: expected.length, present: present.length, history, classification, risk };
+              const missing = expected.filter((signal) => !signalExists(signal));
+              return { name, expected, present, missing, history, classification, risk };
             });
+
+            const databaseFingerprint = crypto.createHash('sha256')
+              .update(connectivity.IDENTITY.database_name)
+              .digest('hex')
+              .slice(0, 12);
 
             console.log('PRODUCTION DATABASE INSPECTION');
             console.log('==============================');
             console.log('Target: Production database');
             console.log(`Reviewed commit: ${reviewedCommit}`);
-            console.log('Mutation: NONE');
+            console.log(`PostgreSQL server version: ${connectivity.IDENTITY.server_version_num}`);
+            console.log(`Database identity: sha256:${databaseFingerprint}`);
+            console.log('Production database mutated: NO');
+            console.log('Prisma migration applied: NO');
             console.log('WAnamaste calls: 0');
             console.log('WhatsApp messages: 0');
-            console.log('Migration applied: NO');
             console.log('');
 
             console.log('A. PRISMA MIGRATION HISTORY');
@@ -556,14 +628,16 @@ jobs:
             console.log('I. MIGRATION DRIFT CLASSIFICATION');
             console.log('Migration | Prisma History | Schema State | Classification | Risk');
             for (const row of classifications) {
-              console.log(`${row.name} | ${row.history} | ${row.present}/${row.expected} expected signals | ${row.classification} | ${row.risk}`);
+              console.log(`${row.name} | ${row.history} | ${row.present.length}/${row.expected.length} expected objects | ${row.classification} | ${row.risk}`);
+              console.log(`  present: ${row.present.join(', ') || 'NONE'}`);
+              console.log(`  missing: ${row.missing.join(', ') || 'NONE'}`);
             }
             console.log('');
 
             let recommendation = 'A. SAFE TO APPLY REVIEWED CHAIN';
             if (classifications.some((row) => row.classification === 'FAILED_MIGRATION') || failedHistory.length) {
               recommendation = 'D. FAILED MIGRATION DETECTED — DO NOT MIGRATE';
-            } else if (classifications.some((row) => ['PARTIALLY_APPLIED', 'ALREADY_APPLIED_IN_SCHEMA', 'HISTORY_APPLIED_SCHEMA_MISMATCH'].includes(row.classification))) {
+            } else if (classifications.some((row) => ['PARTIALLY_APPLIED', 'ALREADY_APPLIED', 'HISTORY_APPLIED_SCHEMA_MISMATCH'].includes(row.classification))) {
               recommendation = 'C. DRIFT DETECTED — DO NOT MIGRATE';
             } else if (classifications.some((row) => row.classification === 'UNKNOWN')) {
               recommendation = 'E. INSUFFICIENT READ-ONLY EVIDENCE';
@@ -572,8 +646,8 @@ jobs:
             }
             console.log('RECOMMENDATION');
             console.log(recommendation);
-          } catch (_error) {
-            safeFailure('Required metadata could not be established without exposing connection details.');
+          } catch (error) {
+            safeFailure(error?.safeMessage || 'Required metadata could not be established safely.');
             process.exitCode = 1;
           }
           NODE
