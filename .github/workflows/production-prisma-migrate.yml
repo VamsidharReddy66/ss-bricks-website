@@ -67,7 +67,7 @@ jobs:
       - name: Install locked dependencies
         run: npm ci
 
-      - name: Verify exact reviewed migration chain is pending
+      - name: Verify exact reviewed migration is pending
         id: preflight
         shell: bash
         env:
@@ -81,14 +81,6 @@ jobs:
           trap 'rm -f "$status_file" "$expected_file" "$pending_file"' EXIT
 
           cat > "$expected_file" <<'EXPECTED_MIGRATIONS'
-          20260714000000_add_quote_distribution_pipeline
-          20260714010000_repair_quote_distribution_schema
-          20260717000000_add_material_calculator
-          20260718000000_add_test_payments
-          20260729000000_sync_calculator_catalogue_dimensions
-          20260729170000_add_offline_sales_analytics
-          20260830000000_add_business_analytics_data
-          20260924000000_add_quote_price_snapshot
           20260926000000_add_wanamaste_delivery_claim
           EXPECTED_MIGRATIONS
 
@@ -126,15 +118,15 @@ jobs:
           grep -Eo '[0-9]{14}_[A-Za-z0-9_-]+' "$status_file" > "$pending_file"
 
           if [[ ! -s "$pending_file" ]] || ! cmp -s "$expected_file" "$pending_file"; then
-            echo "::error::Pending migration identity or order differs from the exact reviewed nine-migration chain."
+            echo "::error::Pending migration identity or order differs from the exact reviewed WAnamaste migration."
             echo -n "Pending migration names: "
             paste -sd ' ' "$pending_file" || true
             exit 1
           fi
 
           echo "should_migrate=true" >> "$GITHUB_OUTPUT"
-          echo "migration_status=APPROVED_REVIEWED_CHAIN" >> "$GITHUB_OUTPUT"
-          echo "The exact reviewed nine-migration chain is pending in historical order."
+          echo "migration_status=APPROVED_REVIEWED_MIGRATION" >> "$GITHUB_OUTPUT"
+          echo "The exact reviewed WAnamaste migration is pending."
 
       - name: Apply reviewed Prisma migration
         if: steps.preflight.outputs.should_migrate == 'true'
@@ -191,7 +183,7 @@ jobs:
           {
             echo "## Production Prisma migration"
             echo "- Reviewed commit: \`7496f570a559b7da9ed1af92eb5160f8150a65a2\`"
-            echo "- Reviewed chain: 9 exact migrations ending in \`20260926000000_add_wanamaste_delivery_claim\`"
+            echo "- Reviewed migration: \`20260926000000_add_wanamaste_delivery_claim\`"
             echo "- Preflight status: \`${{ steps.preflight.outputs.migration_status || 'not-established' }}\`"
             echo "- Postflight status: \`${{ steps.postflight.outputs.migration_status || 'not-run' }}\`"
             if [[ "${{ steps.preflight.outputs.should_migrate }}" == "true" ]]; then
