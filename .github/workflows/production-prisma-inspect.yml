@@ -52,16 +52,17 @@ jobs:
 
           echo "Reviewed commit and migration checksum verified."
 
-      - name: Verify PostgreSQL client
-        shell: bash
-        run: |
-          set +x
-          set -euo pipefail
-          if ! command -v psql >/dev/null 2>&1; then
-            echo "::error::A PostgreSQL client is unavailable; inspection stopped safely."
-            exit 1
-          fi
-          echo "PostgreSQL client is available."
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate --schema=backend/prisma/schema.prisma
 
       - name: Inspect production metadata in read-only transactions
         shell: bash
@@ -74,7 +75,7 @@ jobs:
           const fs = require('fs');
           const path = require('path');
           const crypto = require('crypto');
-          const { spawnSync } = require('child_process');
+          const { PrismaClient } = require('@prisma/client');
 
           const reviewedCommit = '7496f570a559b7da9ed1af92eb5160f8150a65a2';
           const pendingMigrationNames = [
@@ -122,57 +123,6 @@ jobs:
             return error;
           }
 
-          function connectionEnvironment() {
-            if (!process.env.DATABASE_URL) throw safeError('Production DATABASE_URL is unavailable.');
-            let parsed;
-            try {
-              parsed = new URL(process.env.DATABASE_URL);
-            } catch (_error) {
-              throw safeError('Production DATABASE_URL cannot be parsed as a URL.');
-            }
-            if (!['postgres:', 'postgresql:'].includes(parsed.protocol)) {
-              throw safeError('Production DATABASE_URL is not a PostgreSQL URL.');
-            }
-
-            const env = { ...process.env };
-            delete env.DATABASE_URL;
-            env.PGHOST = parsed.hostname;
-            env.PGPORT = parsed.port || '5432';
-            env.PGUSER = decodeURIComponent(parsed.username);
-            env.PGPASSWORD = decodeURIComponent(parsed.password);
-            env.PGDATABASE = decodeURIComponent(parsed.pathname.replace(/^\//, ''));
-            env.PGAPPNAME = 'ss-bricks-production-inspection';
-
-            const libpqOptions = {
-              sslmode: 'PGSSLMODE',
-              sslcert: 'PGSSLCERT',
-              sslkey: 'PGSSLKEY',
-              sslrootcert: 'PGSSLROOTCERT',
-              sslcrl: 'PGSSLCRL',
-              sslcrldir: 'PGSSLCRLDIR',
-              sslsni: 'PGSSLSNI',
-              channel_binding: 'PGCHANNELBINDING',
-              target_session_attrs: 'PGTARGETSESSIONATTRS',
-              connect_timeout: 'PGCONNECT_TIMEOUT',
-              keepalives: 'PGKEEPALIVES',
-              keepalives_idle: 'PGKEEPALIVESIDLE',
-              keepalives_interval: 'PGKEEPALIVESINTERVAL',
-              keepalives_count: 'PGKEEPALIVESCOUNT',
-              tcp_user_timeout: 'PGTCPUSER_TIMEOUT',
-            };
-            for (const [urlParameter, environmentName] of Object.entries(libpqOptions)) {
-              const value = parsed.searchParams.get(urlParameter);
-              if (value !== null) env[environmentName] = value;
-            }
-            env.PGSSLMODE ||= 'require';
-            env.PGCONNECT_TIMEOUT ||= '15';
-
-            const providerOptions = parsed.searchParams.get('options');
-            const safetyOptions = '-c default_transaction_read_only=on -c statement_timeout=30000 -c lock_timeout=5000';
-            env.PGOPTIONS = [providerOptions, safetyOptions].filter(Boolean).join(' ');
-            return env;
-          }
-
           function guardReadOnlySql(sql) {
             const withoutComments = sql.replace(/--.*$/gm, '');
             const withoutStrings = withoutComments.replace(/'(?:''|[^'])*'/gs, "''");
@@ -180,35 +130,31 @@ jobs:
             if (forbidden.test(withoutStrings)) {
               throw new Error('Inspection SQL failed the mutation-keyword guard.');
             }
-            if (!/SET\s+TRANSACTION\s+READ\s+ONLY/i.test(withoutStrings)) {
-              throw new Error('Inspection SQL does not establish a read-only transaction.');
-            }
-            const statements = withoutStrings.split(';').map((value) => value.trim()).filter(Boolean);
-            const allowed = /^(BEGIN|SET\s+TRANSACTION\s+READ\s+ONLY|SELECT|WITH|ROLLBACK)\b/i;
-            if (statements.some((statement) => !allowed.test(statement))) {
-              throw new Error('Inspection SQL contains a non-allowlisted statement.');
+            const normalized = withoutStrings.trim().replace(/;$/, '').trim();
+            if (normalized.includes(';') || !/^(SELECT|WITH)\b/i.test(normalized)) {
+              throw safeError('Inspection SQL contains a non-allowlisted statement.');
             }
           }
 
-          let childEnv;
-          function query(label, sql) {
+          const prisma = new PrismaClient({ log: [] });
+
+          async function query(label, sql) {
             guardReadOnlySql(sql);
-            const result = spawnSync('psql', [
-              '-X', '--no-psqlrc', '--quiet', '--no-align', '--tuples-only',
-              '--set', 'ON_ERROR_STOP=1',
-            ], {
-              env: childEnv,
-              input: sql,
-              encoding: 'utf8',
-              maxBuffer: 10 * 1024 * 1024,
-            });
-            if (result.error) {
-              throw safeError(`The ${label} could not start the PostgreSQL client.`);
-            }
-            if (result.status !== 0) {
+            try {
+              return await prisma.$transaction(async (transaction) => {
+                await transaction.$executeRaw`SET TRANSACTION READ ONLY`;
+                const state = await transaction.$queryRawUnsafe(
+                  "SELECT current_setting('transaction_read_only') AS value",
+                );
+                if (state?.[0]?.value !== 'on') {
+                  throw safeError(`The ${label} did not establish read-only transaction mode.`);
+                }
+                return transaction.$queryRawUnsafe(sql);
+              }, { maxWait: 5000, timeout: 30000 });
+            } catch (error) {
+              if (error?.safeMessage) throw error;
               throw safeError(`The ${label} failed; raw client diagnostics were suppressed.`);
             }
-            return result.stdout.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
           }
 
           function sqlString(value) {
@@ -218,119 +164,83 @@ jobs:
           const tableList = relevantTables.map(sqlString).join(', ');
           const enumList = [...relevantEnums].map(sqlString).join(', ');
 
-          const connectivitySql = `
-          BEGIN;
-          SET TRANSACTION READ ONLY;
-          SELECT 'READ_ONLY_GUARD|' || current_setting('transaction_read_only');
-          SELECT 'IDENTITY|' || jsonb_build_object(
-            'server_version_num', current_setting('server_version_num'),
-            'database_name', current_database()
-          )::text;
-          ROLLBACK;
-          `;
+          const connectivitySql = `SELECT
+            current_setting('server_version_num') AS server_version_num,
+            current_database() AS database_name,
+            current_schema() AS schema_name`;
 
-          const metadataSql = `
-          BEGIN;
-          SET TRANSACTION READ ONLY;
-          SELECT 'READ_ONLY_GUARD|' || current_setting('transaction_read_only');
-          SELECT 'MIGRATIONS|' || COALESCE((
-            SELECT jsonb_agg(to_jsonb(m))::text
-            FROM (
-              SELECT migration_name, started_at, finished_at, rolled_back_at,
-                     applied_steps_count,
-                     CASE WHEN COALESCE(logs, '') = '' THEN false ELSE true END AS logs_present
-              FROM "_prisma_migrations"
-              ORDER BY started_at, migration_name
-            ) m
-          ), '[]');
-          SELECT 'TABLES|' || COALESCE((
-            SELECT jsonb_agg(to_jsonb(t))::text
-            FROM (
-              SELECT wanted.table_name,
-                     to_regclass(format('%I.%I', current_schema(), wanted.table_name)) IS NOT NULL AS exists
-              FROM (VALUES ${tableValues}) AS wanted(table_name)
-              ORDER BY wanted.table_name
-            ) t
-          ), '[]');
-          SELECT 'COLUMNS|' || COALESCE((
-            SELECT jsonb_agg(to_jsonb(c))::text
-            FROM (
-              SELECT table_name, column_name, data_type, udt_name,
-                     is_nullable, column_default, ordinal_position
-              FROM information_schema.columns
-              WHERE table_schema = current_schema()
-                AND table_name IN (${tableList})
-              ORDER BY table_name, ordinal_position
-            ) c
-          ), '[]');
-          SELECT 'CONSTRAINTS|' || COALESCE((
-            SELECT jsonb_agg(to_jsonb(k))::text
-            FROM (
-              SELECT tbl.relname AS table_name, con.conname AS constraint_name,
-                     con.contype AS constraint_type,
-                     pg_get_constraintdef(con.oid, true) AS definition
-              FROM pg_catalog.pg_constraint con
-              JOIN pg_catalog.pg_class tbl ON tbl.oid = con.conrelid
-              JOIN pg_catalog.pg_namespace n ON n.oid = tbl.relnamespace
-              WHERE n.nspname = current_schema()
-                AND tbl.relname IN (${tableList})
-              ORDER BY tbl.relname, con.conname
-            ) k
-          ), '[]');
-          SELECT 'INDEXES|' || COALESCE((
-            SELECT jsonb_agg(to_jsonb(i))::text
-            FROM (
-              SELECT tablename AS table_name, indexname AS index_name, indexdef AS definition
-              FROM pg_catalog.pg_indexes
-              WHERE schemaname = current_schema()
-                AND tablename IN (${tableList})
-              ORDER BY tablename, indexname
-            ) i
-          ), '[]');
-          SELECT 'ENUMS|' || COALESCE((
-            SELECT jsonb_agg(to_jsonb(e))::text
-            FROM (
-              SELECT typ.typname AS enum_name, enum.enumlabel AS enum_value,
-                     enum.enumsortorder AS sort_order
-              FROM pg_catalog.pg_type typ
-              JOIN pg_catalog.pg_enum enum ON enum.enumtypid = typ.oid
-              JOIN pg_catalog.pg_namespace n ON n.oid = typ.typnamespace
-              WHERE n.nspname = current_schema()
-                AND typ.typname IN (${enumList})
-              ORDER BY typ.typname, enum.enumsortorder
-            ) e
-          ), '[]');
-          ROLLBACK;
-          `;
+          const metadataSql = `SELECT jsonb_build_object(
+            'MIGRATIONS', COALESCE((
+              SELECT jsonb_agg(to_jsonb(m)) FROM (
+                SELECT migration_name, started_at, finished_at, rolled_back_at,
+                       applied_steps_count,
+                       CASE WHEN COALESCE(logs, '') = '' THEN false ELSE true END AS logs_present
+                FROM "_prisma_migrations" ORDER BY started_at, migration_name
+              ) m
+            ), '[]'::jsonb),
+            'TABLES', COALESCE((
+              SELECT jsonb_agg(to_jsonb(t)) FROM (
+                SELECT wanted.table_name,
+                       to_regclass(format('%I.%I', current_schema(), wanted.table_name)) IS NOT NULL AS exists
+                FROM (VALUES ${tableValues}) AS wanted(table_name)
+                ORDER BY wanted.table_name
+              ) t
+            ), '[]'::jsonb),
+            'COLUMNS', COALESCE((
+              SELECT jsonb_agg(to_jsonb(c)) FROM (
+                SELECT table_name, column_name, data_type, udt_name,
+                       is_nullable, column_default, ordinal_position
+                FROM information_schema.columns
+                WHERE table_schema = current_schema() AND table_name IN (${tableList})
+                ORDER BY table_name, ordinal_position
+              ) c
+            ), '[]'::jsonb),
+            'CONSTRAINTS', COALESCE((
+              SELECT jsonb_agg(to_jsonb(k)) FROM (
+                SELECT tbl.relname AS table_name, con.conname AS constraint_name,
+                       con.contype AS constraint_type,
+                       pg_get_constraintdef(con.oid, true) AS definition
+                FROM pg_catalog.pg_constraint con
+                JOIN pg_catalog.pg_class tbl ON tbl.oid = con.conrelid
+                JOIN pg_catalog.pg_namespace n ON n.oid = tbl.relnamespace
+                WHERE n.nspname = current_schema() AND tbl.relname IN (${tableList})
+                ORDER BY tbl.relname, con.conname
+              ) k
+            ), '[]'::jsonb),
+            'INDEXES', COALESCE((
+              SELECT jsonb_agg(to_jsonb(i)) FROM (
+                SELECT tablename AS table_name, indexname AS index_name, indexdef AS definition
+                FROM pg_catalog.pg_indexes
+                WHERE schemaname = current_schema() AND tablename IN (${tableList})
+                ORDER BY tablename, indexname
+              ) i
+            ), '[]'::jsonb),
+            'ENUMS', COALESCE((
+              SELECT jsonb_agg(to_jsonb(e)) FROM (
+                SELECT typ.typname AS enum_name, enum.enumlabel AS enum_value,
+                       enum.enumsortorder AS sort_order
+                FROM pg_catalog.pg_type typ
+                JOIN pg_catalog.pg_enum enum ON enum.enumtypid = typ.oid
+                JOIN pg_catalog.pg_namespace n ON n.oid = typ.typnamespace
+                WHERE n.nspname = current_schema() AND typ.typname IN (${enumList})
+                ORDER BY typ.typname, enum.enumsortorder
+              ) e
+            ), '[]'::jsonb)
+          ) AS metadata`;
 
-          function parseMarked(lines) {
-            const result = {};
-            for (const line of lines) {
-              const separator = line.indexOf('|');
-              if (separator < 0) continue;
-              const key = line.slice(0, separator);
-              const value = line.slice(separator + 1);
-              result[key] = key === 'READ_ONLY_GUARD' ? value : JSON.parse(value);
-            }
-            return result;
-          }
-
-          try {
-            childEnv = connectionEnvironment();
-            const connectivity = parseMarked(query('read-only connectivity probe', connectivitySql));
-            if (connectivity.READ_ONLY_GUARD !== 'on') {
-              throw safeError('The connectivity probe did not confirm read-only transaction mode.');
-            }
-            if (!connectivity.IDENTITY?.server_version_num || !connectivity.IDENTITY?.database_name) {
+          async function main() {
+            try {
+            if (!process.env.DATABASE_URL) throw safeError('Production DATABASE_URL is unavailable.');
+            const connectivityRows = await query('read-only connectivity probe', connectivitySql);
+            const connectivity = connectivityRows?.[0];
+            if (!connectivity?.server_version_num || !connectivity?.database_name || !connectivity?.schema_name) {
               throw safeError('Sanitized database identity metadata is unavailable.');
             }
 
-            const metadata = parseMarked(query('read-only schema metadata query', metadataSql));
-            if (metadata.READ_ONLY_GUARD !== 'on') {
-              throw safeError('The metadata query did not confirm read-only transaction mode.');
-            }
+            const metadataRows = await query('read-only schema metadata query', metadataSql);
+            const metadata = metadataRows?.[0]?.metadata;
             for (const key of ['MIGRATIONS', 'TABLES', 'COLUMNS', 'CONSTRAINTS', 'INDEXES', 'ENUMS']) {
-              if (!Array.isArray(metadata[key])) throw new Error(`Required ${key.toLowerCase()} metadata is unavailable.`);
+              if (!Array.isArray(metadata?.[key])) throw safeError(`Required ${key.toLowerCase()} metadata is unavailable.`);
             }
 
             const tableExists = new Map(metadata.TABLES.map((row) => [row.table_name, row.exists]));
@@ -339,72 +249,47 @@ jobs:
               `SELECT ${sqlString(name)} AS table_name, COUNT(*)::text AS row_count FROM "${name.replaceAll('"', '""')}"`);
             let counts = [];
             if (countParts.length) {
-              const countSql = `
-              BEGIN;
-              SET TRANSACTION READ ONLY;
-              SELECT 'READ_ONLY_GUARD|' || current_setting('transaction_read_only');
-              SELECT 'COUNTS|' || COALESCE((SELECT jsonb_agg(to_jsonb(c))::text FROM (${countParts.join('\nUNION ALL\n')}) c), '[]');
-              ROLLBACK;
-              `;
-              const countResult = parseMarked(query('read-only row-count query', countSql));
-              if (countResult.READ_ONLY_GUARD !== 'on') throw new Error('Count session was not read-only.');
-              counts = countResult.COUNTS || [];
+              const countSql = countParts.join('\nUNION ALL\n');
+              counts = await query('read-only row-count query', countSql);
             }
 
             const columns = new Set(metadata.COLUMNS.map((row) => `${row.table_name}.${row.column_name}`));
             const hasColumns = (tableName, columnNames) =>
               columnNames.every((columnName) => columns.has(`${tableName}.${columnName}`));
             let calculator = { bricks: [], thicknesses: [] };
-            const calculatorParts = [];
             if (tableExists.get('brick_types') && hasColumns('brick_types', [
               'name', 'length', 'width', 'height', 'dimension_unit',
               'price_per_piece', 'default_waste_percent', 'is_active',
             ])) {
-              calculatorParts.push(`SELECT 'BRICKS|' || COALESCE(jsonb_agg(jsonb_build_object(
+              const brickRows = await query('read-only brick calculator query', `SELECT COALESCE(jsonb_agg(jsonb_build_object(
                 'name', "name", 'length', "length"::text, 'width', "width"::text,
                 'height', "height"::text, 'unit', "dimension_unit"::text,
                 'price', "price_per_piece"::text, 'waste', "default_waste_percent"::text,
-                'active', "is_active") ORDER BY "name")::text, '[]') FROM "brick_types"`);
+                'active', "is_active") ORDER BY "name"), '[]'::jsonb) AS rows FROM "brick_types"`);
+              calculator.bricks = brickRows?.[0]?.rows || [];
             }
             if (tableExists.get('wall_thickness') && hasColumns('wall_thickness', [
               'display_name', 'thickness_value', 'unit', 'is_active',
             ])) {
-              calculatorParts.push(`SELECT 'THICKNESSES|' || COALESCE(jsonb_agg(jsonb_build_object(
+              const thicknessRows = await query('read-only wall thickness query', `SELECT COALESCE(jsonb_agg(jsonb_build_object(
                 'name', "display_name", 'value', "thickness_value"::text,
-                'unit', "unit"::text, 'active', "is_active") ORDER BY "thickness_value")::text, '[]') FROM "wall_thickness"`);
-            }
-            if (calculatorParts.length) {
-              const calculatorSql = `BEGIN; SET TRANSACTION READ ONLY;
-                SELECT 'READ_ONLY_GUARD|' || current_setting('transaction_read_only');
-                ${calculatorParts.join(';\n')}; ROLLBACK;`;
-              const calculatorResult = parseMarked(query('read-only calculator query', calculatorSql));
-              if (calculatorResult.READ_ONLY_GUARD !== 'on') throw new Error('Calculator session was not read-only.');
-              calculator = {
-                bricks: calculatorResult.BRICKS || [],
-                thicknesses: calculatorResult.THICKNESSES || [],
-              };
+                'unit', "unit"::text, 'active', "is_active") ORDER BY "thickness_value"), '[]'::jsonb) AS rows FROM "wall_thickness"`);
+              calculator.thicknesses = thicknessRows?.[0]?.rows || [];
             }
 
             let notificationDistribution = null;
             if (tableExists.get('NotificationLog')
               && columns.has('NotificationLog.deduplication_key')
               && columns.has('NotificationLog.recovery_attempt_count')) {
-              const distributionSql = `
-              BEGIN;
-              SET TRANSACTION READ ONLY;
-              SELECT 'READ_ONLY_GUARD|' || current_setting('transaction_read_only');
-              SELECT 'NOTIFICATION_DISTRIBUTION|' || jsonb_build_object(
+              const distributionSql = `SELECT jsonb_build_object(
                 'total', COUNT(*)::text,
                 'deduplication_null', COUNT(*) FILTER (WHERE "deduplication_key" IS NULL)::text,
                 'deduplication_non_null', COUNT(*) FILTER (WHERE "deduplication_key" IS NOT NULL)::text,
                 'recovery_zero', COUNT(*) FILTER (WHERE "recovery_attempt_count" = 0)::text,
                 'recovery_non_zero', COUNT(*) FILTER (WHERE "recovery_attempt_count" <> 0)::text
-              )::text FROM "NotificationLog";
-              ROLLBACK;
-              `;
-              const distributionResult = parseMarked(query('read-only notification distribution query', distributionSql));
-              if (distributionResult.READ_ONLY_GUARD !== 'on') throw new Error('Notification session was not read-only.');
-              notificationDistribution = distributionResult.NOTIFICATION_DISTRIBUTION || null;
+              ) AS distribution FROM "NotificationLog"`;
+              const distributionRows = await query('read-only notification distribution query', distributionSql);
+              notificationDistribution = distributionRows?.[0]?.distribution || null;
             }
 
             const countMap = new Map(counts.map((row) => [row.table_name, row.row_count]));
@@ -528,20 +413,23 @@ jobs:
               const failed = attempts.some((row) => row.rolled_back_at || (!row.finished_at && row.logs_present));
               const applied = attempts.some((row) => row.finished_at && !row.rolled_back_at);
               let classification = 'UNKNOWN';
-              if (failed) classification = 'FAILED_MIGRATION';
-              else if (applied && present.length !== expected.length) classification = 'HISTORY_APPLIED_SCHEMA_MISMATCH';
-              else if (!applied && expected.length > 0 && present.length === 0) classification = 'CLEANLY_PENDING';
-              else if (!applied && expected.length > 0 && present.length === expected.length) classification = 'ALREADY_APPLIED';
-              else if (!applied && present.length > 0 && present.length < expected.length) classification = 'PARTIALLY_APPLIED';
-              else if (applied && present.length === expected.length) classification = 'ALREADY_APPLIED';
+              if (failed) classification = 'BLOCKED';
+              else if (applied && expected.length > 0 && present.length === expected.length) classification = 'ALREADY_APPLIED';
+              else if (applied && present.length !== expected.length) classification = 'DRIFTED';
+              else if (!applied && expected.length > 0 && present.length === 0) classification = 'PENDING_SAFE';
+              else if (!applied && expected.length > 0 && present.length > 0) classification = 'DRIFTED';
               const history = failed ? 'FAILED/ROLLED_BACK' : applied ? 'APPLIED' : 'PENDING';
-              const risk = ['CLEANLY_PENDING'].includes(classification) ? 'MEDIUM' : 'HIGH';
+              const risk = classification === 'PENDING_SAFE' ? 'MEDIUM' : classification === 'ALREADY_APPLIED' ? 'LOW' : 'HIGH';
               const missing = expected.filter((signal) => !signalExists(signal));
               return { name, expected, present, missing, history, classification, risk };
             });
 
             const databaseFingerprint = crypto.createHash('sha256')
-              .update(connectivity.IDENTITY.database_name)
+              .update(connectivity.database_name)
+              .digest('hex')
+              .slice(0, 12);
+            const schemaFingerprint = crypto.createHash('sha256')
+              .update(connectivity.schema_name)
               .digest('hex')
               .slice(0, 12);
 
@@ -549,8 +437,9 @@ jobs:
             console.log('==============================');
             console.log('Target: Production database');
             console.log(`Reviewed commit: ${reviewedCommit}`);
-            console.log(`PostgreSQL server version: ${connectivity.IDENTITY.server_version_num}`);
+            console.log(`PostgreSQL server version: ${connectivity.server_version_num}`);
             console.log(`Database identity: sha256:${databaseFingerprint}`);
+            console.log(`Schema identity: sha256:${schemaFingerprint}`);
             console.log('Production database mutated: NO');
             console.log('Prisma migration applied: NO');
             console.log('WAnamaste calls: 0');
@@ -635,9 +524,9 @@ jobs:
             console.log('');
 
             let recommendation = 'A. SAFE TO APPLY REVIEWED CHAIN';
-            if (classifications.some((row) => row.classification === 'FAILED_MIGRATION') || failedHistory.length) {
+            if (classifications.some((row) => row.classification === 'BLOCKED') || failedHistory.length) {
               recommendation = 'D. FAILED MIGRATION DETECTED — DO NOT MIGRATE';
-            } else if (classifications.some((row) => ['PARTIALLY_APPLIED', 'ALREADY_APPLIED', 'HISTORY_APPLIED_SCHEMA_MISMATCH'].includes(row.classification))) {
+            } else if (classifications.some((row) => row.classification === 'DRIFTED')) {
               recommendation = 'C. DRIFT DETECTED — DO NOT MIGRATE';
             } else if (classifications.some((row) => row.classification === 'UNKNOWN')) {
               recommendation = 'E. INSUFFICIENT READ-ONLY EVIDENCE';
@@ -649,5 +538,13 @@ jobs:
           } catch (error) {
             safeFailure(error?.safeMessage || 'Required metadata could not be established safely.');
             process.exitCode = 1;
+          } finally {
+            await prisma.$disconnect();
           }
+          }
+
+          main().catch(() => {
+            safeFailure('Inspection failed safely before completion.');
+            process.exitCode = 1;
+          });
           NODE
