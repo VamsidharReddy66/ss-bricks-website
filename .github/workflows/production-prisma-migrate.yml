@@ -67,16 +67,30 @@ jobs:
       - name: Install locked dependencies
         run: npm ci
 
-      - name: Verify intended migration is the only pending migration
+      - name: Verify exact reviewed migration chain is pending
         id: preflight
         shell: bash
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
+          set +x
           set -euo pipefail
-          expected_migration="20260926000000_add_wanamaste_delivery_claim"
           status_file="$RUNNER_TEMP/prisma-status-before.txt"
-          trap 'rm -f "$status_file"' EXIT
+          expected_file="$RUNNER_TEMP/expected-production-migrations.txt"
+          pending_file="$RUNNER_TEMP/pending-production-migrations.txt"
+          trap 'rm -f "$status_file" "$expected_file" "$pending_file"' EXIT
+
+          cat > "$expected_file" <<'EXPECTED_MIGRATIONS'
+          20260714000000_add_quote_distribution_pipeline
+          20260714010000_repair_quote_distribution_schema
+          20260717000000_add_material_calculator
+          20260718000000_add_test_payments
+          20260729000000_sync_calculator_catalogue_dimensions
+          20260729170000_add_offline_sales_analytics
+          20260830000000_add_business_analytics_data
+          20260924000000_add_quote_price_snapshot
+          20260926000000_add_wanamaste_delivery_claim
+          EXPECTED_MIGRATIONS
 
           if [[ -z "${DATABASE_URL:-}" ]]; then
             echo "::error::The production DATABASE_URL secret is not configured."
@@ -89,10 +103,19 @@ jobs:
           set -e
 
           if [[ $status_code -eq 0 ]]; then
+            if ! grep -Fq "Database schema is up to date" "$status_file"; then
+              echo "::error::Prisma returned success without an explicit up-to-date schema result."
+              exit 1
+            fi
             echo "should_migrate=false" >> "$GITHUB_OUTPUT"
-            echo "migration_status=already-applied" >> "$GITHUB_OUTPUT"
+            echo "migration_status=ALREADY_APPLIED" >> "$GITHUB_OUTPUT"
             echo "All repository migrations are already applied; no migration command will run."
             exit 0
+          fi
+
+          if grep -Eqi 'failed migration|failed to apply|rolled back' "$status_file"; then
+            echo "::error::Prisma migration history contains a failed or rolled-back migration."
+            exit 1
           fi
 
           if ! grep -q "have not yet been applied" "$status_file"; then
@@ -100,21 +123,18 @@ jobs:
             exit 1
           fi
 
-          mapfile -t pending_migrations < <(
-            grep -Eo '[0-9]{14}_[A-Za-z0-9_-]+' "$status_file" | sort -u
-          )
+          grep -Eo '[0-9]{14}_[A-Za-z0-9_-]+' "$status_file" > "$pending_file"
 
-          if [[ ${#pending_migrations[@]} -ne 1 ]] || [[ "${pending_migrations[0]:-}" != "$expected_migration" ]]; then
-            echo "::error::The reviewed migration is not the sole pending migration."
-            if [[ ${#pending_migrations[@]} -gt 0 ]]; then
-              printf 'Pending migration names: %s\n' "${pending_migrations[*]}"
-            fi
+          if [[ ! -s "$pending_file" ]] || ! cmp -s "$expected_file" "$pending_file"; then
+            echo "::error::Pending migration identity or order differs from the exact reviewed nine-migration chain."
+            echo -n "Pending migration names: "
+            paste -sd ' ' "$pending_file" || true
             exit 1
           fi
 
           echo "should_migrate=true" >> "$GITHUB_OUTPUT"
-          echo "migration_status=pending" >> "$GITHUB_OUTPUT"
-          echo "The reviewed migration is the only pending migration."
+          echo "migration_status=APPROVED_REVIEWED_CHAIN" >> "$GITHUB_OUTPUT"
+          echo "The exact reviewed nine-migration chain is pending in historical order."
 
       - name: Apply reviewed Prisma migration
         if: steps.preflight.outputs.should_migrate == 'true'
@@ -122,6 +142,7 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
+          set +x
           set -euo pipefail
           deploy_log="$RUNNER_TEMP/prisma-deploy.txt"
           trap 'rm -f "$deploy_log"' EXIT
@@ -134,11 +155,13 @@ jobs:
           echo "Reviewed migration command completed successfully."
 
       - name: Verify production migration status
+        id: postflight
         if: steps.preflight.outputs.should_migrate == 'true'
         shell: bash
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
+          set +x
           set -euo pipefail
           status_file="$RUNNER_TEMP/prisma-status-after.txt"
           trap 'rm -f "$status_file"' EXIT
@@ -148,6 +171,17 @@ jobs:
             exit 1
           fi
 
+          if grep -Eqi 'failed migration|failed to apply|rolled back|have not yet been applied' "$status_file"; then
+            echo "::error::Post-migration verification found a failed, rolled-back, or pending migration."
+            exit 1
+          fi
+
+          if ! grep -Fq "Database schema is up to date" "$status_file"; then
+            echo "::error::Post-migration status did not explicitly confirm an up-to-date schema."
+            exit 1
+          fi
+
+          echo "migration_status=ALL_APPLIED" >> "$GITHUB_OUTPUT"
           echo "Prisma confirms that all repository migrations are applied."
 
       - name: Write safe migration summary
@@ -157,11 +191,12 @@ jobs:
           {
             echo "## Production Prisma migration"
             echo "- Reviewed commit: \`7496f570a559b7da9ed1af92eb5160f8150a65a2\`"
-            echo "- Migration: \`20260926000000_add_wanamaste_delivery_claim\`"
+            echo "- Reviewed chain: 9 exact migrations ending in \`20260926000000_add_wanamaste_delivery_claim\`"
             echo "- Preflight status: \`${{ steps.preflight.outputs.migration_status || 'not-established' }}\`"
+            echo "- Postflight status: \`${{ steps.postflight.outputs.migration_status || 'not-run' }}\`"
             if [[ "${{ steps.preflight.outputs.should_migrate }}" == "true" ]]; then
               echo "- Result: migration command executed; post-migration status step determines final success"
-            elif [[ "${{ steps.preflight.outputs.migration_status }}" == "already-applied" ]]; then
+            elif [[ "${{ steps.preflight.outputs.migration_status }}" == "ALREADY_APPLIED" ]]; then
               echo "- Result: already applied; migration command was not executed"
             else
               echo "- Result: stopped before migration"
