@@ -4,8 +4,7 @@ const { validateSmtpConfig } = require('../backend/config/smtp');
 const { ensureBootstrapAdmin } = require('../backend/services/adminService');
 const { ensureDefaultProducts } = require('../backend/services/productService');
 const { ensureDefaultCalculatorConfig } = require('../backend/services/calculatorService');
-
-let ready;
+const { createRetryableInitializer } = require('../backend/utils/retryableInitializer');
 
 async function prepareServerlessApp() {
   await connectDatabase();
@@ -21,11 +20,9 @@ async function prepareServerlessApp() {
   }
 }
 
-module.exports = async function handler(req, res) {
-  if (!ready) {
-    ready = prepareServerlessApp();
-  }
+const initializeServerlessApp = createRetryableInitializer(prepareServerlessApp);
 
-  await ready;
+module.exports = async function handler(req, res) {
+  await initializeServerlessApp();
   return app(req, res);
 };
