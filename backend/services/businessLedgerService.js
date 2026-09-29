@@ -268,6 +268,52 @@ async function getSalesCustomerLog(query) {
   return summarizeSalesCustomer(customer, records);
 }
 
+function purchasePaymentStatus(record) {
+  if (record.paymentStatus === 'PAID') return 'DONE';
+  if (record.paymentStatus === 'PENDING') return 'DUE';
+  return 'NOT_RECORDED';
+}
+
+function summarizeVendorPurchases(vendor, records) {
+  const purchases = records.map((record) => ({
+    ...serialize(CONFIG.purchases, record),
+    displayPaymentStatus: purchasePaymentStatus(record),
+    invoiceAvailable: false,
+  }));
+
+  return {
+    vendor: {
+      id: vendor?.id || null,
+      name: vendor?.displayName || purchases[0]?.vendorName || 'Unavailable',
+      phone: vendor?.phone || null,
+      address: vendor?.address || null,
+      productService: vendor?.productService || null,
+    },
+    totalOrderValue: purchases.reduce((total, record) => total + Number(record.purchaseAmount || 0), 0),
+    purchases,
+  };
+}
+
+async function getVendorPurchaseLog(query) {
+  const normalizedName = normalizeIdentity(query.vendorName);
+  const vendor = query.vendorId
+    ? await prisma.businessVendor.findUnique({ where: { id: query.vendorId } })
+    : await prisma.businessVendor.findFirst({ where: { normalizedName }, orderBy: { id: 'asc' } });
+  const identities = [];
+  if (vendor) identities.push({ vendorId: vendor.id });
+  identities.push({ vendorName: { equals: query.vendorName, mode: 'insensitive' } });
+
+  const records = await prisma.materialPurchase.findMany({
+    where: { recordState: 'ACTIVE', OR: identities },
+    orderBy: [{ purchaseDate: 'asc' }, { id: 'asc' }],
+    include: {
+      admin: { select: { name: true } },
+      sourceRow: { select: { sheetName: true, rowNumber: true } },
+    },
+  });
+  return summarizeVendorPurchases(vendor, records);
+}
+
 async function findRecord(tx, type, id) {
   const config = configFor(type);
   const record = await tx[config.model].findUnique({ where: { id } });
@@ -347,9 +393,18 @@ async function voidRecord(type, id, reason, adminId) {
 }
 
 module.exports = {
-  __private: { paymentStatusForSale, prepareData, reportingMonth, serialize, summarizeSalesCustomer },
+  __private: {
+    paymentStatusForSale,
+    prepareData,
+    purchasePaymentStatus,
+    reportingMonth,
+    serialize,
+    summarizeSalesCustomer,
+    summarizeVendorPurchases,
+  },
   createRecord,
   getSalesCustomerLog,
+  getVendorPurchaseLog,
   listRecords,
   updateRecord,
   voidRecord,

@@ -2,7 +2,11 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { prisma } = require('../config/database');
 const businessLedgerService = require('../services/businessLedgerService');
-const { recordSchemas, salesCustomerLogSchema } = require('../validators/businessValidator');
+const {
+  recordSchemas,
+  salesCustomerLogSchema,
+  vendorPurchaseLogSchema,
+} = require('../validators/businessValidator');
 
 const createPayloads = {
   sales: { saleDate: '2026-08-30', customerName: 'Test Customer', customerPhone: '', location: '', productName: 'Fly Ash Bricks', quantity: 1000, quantityUnit: 'brick', unitPrice: 8, driverBatta: 0, invoicedAmount: 8000, paymentMethod: '', receivedTo: '', notes: '' },
@@ -110,4 +114,54 @@ test('validates customer log lookup inputs', () => {
     customerName: 'Test Customer',
   });
   assert.equal(salesCustomerLogSchema.safeParse({ customerName: '' }).success, false);
+});
+
+test('summarizes vendor purchases using recorded totals and payment markers', () => {
+  const records = [
+    {
+      id: 11,
+      vendorName: 'Ram Materials',
+      materialName: 'Crusher dust 6mm',
+      purchaseAmount: 22000,
+      paymentStatus: 'PENDING',
+    },
+    {
+      id: 12,
+      vendorName: 'Ram Materials',
+      materialName: 'Crusher dust 12mm',
+      purchaseAmount: 23000,
+      paymentStatus: 'PAID',
+    },
+    {
+      id: 13,
+      vendorName: 'Ram Materials',
+      materialName: 'Crusher dust 12mm',
+      purchaseAmount: 24000,
+      paymentStatus: 'UNKNOWN',
+    },
+  ];
+  const vendor = {
+    id: 8,
+    displayName: 'Ram Materials',
+    phone: '919999999999',
+    address: 'Tirupati',
+    productService: 'Crusher dust',
+  };
+
+  const result = businessLedgerService.__private.summarizeVendorPurchases(vendor, records);
+
+  assert.equal(result.vendor.name, 'Ram Materials');
+  assert.equal(result.vendor.phone, '919999999999');
+  assert.equal(result.vendor.address, 'Tirupati');
+  assert.equal(result.totalOrderValue, 69000);
+  assert.deepEqual(result.purchases.map((record) => record.displayPaymentStatus), ['DUE', 'DONE', 'NOT_RECORDED']);
+  assert.ok(result.purchases.every((record) => record.invoiceAvailable === false));
+});
+
+test('validates vendor log lookup inputs', () => {
+  assert.deepEqual(vendorPurchaseLogSchema.parse({ vendorId: '8', vendorName: 'Ram Materials' }), {
+    vendorId: 8,
+    vendorName: 'Ram Materials',
+  });
+  assert.equal(vendorPurchaseLogSchema.safeParse({ vendorName: '' }).success, false);
 });

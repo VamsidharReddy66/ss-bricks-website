@@ -9,6 +9,7 @@ const {
   recordSchemas,
   recordTypeSchema,
   salesCustomerLogSchema,
+  vendorPurchaseLogSchema,
   voidRecordSchema,
 } = require('../validators/businessValidator');
 
@@ -78,6 +79,17 @@ async function salesCustomerLog(req, res, next) {
   }
 }
 
+async function vendorPurchaseLog(req, res, next) {
+  try {
+    const query = vendorPurchaseLogSchema.safeParse(req.query);
+    if (!query.success) return validationFailure(res, query.error);
+    const vendorLog = await businessLedgerService.getVendorPurchaseLog(query.data);
+    return successResponse(res, 200, 'Vendor purchase log fetched successfully.', vendorLog);
+  } catch (error) {
+    return next(error);
+  }
+}
+
 async function createRecord(req, res, next) {
   try {
     const type = parsedType(req.params.type, res);
@@ -137,5 +149,6 @@ module.exports = {
   previewImport,
   salesCustomerLog,
   updateRecord,
+  vendorPurchaseLog,
   voidRecord,
 };

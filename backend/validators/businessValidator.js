@@ -166,6 +166,11 @@ const salesCustomerLogSchema = z.object({
   customerName: z.string().trim().min(1).max(160),
 });
 
+const vendorPurchaseLogSchema = z.object({
+  vendorId: z.coerce.number().int().positive().optional(),
+  vendorName: z.string().trim().min(1).max(160),
+});
+
 const recordTypeSchema = z.enum(Object.keys(recordSchemas));
 const recordIdSchema = z.coerce.number().int().positive();
 const recordCorrectionSchema = z.object({
@@ -191,5 +196,6 @@ module.exports = {
   recordSchemas,
   recordTypeSchema,
   salesCustomerLogSchema,
+  vendorPurchaseLogSchema,
   voidRecordSchema,
 };

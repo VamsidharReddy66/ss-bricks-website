@@ -44,6 +44,7 @@ router.get('/business-imports', businessController.listImports);
 router.post('/business-import/preview', upload.single('file'), businessController.previewImport);
 router.post('/business-import/commit', upload.single('file'), businessController.commitImport);
 router.get('/business-records/sales/customer-log', businessController.salesCustomerLog);
+router.get('/business-records/purchases/vendor-log', businessController.vendorPurchaseLog);
 router.get('/business-records/:type', businessController.listRecords);
 router.post('/business-records/:type', businessController.createRecord);
 router.put('/business-records/:type/:id', businessController.updateRecord);

@@ -11,6 +11,7 @@
   const leadModal = document.getElementById('admin-lead-modal');
   const leadPreviewModal = document.getElementById('admin-lead-preview-modal');
   const salesCustomerModal = document.getElementById('admin-sales-customer-modal');
+  const vendorLogModal = document.getElementById('admin-vendor-log-modal');
   const leadDetailModal = document.getElementById('admin-lead-detail-modal');
   const importModal = document.getElementById('admin-import-modal');
   const businessImportModal = document.getElementById('admin-business-import-modal');
@@ -995,6 +996,54 @@
     }
   }
 
+  function renderVendorLog(data) {
+    const vendor = data.vendor || {};
+    const rows = data.purchases || [];
+    cacheBusinessRecords('purchases', rows);
+    document.getElementById('admin-vendor-log-details').innerHTML = `
+      <div><dt>Name</dt><dd>${escapeHtml(vendor.name || 'Unavailable')}</dd></div>
+      <div><dt>Contact</dt><dd>${escapeHtml(vendor.phone || 'Unavailable')}</dd></div>
+      <div><dt>Type of customer</dt><dd>Vendor</dd></div>
+      <div><dt>Address</dt><dd>${escapeHtml(vendor.address || 'Unavailable')}</dd></div>
+    `;
+    document.getElementById('admin-vendor-log-total').textContent = salesCustomerTotal(data.totalOrderValue);
+    document.getElementById('admin-vendor-log-rows').innerHTML = rows.length ? rows.map((row) => {
+      const payment = salesCustomerPayment(row.displayPaymentStatus);
+      return `
+        <tr>
+          <td>${escapeHtml(dateOnly(row.purchaseDate || row.reportingMonth))}</td>
+          <td>${escapeHtml(row.materialName || 'Unavailable')}</td>
+          <td>${row.unitPrice == null ? 'Unavailable' : escapeHtml(money(row.unitPrice))}</td>
+          <td>${row.quantity == null ? 'Unavailable' : Number(row.quantity).toLocaleString('en-IN')}</td>
+          <td>${escapeHtml(money(row.purchaseAmount || 0))}</td>
+          <td><span class="admin-sales-payment ${payment[1]}">${payment[0]}</span></td>
+          <td><span class="admin-sales-invoice-unavailable">Unavailable</span></td>
+          <td><button class="admin-link-button inline" type="button" data-edit-business-record="${Number(row.id)}" data-business-type="purchases">Edit</button></td>
+        </tr>
+      `;
+    }).join('') : '<tr><td colspan="8" class="text-muted">No active purchase records are available for this vendor.</td></tr>';
+  }
+
+  function closeVendorLogModal() {
+    vendorLogModal.hidden = true;
+  }
+
+  async function openVendorLog(vendorName, vendorId) {
+    document.getElementById('admin-vendor-log-details').innerHTML = '<div><dt>Name</dt><dd>Loading...</dd></div>';
+    document.getElementById('admin-vendor-log-total').textContent = 'Loading...';
+    document.getElementById('admin-vendor-log-rows').innerHTML = '<tr><td colspan="8" class="text-muted">Loading vendor purchases...</td></tr>';
+    vendorLogModal.hidden = false;
+    const params = new URLSearchParams({ vendorName });
+    if (vendorId) params.set('vendorId', vendorId);
+    try {
+      const data = await api(`/api/admin/business-records/purchases/vendor-log?${params.toString()}`);
+      renderVendorLog(data);
+    } catch (error) {
+      closeVendorLogModal();
+      showToast(error.message);
+    }
+  }
+
   function renderAccountsAnalytics(report) {
     const finance = report.finance || {};
     const unavailable = (name) => `<article class="accounts-kpi unavailable"><span>${escapeHtml(name)}</span><strong>Unavailable</strong></article>`;
@@ -1008,7 +1057,7 @@
     document.getElementById('admin-accounts-payables').innerHTML = payables.length ? payables.map((row, index) => {
       const name = row.vendorName || row.materialName || 'Unspecified vendor';
       const initials = name.split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase();
-      return `<div class="accounts-balance-row"><span class="accounts-avatar avatar-${index % 5}">${escapeHtml(initials)}</span><span><strong>${escapeHtml(name)}</strong><small>Supplier · ${escapeHtml(row.materialName || 'Material purchase')}</small></span><span><strong>${escapeHtml(money(Number(row.purchaseAmount || 0) + Number(row.driverBatta || 0)))}</strong><small class="accounts-status overdue">Pending status</small></span></div>`;
+      return `<div class="accounts-balance-row"><span class="accounts-avatar avatar-${index % 5}">${escapeHtml(initials)}</span><span><button class="sales-customer-link accounts-vendor-link" type="button" data-vendor-log-name="${escapeHtml(name)}"${row.vendorId ? ` data-vendor-log-id="${Number(row.vendorId)}"` : ''}>${escapeHtml(name)}</button><small>Supplier · ${escapeHtml(row.materialName || 'Material purchase')}</small></span><span><strong>${escapeHtml(money(Number(row.purchaseAmount || 0) + Number(row.driverBatta || 0)))}</strong><small class="accounts-status overdue">Pending status</small></span></div>`;
     }).join('') : '<div class="accounts-empty"><strong>Unavailable</strong></div>';
     document.getElementById('admin-accounts-receivables').innerHTML = '<div class="accounts-empty"><strong>Unavailable</strong></div>';
     const asOf = `As of ${dateTime(report.generatedAt || new Date())}`;
@@ -3099,6 +3148,7 @@
       const record = businessRecordCache.get(businessRecordKey(type, Number(editBusinessRecordButton.dataset.editBusinessRecord)));
       if (record) {
         if (!salesCustomerModal.hidden) closeSalesCustomerModal();
+        if (!vendorLogModal.hidden) closeVendorLogModal();
         openBusinessRecordModal(type, record);
       }
       return;
@@ -3113,6 +3163,18 @@
 
     if (event.target.closest('[data-close-sales-customer-modal]')) {
       closeSalesCustomerModal();
+      return;
+    }
+
+    const vendorLogButton = event.target.closest('[data-vendor-log-name]');
+    if (vendorLogButton) {
+      openVendorLog(vendorLogButton.dataset.vendorLogName, vendorLogButton.dataset.vendorLogId)
+        .catch((error) => showToast(error.message));
+      return;
+    }
+
+    if (event.target.closest('[data-close-vendor-log-modal]')) {
+      closeVendorLogModal();
       return;
     }
 
@@ -3438,6 +3500,7 @@
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape' && !leadPreviewModal.hidden) closeLeadPreviewModal();
     if (event.key === 'Escape' && !salesCustomerModal.hidden) closeSalesCustomerModal();
+    if (event.key === 'Escape' && !vendorLogModal.hidden) closeVendorLogModal();
   });
 
   document.addEventListener('input', (event) => {

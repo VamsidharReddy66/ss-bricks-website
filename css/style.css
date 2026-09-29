@@ -3820,6 +3820,14 @@ select.admin-grid-input {
   text-underline-offset: 3px;
 }
 
+.accounts-vendor-link {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .admin-sales-customer-card {
   width: min(1120px, calc(100vw - 3rem));
   max-height: min(88vh, 760px);
