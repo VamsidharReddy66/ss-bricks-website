@@ -1020,6 +1020,31 @@
   </section>
 </div>
 
+<div class="admin-modal" id="admin-inventory-category-modal" hidden>
+  <div class="admin-modal-backdrop" data-close-inventory-category-modal></div>
+  <section class="admin-modal-card admin-sales-customer-card" role="dialog" aria-modal="true" aria-labelledby="admin-inventory-category-title">
+    <header class="admin-sales-customer-head">
+      <h2 id="admin-inventory-category-title">Expense Log</h2>
+      <button class="admin-icon-button" type="button" aria-label="Close expense log" data-close-inventory-category-modal>&times;</button>
+    </header>
+    <div class="admin-sales-customer-summary">
+      <dl class="admin-sales-customer-details" id="admin-inventory-category-details"></dl>
+      <div class="admin-sales-customer-value">
+        <span>Total Order Value</span>
+        <strong id="admin-inventory-category-total">Unavailable</strong>
+      </div>
+    </div>
+    <div class="admin-sales-customer-table-wrap">
+      <table class="admin-sales-customer-table">
+        <thead>
+          <tr><th>Date</th><th>Description</th><th>Payable</th><th>Payment Status</th><th>Invoice</th><th>Actions</th></tr>
+        </thead>
+        <tbody id="admin-inventory-category-rows"></tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
 <div class="admin-modal" id="admin-lead-preview-modal" hidden>
   <div class="admin-modal-backdrop" data-close-lead-preview-modal></div>
   <section class="admin-modal-card admin-lead-preview-card" role="dialog" aria-modal="true" aria-labelledby="admin-lead-preview-title">

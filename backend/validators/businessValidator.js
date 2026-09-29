@@ -171,6 +171,10 @@ const vendorPurchaseLogSchema = z.object({
   vendorName: z.string().trim().min(1).max(160),
 });
 
+const inventoryCategoryLogSchema = z.object({
+  category: z.string().trim().min(1).max(120),
+});
+
 const recordTypeSchema = z.enum(Object.keys(recordSchemas));
 const recordIdSchema = z.coerce.number().int().positive();
 const recordCorrectionSchema = z.object({
@@ -190,6 +194,7 @@ function formatBusinessErrors(error) {
 
 module.exports = {
   formatBusinessErrors,
+  inventoryCategoryLogSchema,
   listBusinessRecordsSchema,
   recordCorrectionSchema,
   recordIdSchema,

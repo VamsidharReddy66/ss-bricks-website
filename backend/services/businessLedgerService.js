@@ -314,6 +314,37 @@ async function getVendorPurchaseLog(query) {
   return summarizeVendorPurchases(vendor, records);
 }
 
+function summarizeInventoryCategory(category, records) {
+  const purchases = records.map((record) => ({
+    ...serialize(CONFIG.purchases, record),
+    displayPaymentStatus: purchasePaymentStatus(record),
+    invoiceAvailable: false,
+  }));
+  const describedPurchase = purchases.find((record) => record.notes);
+
+  return {
+    category,
+    description: describedPurchase?.notes || null,
+    totalOrderValue: purchases.reduce((total, record) => total + Number(record.purchaseAmount || 0), 0),
+    purchases,
+  };
+}
+
+async function getInventoryCategoryLog(query) {
+  const records = await prisma.materialPurchase.findMany({
+    where: {
+      recordState: 'ACTIVE',
+      materialName: { equals: query.category, mode: 'insensitive' },
+    },
+    orderBy: [{ purchaseDate: 'asc' }, { id: 'asc' }],
+    include: {
+      admin: { select: { name: true } },
+      sourceRow: { select: { sheetName: true, rowNumber: true } },
+    },
+  });
+  return summarizeInventoryCategory(query.category, records);
+}
+
 async function findRecord(tx, type, id) {
   const config = configFor(type);
   const record = await tx[config.model].findUnique({ where: { id } });
@@ -399,10 +430,12 @@ module.exports = {
     purchasePaymentStatus,
     reportingMonth,
     serialize,
+    summarizeInventoryCategory,
     summarizeSalesCustomer,
     summarizeVendorPurchases,
   },
   createRecord,
+  getInventoryCategoryLog,
   getSalesCustomerLog,
   getVendorPurchaseLog,
   listRecords,

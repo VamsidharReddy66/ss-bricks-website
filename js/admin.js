@@ -12,6 +12,7 @@
   const leadPreviewModal = document.getElementById('admin-lead-preview-modal');
   const salesCustomerModal = document.getElementById('admin-sales-customer-modal');
   const vendorLogModal = document.getElementById('admin-vendor-log-modal');
+  const inventoryCategoryModal = document.getElementById('admin-inventory-category-modal');
   const leadDetailModal = document.getElementById('admin-lead-detail-modal');
   const importModal = document.getElementById('admin-import-modal');
   const businessImportModal = document.getElementById('admin-business-import-modal');
@@ -904,7 +905,7 @@
     `).join('') : '<tr><td colspan="7" class="text-muted">No material purchase records in this period.</td></tr>';
     const operationsInventory = document.getElementById('admin-operations-inventory-log');
     if (operationsInventory) operationsInventory.innerHTML = purchases.length ? purchases.map((row) => `
-      <tr><td>${escapeHtml(dateOnly(row.purchaseDate || row.reportingMonth))}</td><td><strong>${escapeHtml(row.materialName)}</strong></td><td>${row.unitPrice === null ? 'Not recorded' : escapeHtml(money(row.unitPrice))}</td><td>${row.quantity === null ? 'Not recorded' : Number(row.quantity).toLocaleString('en-IN')}</td><td>${escapeHtml(money(row.purchaseAmount))}</td><td>${escapeHtml(row.vendorName || 'Not specified')}</td><td>${businessSource(row)}</td><td>${businessActions('purchases', row)}</td></tr>
+      <tr><td>${escapeHtml(dateOnly(row.purchaseDate || row.reportingMonth))}</td><td><button class="sales-customer-link" type="button" data-inventory-category="${escapeHtml(row.materialName)}">${escapeHtml(row.materialName)}</button></td><td>${row.unitPrice === null ? 'Not recorded' : escapeHtml(money(row.unitPrice))}</td><td>${row.quantity === null ? 'Not recorded' : Number(row.quantity).toLocaleString('en-IN')}</td><td>${escapeHtml(money(row.purchaseAmount))}</td><td>${escapeHtml(row.vendorName || 'Not specified')}</td><td>${businessSource(row)}</td><td>${businessActions('purchases', row)}</td></tr>
     `).join('') : '<tr><td colspan="8" class="text-muted">No material purchase records in this period.</td></tr>';
 
     const production = report.operations?.recentProduction || [];
@@ -1040,6 +1041,48 @@
       renderVendorLog(data);
     } catch (error) {
       closeVendorLogModal();
+      showToast(error.message);
+    }
+  }
+
+  function renderInventoryCategoryLog(data) {
+    const rows = data.purchases || [];
+    cacheBusinessRecords('purchases', rows);
+    document.getElementById('admin-inventory-category-details').innerHTML = `
+      <div><dt>Category</dt><dd>${escapeHtml(data.category || 'Unavailable')}</dd></div>
+      <div><dt>Description</dt><dd>${escapeHtml(data.description || 'Unavailable')}</dd></div>
+    `;
+    document.getElementById('admin-inventory-category-total').textContent = salesCustomerTotal(data.totalOrderValue);
+    document.getElementById('admin-inventory-category-rows').innerHTML = rows.length ? rows.map((row) => {
+      const payment = salesCustomerPayment(row.displayPaymentStatus);
+      return `
+        <tr>
+          <td>${escapeHtml(dateOnly(row.purchaseDate || row.reportingMonth))}</td>
+          <td>${escapeHtml(row.notes || row.materialName || 'Unavailable')}</td>
+          <td>${escapeHtml(money(row.purchaseAmount || 0))}</td>
+          <td><span class="admin-sales-payment ${payment[1]}">${payment[0]}</span></td>
+          <td><span class="admin-sales-invoice-unavailable">Unavailable</span></td>
+          <td><button class="admin-link-button inline" type="button" data-edit-business-record="${Number(row.id)}" data-business-type="purchases">Edit</button></td>
+        </tr>
+      `;
+    }).join('') : '<tr><td colspan="6" class="text-muted">No active inventory records are available for this category.</td></tr>';
+  }
+
+  function closeInventoryCategoryModal() {
+    inventoryCategoryModal.hidden = true;
+  }
+
+  async function openInventoryCategoryLog(category) {
+    document.getElementById('admin-inventory-category-details').innerHTML = '<div><dt>Category</dt><dd>Loading...</dd></div>';
+    document.getElementById('admin-inventory-category-total').textContent = 'Loading...';
+    document.getElementById('admin-inventory-category-rows').innerHTML = '<tr><td colspan="6" class="text-muted">Loading category purchases...</td></tr>';
+    inventoryCategoryModal.hidden = false;
+    try {
+      const params = new URLSearchParams({ category });
+      const data = await api(`/api/admin/business-records/purchases/category-log?${params.toString()}`);
+      renderInventoryCategoryLog(data);
+    } catch (error) {
+      closeInventoryCategoryModal();
       showToast(error.message);
     }
   }
@@ -3149,6 +3192,7 @@
       if (record) {
         if (!salesCustomerModal.hidden) closeSalesCustomerModal();
         if (!vendorLogModal.hidden) closeVendorLogModal();
+        if (!inventoryCategoryModal.hidden) closeInventoryCategoryModal();
         openBusinessRecordModal(type, record);
       }
       return;
@@ -3175,6 +3219,18 @@
 
     if (event.target.closest('[data-close-vendor-log-modal]')) {
       closeVendorLogModal();
+      return;
+    }
+
+    const inventoryCategoryButton = event.target.closest('[data-inventory-category]');
+    if (inventoryCategoryButton) {
+      openInventoryCategoryLog(inventoryCategoryButton.dataset.inventoryCategory)
+        .catch((error) => showToast(error.message));
+      return;
+    }
+
+    if (event.target.closest('[data-close-inventory-category-modal]')) {
+      closeInventoryCategoryModal();
       return;
     }
 
@@ -3501,6 +3557,7 @@
     if (event.key === 'Escape' && !leadPreviewModal.hidden) closeLeadPreviewModal();
     if (event.key === 'Escape' && !salesCustomerModal.hidden) closeSalesCustomerModal();
     if (event.key === 'Escape' && !vendorLogModal.hidden) closeVendorLogModal();
+    if (event.key === 'Escape' && !inventoryCategoryModal.hidden) closeInventoryCategoryModal();
   });
 
   document.addEventListener('input', (event) => {

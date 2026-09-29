@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const { prisma } = require('../config/database');
 const businessLedgerService = require('../services/businessLedgerService');
 const {
+  inventoryCategoryLogSchema,
   recordSchemas,
   salesCustomerLogSchema,
   vendorPurchaseLogSchema,
@@ -164,4 +165,38 @@ test('validates vendor log lookup inputs', () => {
     vendorName: 'Ram Materials',
   });
   assert.equal(vendorPurchaseLogSchema.safeParse({ vendorName: '' }).success, false);
+});
+
+test('summarizes inventory purchases by their recorded material category', () => {
+  const records = [
+    {
+      id: 21,
+      materialName: 'Diesel Fuel',
+      notes: '20 Litres of Diesel Fuel',
+      purchaseAmount: 2077,
+      paymentStatus: 'PENDING',
+    },
+    {
+      id: 22,
+      materialName: 'Diesel Fuel',
+      notes: null,
+      purchaseAmount: 2077,
+      paymentStatus: 'PAID',
+    },
+  ];
+
+  const result = businessLedgerService.__private.summarizeInventoryCategory('Diesel Fuel', records);
+
+  assert.equal(result.category, 'Diesel Fuel');
+  assert.equal(result.description, '20 Litres of Diesel Fuel');
+  assert.equal(result.totalOrderValue, 4154);
+  assert.deepEqual(result.purchases.map((record) => record.displayPaymentStatus), ['DUE', 'DONE']);
+  assert.ok(result.purchases.every((record) => record.invoiceAvailable === false));
+});
+
+test('validates inventory category log lookup inputs', () => {
+  assert.deepEqual(inventoryCategoryLogSchema.parse({ category: 'Power & Fuel Expense' }), {
+    category: 'Power & Fuel Expense',
+  });
+  assert.equal(inventoryCategoryLogSchema.safeParse({ category: '' }).success, false);
 });

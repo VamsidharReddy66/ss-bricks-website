@@ -3,6 +3,7 @@ const businessLedgerService = require('../services/businessLedgerService');
 const { successResponse, errorResponse } = require('../utils/apiResponse');
 const {
   formatBusinessErrors,
+  inventoryCategoryLogSchema,
   listBusinessRecordsSchema,
   recordCorrectionSchema,
   recordIdSchema,
@@ -90,6 +91,17 @@ async function vendorPurchaseLog(req, res, next) {
   }
 }
 
+async function inventoryCategoryLog(req, res, next) {
+  try {
+    const query = inventoryCategoryLogSchema.safeParse(req.query);
+    if (!query.success) return validationFailure(res, query.error);
+    const categoryLog = await businessLedgerService.getInventoryCategoryLog(query.data);
+    return successResponse(res, 200, 'Inventory category log fetched successfully.', categoryLog);
+  } catch (error) {
+    return next(error);
+  }
+}
+
 async function createRecord(req, res, next) {
   try {
     const type = parsedType(req.params.type, res);
@@ -144,6 +156,7 @@ async function voidRecord(req, res, next) {
 module.exports = {
   commitImport,
   createRecord,
+  inventoryCategoryLog,
   listImports,
   listRecords,
   previewImport,
