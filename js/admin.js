@@ -9,6 +9,7 @@
   const toast = document.getElementById('admin-toast');
   const modal = document.getElementById('admin-product-modal');
   const leadModal = document.getElementById('admin-lead-modal');
+  const leadPreviewModal = document.getElementById('admin-lead-preview-modal');
   const leadDetailModal = document.getElementById('admin-lead-detail-modal');
   const importModal = document.getElementById('admin-import-modal');
   const businessImportModal = document.getElementById('admin-business-import-modal');
@@ -1332,7 +1333,7 @@
       if (end && date > end) return false;
       return !search || [lead.customerName, lead.phone, lead.location].some((value) => String(value || '').toLowerCase().includes(search));
     });
-    document.getElementById('admin-marketing-leads').innerHTML = rows.length ? rows.map((lead) => `<tr><td>${escapeHtml(dateOnly(lead.date))}</td><td><strong>${escapeHtml(lead.customerName)}</strong><small>${escapeHtml(lead.phone || '')}</small></td><td>${escapeHtml(lead.product)}</td><td>${Number(lead.quantity).toLocaleString('en-IN')}</td><td>${escapeHtml(label(lead.priority))}</td><td><span class="admin-status ${String(lead.status).toLowerCase()}">${escapeHtml(label(lead.status))}</span></td><td>${lead.followUp ? escapeHtml(dateOnly(lead.followUp)) : 'Not scheduled'}</td><td>${escapeHtml(label(lead.source))}</td><td><button class="admin-link-button inline" type="button" data-view-lead="${lead.id}">Edit</button></td></tr>`).join('') : '<tr><td colspan="9" class="text-muted">No matching leads.</td></tr>';
+    document.getElementById('admin-marketing-leads').innerHTML = rows.length ? rows.map((lead) => `<tr><td>${escapeHtml(dateOnly(lead.date))}</td><td><button class="marketing-customer-link" type="button" data-preview-lead="${lead.id}">${escapeHtml(lead.customerName)}</button><small>${escapeHtml(lead.phone || '')}</small></td><td>${escapeHtml(lead.product)}</td><td>${Number(lead.quantity).toLocaleString('en-IN')}</td><td>${escapeHtml(label(lead.priority))}</td><td><span class="admin-status ${String(lead.status).toLowerCase()}">${escapeHtml(label(lead.status))}</span></td><td>${lead.followUp ? escapeHtml(dateOnly(lead.followUp)) : 'Not scheduled'}</td><td>${escapeHtml(label(lead.source))}</td><td><button class="admin-link-button inline" type="button" data-view-lead="${lead.id}">Edit</button></td></tr>`).join('') : '<tr><td colspan="9" class="text-muted">No matching leads.</td></tr>';
     document.getElementById('admin-marketing-lead-summary').textContent = `${rows.length.toLocaleString('en-IN')} of ${(marketingAnalytics?.leads || []).length.toLocaleString('en-IN')} records shown`;
   }
 
@@ -2599,6 +2600,63 @@
     return { icon: 'default', title: label(activity.type) };
   }
 
+  function leadPreviewField(labelText, value) {
+    return `<div><dt>${escapeHtml(labelText)}</dt><dd>${escapeHtml(value || 'Unavailable')}</dd></div>`;
+  }
+
+  function renderLeadPreview(lead) {
+    const contactFields = [
+      leadPreviewField('Name', lead.customerName),
+      leadPreviewField('Contact', lead.phone),
+      leadPreviewField('Email', lead.email),
+      leadPreviewField('Address', lead.location),
+      leadPreviewField('Type of Customer', 'Not tracked'),
+    ].join('');
+    const leadFields = [
+      leadPreviewField('Product Enquired', lead.product),
+      leadPreviewField('Quantity', lead.quantity === null || lead.quantity === undefined ? 'Unavailable' : Number(lead.quantity).toLocaleString('en-IN')),
+      leadPreviewField('Source', label(lead.source)),
+      leadPreviewField('Priority', `${label(lead.status)} - ${label(lead.priority)}`),
+      leadPreviewField('Next Follow-up', lead.nextFollowUpDate ? dateOnly(lead.nextFollowUpDate) : 'Not scheduled'),
+    ].join('');
+
+    document.getElementById('admin-lead-preview-summary').innerHTML = `
+      <dl class="admin-lead-preview-panel">${contactFields}</dl>
+      <dl class="admin-lead-preview-panel">${leadFields}</dl>
+    `;
+
+    const activities = lead.activities || [];
+    document.getElementById('admin-lead-preview-activities').innerHTML = activities.length ? activities.map((activity) => {
+      const meta = activityMeta(activity);
+      const documentUrl = String(lead.pdfUrl || '');
+      const hasSafeDocumentUrl = (/^\/(?!\/)/.test(documentUrl) || /^https:\/\//i.test(documentUrl));
+      const hasDocument = hasSafeDocumentUrl && /pdf|quotation/i.test(activity.note || '');
+      return `
+        <article class="admin-lead-preview-activity">
+          <span class="admin-lead-preview-icon">${timelineIcon(meta.icon)}</span>
+          <div class="admin-lead-preview-activity-copy">
+            <div><strong>${escapeHtml(meta.title)}</strong>${activity.createdBy ? `<span>${escapeHtml(activity.createdBy)}</span>` : ''}</div>
+            <p>${escapeHtml(activity.note || '')}${hasDocument ? ` <a href="${escapeHtml(lead.pdfUrl)}" target="_blank" rel="noopener" aria-label="Open quotation PDF" title="Open quotation PDF">&#8681;</a>` : ''}</p>
+          </div>
+          <time>${escapeHtml(dateTime(activity.createdAt))}</time>
+        </article>
+      `;
+    }).join('') : '<p class="admin-lead-preview-empty">No lead activity yet.</p>';
+
+    leadPreviewModal.dataset.leadId = String(lead.id);
+  }
+
+  async function openLeadPreview(leadId) {
+    const data = await api(`/api/admin/leads/${leadId}`);
+    renderLeadPreview(data.lead);
+    leadPreviewModal.hidden = false;
+  }
+
+  function closeLeadPreviewModal() {
+    leadPreviewModal.hidden = true;
+    delete leadPreviewModal.dataset.leadId;
+  }
+
   function renderLeadDetail(lead) {
     document.getElementById('admin-lead-detail-title').textContent = lead.customerName;
     document.getElementById('admin-lead-note-id').value = lead.id;
@@ -3026,6 +3084,31 @@
       return;
     }
 
+    const previewLeadButton = event.target.closest('[data-preview-lead]');
+    if (previewLeadButton) {
+      openLeadPreview(previewLeadButton.dataset.previewLead).catch((error) => showToast(error.message));
+      return;
+    }
+
+    if (event.target.closest('[data-close-lead-preview-modal]')) {
+      closeLeadPreviewModal();
+      return;
+    }
+
+    const previewEditButton = event.target.closest('#admin-lead-preview-edit');
+    const previewTaskButton = event.target.closest('#admin-lead-preview-task');
+    if (previewEditButton || previewTaskButton) {
+      const leadId = leadPreviewModal.dataset.leadId;
+      closeLeadPreviewModal();
+      if (!leadId) return;
+      openLeadDetail(leadId)
+        .then(() => {
+          if (previewTaskButton) document.getElementById('edit-lead-follow-up').focus();
+        })
+        .catch((error) => showToast(error.message));
+      return;
+    }
+
     const retryWhatsappButton = event.target.closest('#admin-retry-whatsapp');
     if (retryWhatsappButton) {
       const reason = window.prompt('Reason for retrying this quotation WhatsApp delivery:');
@@ -3261,6 +3344,10 @@
     } finally {
       statusSelect.disabled = false;
     }
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && !leadPreviewModal.hidden) closeLeadPreviewModal();
   });
 
   document.addEventListener('input', (event) => {

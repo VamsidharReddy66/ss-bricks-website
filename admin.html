@@ -970,6 +970,30 @@
   </section>
 </div>
 
+<div class="admin-modal" id="admin-lead-preview-modal" hidden>
+  <div class="admin-modal-backdrop" data-close-lead-preview-modal></div>
+  <section class="admin-modal-card admin-lead-preview-card" role="dialog" aria-modal="true" aria-labelledby="admin-lead-preview-title">
+    <header class="admin-lead-preview-header">
+      <h2 id="admin-lead-preview-title">Lead Details</h2>
+    </header>
+
+    <div class="admin-lead-preview-actions">
+      <button class="btn btn-outline" type="button" id="admin-lead-preview-task">+ Add Task</button>
+      <button class="btn btn-maroon" type="button" id="admin-lead-preview-edit">Edit</button>
+    </div>
+
+    <div class="admin-lead-preview-summary" id="admin-lead-preview-summary"></div>
+
+    <section class="admin-lead-preview-timeline" aria-labelledby="admin-lead-preview-timeline-title">
+      <div class="admin-lead-preview-timeline-head">
+        <h3 id="admin-lead-preview-timeline-title">Lead Timeline</h3>
+        <p>All lead activities in one place</p>
+      </div>
+      <div class="admin-lead-preview-activities" id="admin-lead-preview-activities"></div>
+    </section>
+  </section>
+</div>
+
 <div class="admin-modal" id="admin-lead-detail-modal" hidden>
   <div class="admin-modal-backdrop" data-close-lead-detail-modal></div>
   <section class="admin-modal-card admin-lead-detail-card" role="dialog" aria-modal="true" aria-labelledby="admin-lead-detail-title">
