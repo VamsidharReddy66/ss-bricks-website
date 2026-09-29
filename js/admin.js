@@ -470,9 +470,10 @@
     dashboard = await api('/api/admin/dashboard');
     admin = dashboard.admin;
     renderStats();
-    document.getElementById('admin-account-summary').textContent = admin
-      ? `${admin.name} (${admin.email})`
-      : '';
+    const accountSummary = document.getElementById('admin-account-summary');
+    if (accountSummary) {
+      accountSummary.textContent = admin ? `${admin.name} (${admin.email})` : '';
+    }
   }
 
   async function loadProducts() {
@@ -2120,6 +2121,17 @@
     const analyticsView = document.getElementById('admin-view-analytics');
     const isSales = name === 'sales';
     const isMarketing = name === 'marketing';
+    const analyticsTitles = {
+      overview: 'Overview',
+      marketing: 'Marketing',
+      sales: 'Sales',
+      operations: 'Operations',
+      accounts: 'Accounts',
+      hr: 'HR Management',
+    };
+    if (document.getElementById('admin-view-analytics')?.classList.contains('active')) {
+      pageTitle.textContent = analyticsTitles[name] || 'Overview';
+    }
     if (title) title.textContent = isSales ? 'Sales Analytics' : isMarketing ? 'Marketing' : name === 'operations' ? 'Operations Analytics' : name === 'accounts' ? 'Accounts Analytics' : name === 'hr' ? 'HR Management' : name === 'executive-overview' ? 'Executive Overview' : 'Business Analytics';
     if (description) description.textContent = isSales
       ? 'Workbook sales, customer revenue and product pricing from normalized records.'
@@ -2355,6 +2367,8 @@
   }
 
   async function loadLeads() {
+    const tbody = document.getElementById('admin-leads');
+    if (!tbody) return;
     const params = new URLSearchParams({
       page: String(leadPage),
       limit: '20',
@@ -2363,7 +2377,6 @@
     if (leadSearch) params.set('search', leadSearch);
     const data = await api(`/api/admin/leads?${params.toString()}`);
     leadPagination = data.pagination || leadPagination;
-    const tbody = document.getElementById('admin-leads');
     const leads = data.leads || [];
     tbody.innerHTML = leads.length ? leads.map((lead) => `
       <tr>
@@ -2425,39 +2438,44 @@
   async function loadHistory() {
     const data = await api('/api/admin/price-history');
     const list = document.getElementById('admin-history');
+    if (!list) return;
     const history = data.history || [];
     list.innerHTML = history.length ? history.map((item) => `
       <div class="admin-history-item">
-        <div>
+        <div class="admin-history-product">
           <strong>${escapeHtml(item.productName)}</strong>
-          <div class="body-sm text-muted">${escapeHtml(item.priceType)} price by ${escapeHtml(item.updatedBy)}</div>
+          <span>${escapeHtml(label(item.priceType))} price · ${escapeHtml(item.updatedBy)}</span>
         </div>
-        <div>${escapeHtml(money(item.oldPrice))} to ${escapeHtml(money(item.newPrice))}<br><span class="body-sm text-muted">${escapeHtml(dateTime(item.updatedAt))}</span></div>
+        <div class="admin-history-change">
+          <span>${escapeHtml(money(item.oldPrice))}</span>
+          <b aria-hidden="true">→</b>
+          <strong>${escapeHtml(money(item.newPrice))}</strong>
+          <time>${escapeHtml(dateTime(item.updatedAt))}</time>
+        </div>
       </div>
     `).join('') : '<p class="body-sm text-muted">No price updates yet.</p>';
   }
 
-  function openView(name) {
+  function openView(name, analyticsTabName = '') {
+    const activeAnalyticsTab = analyticsTabName
+      || document.querySelector('.admin-nav-item[data-analytics-tab].active')?.dataset.analyticsTab
+      || 'overview';
     document.querySelectorAll('.admin-nav-item').forEach((button) => {
-      button.classList.toggle('active', button.dataset.view === name);
+      const active = name === 'analytics'
+        ? button.dataset.view === 'analytics' && button.dataset.analyticsTab === activeAnalyticsTab
+        : button.dataset.view === name;
+      button.classList.toggle('active', active);
     });
     document.querySelectorAll('.admin-view').forEach((view) => {
       view.classList.toggle('active', view.id === `admin-view-${name}`);
     });
-    pageTitle.textContent = {
-      dashboard: 'Dashboard',
-      analytics: 'Analytics',
-      leads: 'Leads',
-      products: 'Products',
-      settings: 'Settings',
-    }[name] || 'Dashboard';
+    pageTitle.textContent = name === 'products' ? 'Products' : 'Overview';
 
-    if (name === 'leads') loadLeads().catch((error) => showToast(error.message));
     if (name === 'analytics') {
-      setAnalyticsTab(document.querySelector('[data-analytics-tab].active')?.dataset.analyticsTab || 'overview');
+      setAnalyticsTab(activeAnalyticsTab);
       loadAnalytics().catch((error) => showToast(error.message));
     }
-    if (name === 'settings') loadHistory().catch((error) => showToast(error.message));
+    if (name === 'products') loadHistory().catch((error) => showToast(error.message));
   }
 
   function openModal(product) {
@@ -2847,6 +2865,8 @@
 
     showApp();
     await Promise.all([loadDashboard(), loadProducts()]);
+    setAnalyticsTab('overview');
+    await loadAnalytics();
   }
 
   loginForm.addEventListener('submit', async (event) => {
@@ -2871,6 +2891,8 @@
       admin = data.admin;
       showApp();
       await Promise.all([loadDashboard(), loadProducts()]);
+      setAnalyticsTab('overview');
+      await loadAnalytics();
       showToast('Login successful');
     } catch (error) {
       showStatus(loginStatus, error.message, true);
@@ -2889,7 +2911,7 @@
     const navButton = event.target.closest('[data-view]');
     if (navButton) {
       if (salesGridEditing && !confirmCancelSalesGridEdit()) return;
-      openView(navButton.dataset.view);
+      openView(navButton.dataset.view, navButton.dataset.analyticsTab || '');
       return;
     }
 
@@ -3257,13 +3279,13 @@
     }
   });
 
-  document.getElementById('admin-lead-filter').addEventListener('change', (event) => {
+  document.getElementById('admin-lead-filter')?.addEventListener('change', (event) => {
     leadFilter = event.target.value;
     leadPage = 1;
     loadLeads().catch((error) => showToast(error.message));
   });
 
-  document.getElementById('admin-lead-search').addEventListener('input', (event) => {
+  document.getElementById('admin-lead-search')?.addEventListener('input', (event) => {
     leadSearch = event.target.value.trim();
     leadPage = 1;
     window.clearTimeout(event.target.searchTimer);
@@ -3339,7 +3361,7 @@
       await Promise.all([loadDashboard(), loadLeads(), marketingAnalytics ? loadMarketingAnalytics() : Promise.resolve()]);
       closeLeadModal();
       showToast('Lead created successfully');
-      openView('leads');
+      openView('analytics', 'marketing');
     } catch (submitError) {
       const firstError = submitError.errors?.[0]?.message;
       showStatus(leadStatus, firstError || submitError.message, true);
@@ -3770,7 +3792,7 @@
         }),
       });
       await Promise.all([loadDashboard(), loadLeads()]);
-      openView('leads');
+      openView('analytics', 'marketing');
       importPreview.innerHTML = `
         <strong>Import Summary</strong>
         <ul>

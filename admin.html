@@ -72,11 +72,13 @@
     </a>
 
     <nav class="admin-nav">
-      <button class="admin-nav-item active" type="button" data-view="dashboard">Dashboard</button>
-      <button class="admin-nav-item" type="button" data-view="analytics">Analytics</button>
-      <button class="admin-nav-item" type="button" data-view="leads">Leads</button>
-      <button class="admin-nav-item" type="button" data-view="products">Products</button>
-      <button class="admin-nav-item" type="button" data-view="settings">Settings</button>
+      <button class="admin-nav-item active" type="button" data-view="analytics" data-analytics-tab="overview">Overview</button>
+      <button class="admin-nav-item" type="button" data-view="analytics" data-analytics-tab="marketing">Marketing</button>
+      <button class="admin-nav-item" type="button" data-view="analytics" data-analytics-tab="sales">Sales</button>
+      <button class="admin-nav-item" type="button" data-view="analytics" data-analytics-tab="operations">Operations</button>
+      <button class="admin-nav-item" type="button" data-view="analytics" data-analytics-tab="accounts">Accounts</button>
+      <button class="admin-nav-item" type="button" data-view="analytics" data-analytics-tab="hr">HR Management</button>
+      <button class="admin-nav-item admin-nav-products" type="button" data-view="products">Products</button>
       <button class="admin-nav-item admin-logout" type="button" id="admin-logout">Logout</button>
     </nav>
   </aside>
@@ -85,41 +87,12 @@
     <header class="admin-topbar">
       <div>
         <span class="label">SS Bricks Admin</span>
-        <h1 class="h-lg" id="admin-page-title">Dashboard</h1>
+        <h1 class="h-lg" id="admin-page-title">Overview</h1>
       </div>
       <a class="btn btn-outline btn-sm" href="index.html" target="_blank" rel="noopener">View Website</a>
     </header>
 
-    <section class="admin-view active" id="admin-view-dashboard">
-      <div class="admin-stats-grid" id="admin-stats"></div>
-      <div class="admin-section-head">
-        <div>
-          <h2 class="h-md">Quick Actions</h2>
-          <p class="body-sm text-muted">Common daily tasks without extra pages.</p>
-        </div>
-      </div>
-      <div class="admin-action-row">
-        <button class="btn btn-maroon" type="button" data-open-lead-modal>Add Lead</button>
-        <button class="btn btn-outline" type="button" data-open-import-modal>Import Leads</button>
-        <button class="btn btn-outline" type="button" data-view="products">Products</button>
-      </div>
-      <div class="admin-section-head">
-        <div>
-          <h2 class="h-md">Recent Activities</h2>
-          <p class="body-sm text-muted">Latest lead timeline updates.</p>
-        </div>
-      </div>
-      <div class="admin-history-list" id="admin-recent-activities"></div>
-      <div class="admin-section-head">
-        <div>
-          <h2 class="h-md">Quick Price Update</h2>
-          <p class="body-sm text-muted">Update common product pricing from one screen.</p>
-        </div>
-      </div>
-      <div class="admin-product-grid" id="admin-dashboard-products"></div>
-    </section>
-
-    <section class="admin-view" id="admin-view-analytics">
+    <section class="admin-view active" id="admin-view-analytics">
       <div class="admin-section-head admin-analytics-head">
         <div>
           <h2 class="h-md" id="admin-analytics-title">Business Analytics</h2>
@@ -143,15 +116,6 @@
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.2 15.2A8.5 8.5 0 0 1 8.8 3.8 8.6 8.6 0 1 0 20.2 15.2Z"></path></svg>
           </button>
         </div>
-      </div>
-
-      <div class="admin-analytics-tabs" role="tablist" aria-label="Analytics views">
-        <button class="admin-analytics-tab active" type="button" role="tab" aria-selected="true" data-analytics-tab="overview">Overview</button>
-        <button class="admin-analytics-tab" type="button" role="tab" aria-selected="false" data-analytics-tab="marketing">Marketing</button>
-        <button class="admin-analytics-tab" type="button" role="tab" aria-selected="false" data-analytics-tab="sales">Sales</button>
-        <button class="admin-analytics-tab" type="button" role="tab" aria-selected="false" data-analytics-tab="operations">Operations</button>
-        <button class="admin-analytics-tab" type="button" role="tab" aria-selected="false" data-analytics-tab="accounts">Accounts</button>
-        <button class="admin-analytics-tab" type="button" role="tab" aria-selected="false" data-analytics-tab="hr">HR Management</button>
       </div>
 
       <div class="admin-analytics-panel active" id="admin-analytics-overview" role="tabpanel">
@@ -827,73 +791,16 @@
         </div>
       </div>
       <div class="admin-product-grid" id="admin-products"></div>
-    </section>
-
-    <section class="admin-view" id="admin-view-leads">
-      <div class="admin-section-head">
-        <div>
-          <h2 class="h-md">Leads</h2>
-          <p class="body-sm text-muted">Website, phone, WhatsApp, walk-in, and imported enquiries in one place.</p>
+      <section class="admin-product-history" aria-labelledby="admin-product-history-title">
+        <div class="admin-product-history-head">
+          <div>
+            <span class="label">Price History</span>
+            <h3 class="h-sm" id="admin-product-history-title">Recent updates</h3>
+          </div>
+          <span class="body-sm text-muted">Latest product price changes</span>
         </div>
-        <div class="admin-action-row compact">
-          <button class="btn btn-maroon btn-sm" type="button" data-open-lead-modal>Add Lead</button>
-          <button class="btn btn-outline btn-sm" type="button" data-open-import-modal>Import Leads</button>
-        </div>
-      </div>
-      <div class="admin-lead-tools">
-        <label class="form-field">
-          <span class="form-label">Filter</span>
-          <select class="form-select" id="admin-lead-filter">
-            <option value="ALL">All</option>
-            <option value="NEW">New</option>
-            <option value="CONTACTED">Contacted</option>
-            <option value="FOLLOW_UP_TODAY">Follow-up Today</option>
-            <option value="FOLLOW_UP_PENDING">Follow-up Pending</option>
-            <option value="QUOTATION_SENT">Quotation Sent</option>
-            <option value="WON">Won</option>
-            <option value="LOST">Lost</option>
-            <option value="IMPORTED">Imported</option>
-            <option value="HIGH_PRIORITY">High Priority</option>
-            <option value="WEBSITE_LEADS">Website Leads</option>
-            <option value="CSV_IMPORTS">CSV Imports</option>
-          </select>
-        </label>
-        <label class="form-field admin-search-field">
-          <span class="form-label">Search</span>
-          <input class="form-input" type="search" id="admin-lead-search" placeholder="Lead ID, name, phone, company, product" />
-        </label>
-      </div>
-      <div class="admin-table-wrap">
-        <table class="admin-table">
-          <thead>
-            <tr>
-              <th>Lead</th>
-              <th>Customer</th>
-              <th>Product</th>
-              <th>Quantity</th>
-              <th>Source</th>
-              <th>Priority</th>
-              <th>Status</th>
-              <th>Next Follow-up</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody id="admin-leads"></tbody>
-        </table>
-      </div>
-      <div class="admin-pagination" id="admin-lead-pagination"></div>
-    </section>
-
-    <section class="admin-view" id="admin-view-settings">
-      <div class="admin-settings-panel">
-        <span class="label">Settings</span>
-        <h2 class="h-md">Account</h2>
-        <p class="body-md text-muted" id="admin-account-summary"></p>
-      </div>
-      <div class="admin-settings-panel">
-        <span class="label">Price History</span>
-        <div id="admin-history" class="admin-history-list"></div>
-      </div>
+        <div id="admin-history" class="admin-history-list admin-price-history-list"></div>
+      </section>
     </section>
   </section>
 </main>
