@@ -94,6 +94,7 @@ function serializeLead(lead) {
     status: lead.status,
     followUp: lead.nextFollowUpDate,
     source: lead.source,
+    pdfUrl: lead.pdfUrl,
   };
 }
 
@@ -142,4 +143,7 @@ async function getMarketingAnalytics(range = 'LAST_30_DAYS') {
   };
 }
 
-module.exports = { getMarketingAnalytics };
+module.exports = {
+  getMarketingAnalytics,
+  _private: { serializeLead },
+};

@@ -3986,6 +3986,11 @@ body.admin-dark-theme .sales-chart-bar { fill: #12af00; }
 .marketing-customer-link { border: 0; padding: 0; background: transparent; color: #111; font: inherit; font-weight: 800; text-align: left; cursor: pointer; }
 .marketing-customer-link:hover { color: var(--maroon); text-decoration: underline; text-underline-offset: 3px; }
 .marketing-customer-link:focus-visible { border-radius: 2px; outline: 2px solid var(--maroon); outline-offset: 3px; }
+.marketing-pdf-link { display: inline-flex; align-items: center; gap: .4rem; color: var(--maroon); font-size: .76rem; font-weight: 800; text-decoration: none; white-space: nowrap; }
+.marketing-pdf-link > span { display: inline-grid; place-items: center; min-width: 30px; height: 24px; padding: 0 .3rem; border: 1px solid #8a1814; border-radius: 3px; background: #fff4f2; color: #8a1814; font-size: .58rem; letter-spacing: 0; }
+.marketing-pdf-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+.marketing-pdf-link:focus-visible { border-radius: 2px; outline: 2px solid var(--maroon); outline-offset: 3px; }
+.marketing-pdf-unavailable { color: #77716c; font-size: .72rem; }
 .marketing-table-summary { color: #707070; font-size: .8rem; text-align: right; margin: .7rem 0 0; }
 .marketing-empty { min-height: 220px; display: grid; place-items: center; color: #707070; }
 body.admin-dark-theme .marketing-reference-dashboard { color: #f6f2eb; }

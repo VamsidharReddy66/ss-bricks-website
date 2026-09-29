@@ -1333,7 +1333,14 @@
       if (end && date > end) return false;
       return !search || [lead.customerName, lead.phone, lead.location].some((value) => String(value || '').toLowerCase().includes(search));
     });
-    document.getElementById('admin-marketing-leads').innerHTML = rows.length ? rows.map((lead) => `<tr><td>${escapeHtml(dateOnly(lead.date))}</td><td><button class="marketing-customer-link" type="button" data-preview-lead="${lead.id}">${escapeHtml(lead.customerName)}</button><small>${escapeHtml(lead.phone || '')}</small></td><td>${escapeHtml(lead.product)}</td><td>${Number(lead.quantity).toLocaleString('en-IN')}</td><td>${escapeHtml(label(lead.priority))}</td><td><span class="admin-status ${String(lead.status).toLowerCase()}">${escapeHtml(label(lead.status))}</span></td><td>${lead.followUp ? escapeHtml(dateOnly(lead.followUp)) : 'Not scheduled'}</td><td>${escapeHtml(label(lead.source))}</td><td><button class="admin-link-button inline" type="button" data-view-lead="${lead.id}">Edit</button></td></tr>`).join('') : '<tr><td colspan="9" class="text-muted">No matching leads.</td></tr>';
+    document.getElementById('admin-marketing-leads').innerHTML = rows.length ? rows.map((lead) => {
+      const pdfUrl = String(lead.pdfUrl || '');
+      const safePdfUrl = /^\/(?!\/)/.test(pdfUrl) || /^https:\/\//i.test(pdfUrl) ? pdfUrl : '';
+      const pdfAction = safePdfUrl
+        ? `<a class="marketing-pdf-link" href="${escapeHtml(safePdfUrl)}" target="_blank" rel="noopener" aria-label="View quotation PDF for ${escapeHtml(lead.customerName)}"><span aria-hidden="true">PDF</span>View</a>`
+        : '<span class="marketing-pdf-unavailable">Unavailable</span>';
+      return `<tr><td>${escapeHtml(dateOnly(lead.date))}</td><td><button class="marketing-customer-link" type="button" data-preview-lead="${lead.id}">${escapeHtml(lead.customerName)}</button><small>${escapeHtml(lead.phone || '')}</small></td><td>${escapeHtml(lead.product)}</td><td>${Number(lead.quantity).toLocaleString('en-IN')}</td><td>${escapeHtml(label(lead.priority))}</td><td><span class="admin-status ${String(lead.status).toLowerCase()}">${escapeHtml(label(lead.status))}</span></td><td>${lead.followUp ? escapeHtml(dateOnly(lead.followUp)) : 'Not scheduled'}</td><td>${escapeHtml(label(lead.source))}</td><td><button class="admin-link-button inline" type="button" data-view-lead="${lead.id}">Edit</button></td><td>${pdfAction}</td></tr>`;
+    }).join('') : '<tr><td colspan="10" class="text-muted">No matching leads.</td></tr>';
     document.getElementById('admin-marketing-lead-summary').textContent = `${rows.length.toLocaleString('en-IN')} of ${(marketingAnalytics?.leads || []).length.toLocaleString('en-IN')} records shown`;
   }
 
