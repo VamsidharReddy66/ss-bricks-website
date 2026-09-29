@@ -3801,6 +3801,140 @@ select.admin-grid-input {
   font-weight: 850;
 }
 
+.sales-customer-link {
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #282522;
+  font: inherit;
+  font-weight: 800;
+  text-align: left;
+  cursor: pointer;
+}
+
+.sales-customer-link:hover,
+.sales-customer-link:focus-visible {
+  color: var(--maroon);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.admin-sales-customer-card {
+  width: min(1120px, calc(100vw - 3rem));
+  max-height: min(88vh, 760px);
+  padding: 1.5rem 1.7rem 1.7rem;
+  border: 1px solid #dedbd6;
+  border-radius: 8px;
+  color: #282522;
+}
+
+.admin-sales-customer-head {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 3.25rem 0.8rem;
+}
+
+.admin-sales-customer-head::after {
+  position: absolute;
+  right: 20%;
+  bottom: 0;
+  left: 20%;
+  height: 1px;
+  background: #bcb8b2;
+  content: '';
+}
+
+.admin-sales-customer-head h2 {
+  margin: 0;
+  font-size: 0.95rem;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.admin-sales-customer-head .admin-icon-button {
+  position: absolute;
+  top: -0.35rem;
+  right: 0;
+}
+
+.admin-sales-customer-summary {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  gap: 0.8rem;
+  margin: 1.35rem 0 1rem;
+}
+
+.admin-sales-customer-details,
+.admin-sales-customer-value {
+  min-height: 145px;
+  margin: 0;
+  padding: 1.1rem 1rem;
+  border-radius: 8px;
+  background: #efede9;
+}
+
+.admin-sales-customer-details div {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 0.4rem;
+  margin-bottom: 0.38rem;
+}
+
+.admin-sales-customer-details dt { font-weight: 800; }
+.admin-sales-customer-details dt::after { content: ':'; }
+.admin-sales-customer-details dd { min-width: 0; margin: 0; overflow-wrap: anywhere; }
+
+.admin-sales-customer-value {
+  display: grid;
+  place-content: center;
+  text-align: center;
+}
+
+.admin-sales-customer-value span {
+  margin-bottom: 0.35rem;
+  font-size: 0.83rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.admin-sales-customer-value strong { font-size: clamp(1.8rem, 4vw, 2.85rem); }
+
+.admin-sales-customer-table-wrap { overflow: auto; }
+
+.admin-sales-customer-table {
+  width: 100%;
+  min-width: 940px;
+  border-collapse: collapse;
+  font-size: 0.74rem;
+}
+
+.admin-sales-customer-table th,
+.admin-sales-customer-table td {
+  padding: 0.72rem 0.25rem;
+  border-bottom: 1px solid #c9c5bf;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.admin-sales-customer-table th { color: #4d4945; font-weight: 500; }
+.admin-sales-payment.done { color: #08a51f; }
+.admin-sales-payment.due { color: #e02020; }
+.admin-sales-payment.partial { color: #a56500; }
+.admin-sales-payment.not-recorded { color: #6c6762; }
+.admin-sales-invoice-unavailable { color: #77716b; }
+
+body.admin-dark-theme .admin-sales-customer-card { background: #fff; color: #282522; }
+
+@media (max-width: 720px) {
+  .admin-sales-customer-card { width: min(100%, calc(100vw - 1.25rem)); padding: 1rem; }
+  .admin-sales-customer-summary { grid-template-columns: 1fr; }
+  .admin-sales-customer-details,
+  .admin-sales-customer-value { min-height: 120px; }
+}
+
 .sales-log-card { margin-top: 0.15rem; }
 .sales-log-primary-actions,
 .sales-log-secondary-actions { gap: 0.65rem; }

@@ -8,6 +8,7 @@ const {
   recordIdSchema,
   recordSchemas,
   recordTypeSchema,
+  salesCustomerLogSchema,
   voidRecordSchema,
 } = require('../validators/businessValidator');
 
@@ -61,6 +62,17 @@ async function listRecords(req, res, next) {
     if (!query.success) return validationFailure(res, query.error);
     const result = await businessLedgerService.listRecords(type, query.data);
     return successResponse(res, 200, 'Business records fetched successfully.', result);
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function salesCustomerLog(req, res, next) {
+  try {
+    const query = salesCustomerLogSchema.safeParse(req.query);
+    if (!query.success) return validationFailure(res, query.error);
+    const customerLog = await businessLedgerService.getSalesCustomerLog(query.data);
+    return successResponse(res, 200, 'Sales customer log fetched successfully.', customerLog);
   } catch (error) {
     return next(error);
   }
@@ -123,6 +135,7 @@ module.exports = {
   listImports,
   listRecords,
   previewImport,
+  salesCustomerLog,
   updateRecord,
   voidRecord,
 };

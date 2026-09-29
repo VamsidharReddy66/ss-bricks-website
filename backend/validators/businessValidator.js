@@ -161,6 +161,11 @@ const listBusinessRecordsSchema = z.object({
   month: z.union([z.literal('ALL'), z.string().regex(/^\d{4}-\d{2}$/, 'Month must use YYYY-MM format.')]).default('ALL'),
 });
 
+const salesCustomerLogSchema = z.object({
+  customerId: z.coerce.number().int().positive().optional(),
+  customerName: z.string().trim().min(1).max(160),
+});
+
 const recordTypeSchema = z.enum(Object.keys(recordSchemas));
 const recordIdSchema = z.coerce.number().int().positive();
 const recordCorrectionSchema = z.object({
@@ -185,5 +190,6 @@ module.exports = {
   recordIdSchema,
   recordSchemas,
   recordTypeSchema,
+  salesCustomerLogSchema,
   voidRecordSchema,
 };

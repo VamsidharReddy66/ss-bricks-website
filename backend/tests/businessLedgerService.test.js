@@ -2,7 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { prisma } = require('../config/database');
 const businessLedgerService = require('../services/businessLedgerService');
-const { recordSchemas } = require('../validators/businessValidator');
+const { recordSchemas, salesCustomerLogSchema } = require('../validators/businessValidator');
 
 const createPayloads = {
   sales: { saleDate: '2026-08-30', customerName: 'Test Customer', customerPhone: '', location: '', productName: 'Fly Ash Bricks', quantity: 1000, quantityUnit: 'brick', unitPrice: 8, driverBatta: 0, invoicedAmount: 8000, paymentMethod: '', receivedTo: '', notes: '' },
@@ -60,4 +60,54 @@ test('creates a manual, audited record for every visible business log', async ()
   assert.equal(created.length, 6);
   assert.equal(audits.length, 6);
   assert.deepEqual(audits.map((entry) => entry.action), Array(6).fill('CREATE'));
+});
+
+test('summarizes customer sales using stored invoice and payment evidence', () => {
+  const records = [
+    {
+      id: 1,
+      customerName: 'Purushottam Naidu',
+      customerPhone: '919999999999',
+      location: 'Tirupati',
+      invoicedAmount: 8900,
+      sourceReceivedAmount: 8900,
+      sourceOutstandingAmount: null,
+    },
+    {
+      id: 2,
+      customerName: 'Purushottam Naidu',
+      customerPhone: null,
+      location: null,
+      invoicedAmount: 17800,
+      sourceReceivedAmount: null,
+      sourceOutstandingAmount: 4200,
+    },
+    {
+      id: 3,
+      customerName: 'Purushottam Naidu',
+      customerPhone: null,
+      location: null,
+      invoicedAmount: 6000,
+      sourceReceivedAmount: null,
+      sourceOutstandingAmount: null,
+    },
+  ];
+
+  const result = businessLedgerService.__private.summarizeSalesCustomer(null, records);
+
+  assert.equal(result.customer.name, 'Purushottam Naidu');
+  assert.equal(result.customer.phone, '919999999999');
+  assert.equal(result.customer.location, 'Tirupati');
+  assert.equal(result.customer.customerType, null);
+  assert.equal(result.totalOrderValue, 32700);
+  assert.deepEqual(result.sales.map((record) => record.paymentStatus), ['DONE', 'DUE', 'NOT_RECORDED']);
+  assert.ok(result.sales.every((record) => record.invoiceAvailable === false));
+});
+
+test('validates customer log lookup inputs', () => {
+  assert.deepEqual(salesCustomerLogSchema.parse({ customerId: '12', customerName: 'Test Customer' }), {
+    customerId: 12,
+    customerName: 'Test Customer',
+  });
+  assert.equal(salesCustomerLogSchema.safeParse({ customerName: '' }).success, false);
 });

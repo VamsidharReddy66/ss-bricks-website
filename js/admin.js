@@ -10,6 +10,7 @@
   const modal = document.getElementById('admin-product-modal');
   const leadModal = document.getElementById('admin-lead-modal');
   const leadPreviewModal = document.getElementById('admin-lead-preview-modal');
+  const salesCustomerModal = document.getElementById('admin-sales-customer-modal');
   const leadDetailModal = document.getElementById('admin-lead-detail-modal');
   const importModal = document.getElementById('admin-import-modal');
   const businessImportModal = document.getElementById('admin-business-import-modal');
@@ -869,7 +870,7 @@
     document.getElementById('admin-business-sales-log').innerHTML = salesRows.length ? salesRows.map((row) => `
       <tr>
         <td>${escapeHtml(dateOnly(row.saleDate || row.reportingMonth))}</td>
-        <td><strong>${escapeHtml(row.customerName)}</strong><br><span class="sales-log-meta">${businessSource(row)} Ledger #${Number(row.id).toLocaleString('en-IN')}</span></td>
+        <td><button class="sales-customer-link" type="button" data-sales-customer-name="${escapeHtml(row.customerName)}"${row.customerId ? ` data-sales-customer-id="${Number(row.customerId)}"` : ''}>${escapeHtml(row.customerName)}</button><br><span class="sales-log-meta">${businessSource(row)} Ledger #${Number(row.id).toLocaleString('en-IN')}</span></td>
         <td>${escapeHtml(row.productName || 'Not specified')}</td>
         <td>${row.quantity === null ? '-' : Number(row.quantity).toLocaleString('en-IN')} <span class="text-muted">${escapeHtml(row.quantityUnit || '')}</span></td>
         <td>${row.unitPrice === null ? '<span class="text-muted">Not recorded</span>' : escapeHtml(money(row.unitPrice))}</td>
@@ -926,6 +927,72 @@
     document.getElementById('admin-business-events-log').innerHTML = events.length ? events.map((row) => `
       <tr><td>${escapeHtml(dateTime(row.occurredAt))}</td><td>${escapeHtml(label(row.type))}</td><td><strong>${escapeHtml(row.description)}</strong>${row.category ? `<br><span class="text-muted">${escapeHtml(row.category)}</span>` : ''}</td><td>${escapeHtml(label(row.impact))}</td><td>${escapeHtml(label(row.status))}</td><td>${businessActions('events', row)}</td></tr>
     `).join('') : '<tr><td colspan="6" class="text-muted">No business events recorded in this period.</td></tr>';
+  }
+
+  function salesCustomerTotal(value) {
+    const total = Number(value || 0);
+    if (total >= 100000) {
+      return `Rs.${(total / 100000).toLocaleString('en-IN', { maximumFractionDigits: 2 })} Lakhs`;
+    }
+    return money(total);
+  }
+
+  function salesCustomerPayment(status) {
+    const states = {
+      DONE: ['Done', 'done'],
+      DUE: ['Due', 'due'],
+      PARTIAL: ['Partial', 'partial'],
+      NOT_RECORDED: ['Unavailable', 'not-recorded'],
+    };
+    return states[status] || states.NOT_RECORDED;
+  }
+
+  function renderSalesCustomerLog(data) {
+    const customer = data.customer || {};
+    const rows = data.sales || [];
+    cacheBusinessRecords('sales', rows);
+    document.getElementById('admin-sales-customer-details').innerHTML = `
+      <div><dt>Name</dt><dd>${escapeHtml(customer.name || 'Unavailable')}</dd></div>
+      <div><dt>Contact</dt><dd>${escapeHtml(customer.phone || 'Unavailable')}</dd></div>
+      <div><dt>Type of customer</dt><dd>${escapeHtml(customer.customerType || 'Unavailable')}</dd></div>
+      <div><dt>Address</dt><dd>${escapeHtml(customer.location || 'Unavailable')}</dd></div>
+    `;
+    document.getElementById('admin-sales-customer-total').textContent = salesCustomerTotal(data.totalOrderValue);
+    document.getElementById('admin-sales-customer-rows').innerHTML = rows.length ? rows.map((row) => {
+      const payment = salesCustomerPayment(row.paymentStatus);
+      return `
+        <tr>
+          <td>${escapeHtml(dateOnly(row.saleDate || row.reportingMonth))}</td>
+          <td>${escapeHtml(row.productName || 'Unavailable')}</td>
+          <td>${row.quantity == null ? 'Unavailable' : `${Number(row.quantity).toLocaleString('en-IN')} ${escapeHtml(row.quantityUnit || '')}`}</td>
+          <td>${row.unitPrice == null ? 'Unavailable' : escapeHtml(money(row.unitPrice))}</td>
+          <td>${escapeHtml(money(row.invoicedAmount || 0))}</td>
+          <td><span class="admin-sales-payment ${payment[1]}">${payment[0]}</span></td>
+          <td><span class="admin-sales-invoice-unavailable">Unavailable</span></td>
+          <td><button class="admin-link-button inline" type="button" data-edit-business-record="${Number(row.id)}" data-business-type="sales">Edit</button></td>
+        </tr>
+      `;
+    }).join('') : '<tr><td colspan="8" class="text-muted">No active sales records are available for this customer.</td></tr>';
+  }
+
+  function closeSalesCustomerModal() {
+    salesCustomerModal.hidden = true;
+  }
+
+  async function openSalesCustomerLog(customerName, customerId) {
+    document.getElementById('admin-sales-customer-details').innerHTML = '<div><dt>Name</dt><dd>Loading...</dd></div>';
+    document.getElementById('admin-sales-customer-total').textContent = 'Loading...';
+    document.getElementById('admin-sales-customer-rows').innerHTML = '<tr><td colspan="8" class="text-muted">Loading customer sales...</td></tr>';
+    salesCustomerModal.hidden = false;
+    const params = new URLSearchParams({ customerName });
+    if (customerId) params.set('customerId', customerId);
+    try {
+      const data = await api(`/api/admin/business-records/sales/customer-log?${params.toString()}`);
+      renderSalesCustomerLog(data);
+    } catch (error) {
+      closeSalesCustomerModal();
+      showToast(error.message);
+    }
   }
 
   function renderAccountsAnalytics(report) {
@@ -1095,7 +1162,7 @@
     const customerTarget = document.getElementById('admin-sales-customer-table');
     customerTarget.innerHTML = (report.sales.customers || []).slice(0, 6).map((row) => `
       <tr>
-        <td><span class="sales-customer-avatar">${escapeHtml(customerInitials(row.name))}</span><strong>${escapeHtml(row.name)}</strong></td>
+        <td><span class="sales-customer-avatar">${escapeHtml(customerInitials(row.name))}</span><button class="sales-customer-link" type="button" data-sales-customer-name="${escapeHtml(row.name)}">${escapeHtml(row.name)}</button></td>
         <td>${escapeHtml(money(row.value))}</td>
         <td><span class="text-muted" title="${escapeHtml(report.sales.outstandingReason || 'Invoice-level receipts are unavailable.')}">Unavailable</span></td>
       </tr>
@@ -3030,7 +3097,22 @@
     if (editBusinessRecordButton) {
       const type = editBusinessRecordButton.dataset.businessType;
       const record = businessRecordCache.get(businessRecordKey(type, Number(editBusinessRecordButton.dataset.editBusinessRecord)));
-      if (record) openBusinessRecordModal(type, record);
+      if (record) {
+        if (!salesCustomerModal.hidden) closeSalesCustomerModal();
+        openBusinessRecordModal(type, record);
+      }
+      return;
+    }
+
+    const salesCustomerButton = event.target.closest('[data-sales-customer-name]');
+    if (salesCustomerButton) {
+      openSalesCustomerLog(salesCustomerButton.dataset.salesCustomerName, salesCustomerButton.dataset.salesCustomerId)
+        .catch((error) => showToast(error.message));
+      return;
+    }
+
+    if (event.target.closest('[data-close-sales-customer-modal]')) {
+      closeSalesCustomerModal();
       return;
     }
 
@@ -3355,6 +3437,7 @@
 
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape' && !leadPreviewModal.hidden) closeLeadPreviewModal();
+    if (event.key === 'Escape' && !salesCustomerModal.hidden) closeSalesCustomerModal();
   });
 
   document.addEventListener('input', (event) => {

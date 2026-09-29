@@ -213,6 +213,61 @@ async function listRecords(type, query) {
   };
 }
 
+function paymentStatusForSale(record) {
+  const invoiced = record.invoicedAmount == null ? null : Number(record.invoicedAmount);
+  const received = record.sourceReceivedAmount == null ? null : Number(record.sourceReceivedAmount);
+  const outstanding = record.sourceOutstandingAmount == null ? null : Number(record.sourceOutstandingAmount);
+
+  if (outstanding !== null) return outstanding > 0 ? 'DUE' : 'DONE';
+  if (received !== null && invoiced !== null) {
+    if (received >= invoiced) return 'DONE';
+    return received > 0 ? 'PARTIAL' : 'DUE';
+  }
+  return 'NOT_RECORDED';
+}
+
+function summarizeSalesCustomer(customer, records) {
+  const sales = records.map((record) => ({
+    ...serialize(CONFIG.sales, record),
+    paymentStatus: paymentStatusForSale(record),
+    invoiceAvailable: false,
+  }));
+  const firstWithPhone = sales.find((record) => record.customerPhone);
+  const firstWithLocation = sales.find((record) => record.location);
+
+  return {
+    customer: {
+      id: customer?.id || null,
+      name: customer?.displayName || sales[0]?.customerName || 'Unavailable',
+      phone: customer?.phone || firstWithPhone?.customerPhone || null,
+      location: customer?.location || firstWithLocation?.location || null,
+      customerType: null,
+    },
+    totalOrderValue: sales.reduce((total, record) => total + Number(record.invoicedAmount || 0), 0),
+    sales,
+  };
+}
+
+async function getSalesCustomerLog(query) {
+  const normalizedName = normalizeIdentity(query.customerName);
+  const customer = query.customerId
+    ? await prisma.ledgerCustomer.findUnique({ where: { id: query.customerId } })
+    : await prisma.ledgerCustomer.findFirst({ where: { normalizedName }, orderBy: { id: 'asc' } });
+  const identities = [];
+  if (customer) identities.push({ customerId: customer.id });
+  identities.push({ customerName: { equals: query.customerName, mode: 'insensitive' } });
+
+  const records = await prisma.ledgerSale.findMany({
+    where: { recordState: 'ACTIVE', OR: identities },
+    orderBy: [{ saleDate: 'asc' }, { id: 'asc' }],
+    include: {
+      admin: { select: { name: true } },
+      sourceRow: { select: { sheetName: true, rowNumber: true } },
+    },
+  });
+  return summarizeSalesCustomer(customer, records);
+}
+
 async function findRecord(tx, type, id) {
   const config = configFor(type);
   const record = await tx[config.model].findUnique({ where: { id } });
@@ -292,8 +347,9 @@ async function voidRecord(type, id, reason, adminId) {
 }
 
 module.exports = {
-  __private: { prepareData, reportingMonth, serialize },
+  __private: { paymentStatusForSale, prepareData, reportingMonth, serialize, summarizeSalesCustomer },
   createRecord,
+  getSalesCustomerLog,
   listRecords,
   updateRecord,
   voidRecord,
