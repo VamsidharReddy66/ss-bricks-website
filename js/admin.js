@@ -734,7 +734,7 @@
     if (!target) return;
     const visibleRows = (rows || []).filter((row) => Number(row.value || 0) > 0);
     const total = visibleRows.reduce((sum, row) => sum + Number(row.value || 0), 0);
-    if (!visibleRows.length || !total) {
+    if ((!visibleRows.length || !total) && !options.showAllRows) {
       target.innerHTML = `<div class="admin-chart-empty">${escapeHtml(options.emptyMessage || 'No values in this period.')}</div>`;
       return;
     }
@@ -745,20 +745,52 @@
       return `${row.color || analyticsColors[index % analyticsColors.length]} ${start}% ${cursor}%`;
     }).join(', ');
     const formatter = options.formatter || compactNumber;
+    const legendRows = options.showAllRows ? rows : visibleRows;
     target.innerHTML = `
-      <div class="admin-donut" style="--donut-fill:conic-gradient(${segments})">
-        <div class="admin-donut-center"><strong>${escapeHtml(formatter(total))}</strong><span>${escapeHtml(options.centerLabel || 'total')}</span></div>
+      <div class="admin-donut" role="img" aria-label="${escapeHtml(total ? `${options.centerLabel || 'total'}: ${formatter(total)}` : 'No invoiced sales in this period')}" style="--donut-fill:${total ? `conic-gradient(${segments})` : '#dedbd6'}">
+        <div class="admin-donut-center"><strong>${escapeHtml(total ? formatter(total) : '—')}</strong><span>${escapeHtml(options.centerLabel || 'total')}</span></div>
       </div>
       <div class="admin-donut-legend">
-        ${visibleRows.map((row, index) => `
-          <div class="admin-donut-legend-row">
+        ${legendRows.map((row, index) => `
+          <div class="admin-donut-legend-row${Number(row.value || 0) > 0 ? '' : ' unavailable'}"${row.records ? ` title="${Number(row.records)} invoiced row${Number(row.records) === 1 ? '' : 's'}"` : ''}>
             <i class="admin-donut-swatch" style="--swatch-color:${row.color || analyticsColors[index % analyticsColors.length]}"></i>
             <span>${escapeHtml(row.name)}</span>
-            <strong>${escapeHtml(formatter(row.value))}</strong>
+            <strong>${Number(row.value || 0) > 0 ? escapeHtml(formatter(row.value)) : '—'}</strong>
           </div>
         `).join('')}
       </div>
     `;
+  }
+
+  function renderSalesProductMix(products) {
+    const catalog = [
+      { name: '8-inch Cement Blocks', color: '#552722' },
+      { name: '9-inch Cement Blocks', color: '#06619e' },
+      { name: 'Fly Ash Bricks', color: '#12af00' },
+      { name: 'Mud Bricks', color: '#cf7c00' },
+      { name: 'Paver Blocks', color: '#cb54d3' },
+      { name: 'Colored Paver Blocks', color: '#cf1c00' },
+    ];
+    const keyFor = (name) => String(name || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+    const values = new Map((products || []).map((row) => [keyFor(row.name), row]));
+    const rows = catalog.map((product) => {
+      const data = values.get(keyFor(product.name));
+      values.delete(keyFor(product.name));
+      return { ...product, value: Number(data?.value || 0), records: Number(data?.records || 0) };
+    });
+    const otherColors = ['#397f79', '#8b5798', '#946c36'];
+    let otherIndex = 0;
+    [...values.values()].filter((row) => keyFor(row.name) !== 'not specified').forEach((row) => {
+      rows.push({ ...row, color: otherColors[otherIndex % otherColors.length] });
+      otherIndex += 1;
+    });
+    const unassigned = values.get('not specified');
+    if (unassigned) rows.push({ ...unassigned, name: 'Unassigned product', color: '#808080' });
+    renderDonutChart('admin-sales-product-donut', rows, {
+      formatter: compactMoney,
+      centerLabel: 'invoiced',
+      showAllRows: true,
+    });
   }
 
   function salesTrendMarkup(trend, noun) {
@@ -1225,10 +1257,7 @@
         <div>${salesTrendMarkup(report.sales.trends?.uniqueCustomers, 'customer')}</div>
       </article>
     `;
-    renderDonutChart('admin-sales-product-donut', report.sales.products || [], {
-      formatter: compactMoney,
-      centerLabel: 'invoiced',
-    });
+    renderSalesProductMix(report.sales.products || []);
     const customerMixTarget = document.getElementById('admin-sales-customer-mix');
     customerMixTarget.innerHTML = `
       <div class="sales-unavailable-donut" aria-hidden="true"><span>?</span></div>

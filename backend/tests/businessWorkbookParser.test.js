@@ -4,7 +4,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const XLSX = require('xlsx');
 const { __private: analyticsPrivate } = require('../services/businessAnalyticsService');
-const { parseBusinessWorkbook } = require('../services/businessWorkbookParser');
+const { _private: parserPrivate, parseBusinessWorkbook } = require('../services/businessWorkbookParser');
 const { listBusinessRecordsSchema, recordSchemas } = require('../validators/businessValidator');
 
 function workbookBuffer() {
@@ -33,6 +33,14 @@ test('normalizes semantic workbook headers and excludes source totals from trans
   assert.equal(parsed.data.expenses[0].amount, 1200);
   assert.equal(parsed.reconciliation.salesInvoiced.status, 'MATCH');
   assert.equal(parsed.reconciliation.factoryExpenses.status, 'MATCH');
+});
+
+test('keeps nine-inch cement blocks and colored pavers distinct on import', () => {
+  assert.equal(parserPrivate.canonicalProduct('9" Cement Blocks'), '9-inch Cement Blocks');
+  assert.equal(parserPrivate.canonicalProduct('9-inch Cement Blocks'), '9-inch Cement Blocks');
+  assert.equal(parserPrivate.canonicalProduct('Colored Paver Blocks'), 'Colored Paver Blocks');
+  assert.equal(parserPrivate.canonicalProduct('Paver Blocks'), 'Paver Blocks');
+  assert.equal(parserPrivate.canonicalProduct(''), null);
 });
 
 test('marks historical collections unavailable instead of deriving receivables from ambiguous cells', () => {

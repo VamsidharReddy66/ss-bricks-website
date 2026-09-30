@@ -3618,26 +3618,32 @@ select.admin-grid-input {
 }
 
 .sales-donut-layout {
-  grid-template-columns: 116px minmax(0, 1fr);
-  min-height: 150px;
-  align-items: center;
-  gap: 0.75rem;
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
+  gap: 0.85rem;
 }
 
 .sales-donut-layout .admin-donut {
-  width: 112px;
-  height: 112px;
+  box-sizing: border-box;
+  width: min(156px, 100%);
+  height: auto;
+  aspect-ratio: 1 / 1;
+  flex: none;
 }
 
 .sales-donut-layout .admin-donut::after {
-  width: 64px;
-  height: 64px;
+  inset: 27%;
+  width: auto;
+  height: auto;
 }
 
-.sales-donut-layout .admin-donut-center strong { font-size: 0.9rem; }
-.sales-donut-layout .admin-donut-center span { font-size: 0.58rem; }
-.sales-donut-layout .admin-donut-legend { gap: 0.28rem; }
-.sales-donut-layout .admin-donut-legend-row { font-size: 0.62rem; }
+.sales-donut-layout .admin-donut-center { inset: 29%; }
+.sales-donut-layout .admin-donut-center strong { font-size: 1.05rem; }
+.sales-donut-layout .admin-donut-center span { font-size: 0.7rem; }
+.sales-donut-layout .admin-donut-legend { width: 100%; gap: 0.38rem; }
+.sales-donut-layout .admin-donut-legend-row { color: #262322; font-size: 0.7rem; }
+.sales-donut-layout .admin-donut-legend-row strong { font-size: 0.7rem; }
+.sales-donut-layout .admin-donut-legend-row.unavailable strong { color: #69645f; }
 
 .sales-unavailable-visual {
   display: flex;

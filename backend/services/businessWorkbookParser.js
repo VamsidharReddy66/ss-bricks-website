@@ -67,7 +67,9 @@ function canonicalProduct(value) {
   const source = clean(value);
   const key = normalized(source);
   if (!key) return null;
+  if (key.includes('colored paver block') || key.includes('coloured paver block') || key.includes('color paver block') || key.includes('colour paver block')) return 'Colored Paver Blocks';
   if (key.includes('paver block')) return 'Paver Blocks';
+  if (key.includes('9 inch cement block') || key.includes('9 cement block')) return '9-inch Cement Blocks';
   if (key.includes('cement block') && key.includes('waste')) return '8-inch Cement Blocks (Waste Blocks)';
   if (key.includes('cement block')) return '8-inch Cement Blocks';
   if (key.includes('partition block')) return 'Partition Blocks';
