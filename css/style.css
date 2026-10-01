@@ -4216,6 +4216,12 @@ body.admin-dark-theme .admin-lead-preview-card { background: #fff; color: #28252
 .operations-stock-table tbody tr:last-child th, .operations-stock-table tbody tr:last-child td { border-bottom: 0; }
 .operations-stock-table td { color: #69645f; }
 .operations-stock-note { margin: .7rem 0 0; color: #5d5853; font-size: .72rem; line-height: 1.4; }
+.operations-capacity-head { display: flex; justify-content: space-between; gap: .75rem; padding: .7rem .55rem; background: #e9e7e3; font-size: .68rem; font-weight: 700; }
+.operations-capacity-head span:last-child { text-align: right; }
+.operations-capacity-list { display: grid; gap: .72rem; margin-top: .8rem; }
+.operations-capacity-row > div { display: flex; justify-content: space-between; gap: .5rem; font-size: .75rem; }
+.operations-capacity-row strong { color: #69645f; }
+.operations-capacity-track { display: block; height: 8px; margin-top: .35rem; border-radius: 4px; background: #e9e7e3; box-shadow: inset 3px 0 var(--capacity-color); }
 .operations-unavailable { min-height: 180px; display: grid; align-content: center; text-align: center; padding: 1.25rem; background: #f5f1ea; }
 .operations-unavailable strong { font-size: 1rem; }
 .operations-unavailable p { color: #5d5853; line-height: 1.55; margin: .65rem auto 0; max-width: 36ch; }
@@ -4229,6 +4235,7 @@ body.admin-dark-theme .operations-reference-dashboard { color: #f6f2eb; }
 body.admin-dark-theme .operations-reference-card { background: #1a1917; border-color: #36332f; }
 body.admin-dark-theme .operations-stock-table thead th { background: #302d29; }
 body.admin-dark-theme .operations-stock-table th, body.admin-dark-theme .operations-stock-table td { border-bottom-color: #77716a; }
+body.admin-dark-theme .operations-capacity-head, body.admin-dark-theme .operations-capacity-track { background: #302d29; }
 body.admin-dark-theme .operations-unavailable, body.admin-dark-theme .operations-log-card .admin-table-wrap { background: #151412; }
 body.admin-dark-theme .operations-log-card .admin-table th { background: #26231f; }
 @media (max-width: 1100px) { .operations-summary-grid { grid-template-columns: 1fr 1fr; } .operations-summary-grid > :last-child { grid-column: 1 / -1; } }
