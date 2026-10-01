@@ -690,19 +690,36 @@
   function renderStackedProductionChart(targetId, rows) {
     const target = document.getElementById(targetId);
     if (!target) return;
-    const visibleRows = (rows || []).filter((row) => Number(row.total || 0) > 0);
-    if (!visibleRows.length) {
+    const months = (rows || []).slice(-12);
+    const maxTotal = Math.max(0, ...months.map((row) => Number(row.total || 0)));
+    if (!maxTotal) {
       target.innerHTML = '<div class="admin-chart-empty">No recorded production in this period.</div>';
       return;
     }
-    const products = [...new Set(visibleRows.flatMap((row) => row.segments.map((segment) => segment.product)))];
-    const colors = ['#06619e', '#cf7c00', '#12af00', '#552722', '#b73c28', '#ffc400', '#d0004e'];
-    const colorMap = new Map(products.map((product, index) => [product, colors[index % colors.length]]));
-    const maxTotal = Math.max(...visibleRows.map((row) => Number(row.total || 0)), 1);
+    const catalog = [
+      ['8-inch Cement Blocks', '#06619e'],
+      ['9-inch Cement Blocks', '#cf7c00'],
+      ['Fly Ash Bricks', '#12af00'],
+      ['Mud Bricks', '#552722'],
+      ['Paver Blocks', '#b73c28'],
+      ['Colored Paver Blocks', '#ffc400'],
+    ];
+    const colorMap = new Map(catalog.map(([name, color]) => [name.toLowerCase(), color]));
+    const extraColors = ['#8b5798', '#397f79', '#946c36'];
+    const extras = [...new Set(months.flatMap((row) => (row.segments || []).map((segment) => segment.product)))].filter((name) => !colorMap.has(String(name).toLowerCase()));
+    extras.forEach((name, index) => colorMap.set(String(name).toLowerCase(), extraColors[index % extraColors.length]));
+    const stepBase = 10 ** Math.floor(Math.log10(maxTotal / 4));
+    const step = [1, 2, 5, 10].map((factor) => factor * stepBase).find((value) => value >= maxTotal / 4);
+    const ceiling = step * Math.ceil(maxTotal / step);
+    const legend = [...catalog, ...extras.map((name) => [name, colorMap.get(String(name).toLowerCase())])];
     target.innerHTML = `
-      <div class="operations-stack-legend" aria-label="Product legend">${products.map((product) => `<span><i style="--stack-color:${colorMap.get(product)}"></i>${escapeHtml(product)}</span>`).join('')}</div>
-      <div class="operations-stack-plot" style="--stack-columns:${visibleRows.length}">
-        ${visibleRows.map((row) => `<div class="operations-stack-group"><div class="operations-stack-bar" style="height:${Math.max((row.total / maxTotal) * 300, 4)}px">${row.segments.map((segment) => `<span style="height:${row.total ? (segment.quantity / row.total) * 100 : 0}%;--stack-color:${colorMap.get(segment.product)}" tabindex="0"><span class="sr-only">${escapeHtml(row.label)}, ${escapeHtml(segment.product)}, ${escapeHtml(compactNumber(segment.quantity))} units</span><title>${escapeHtml(`${row.label}: ${segment.product} - ${Number(segment.quantity).toLocaleString('en-IN')} units; total ${Number(row.total).toLocaleString('en-IN')}`)}</title></span>`).join('')}</div><strong>${escapeHtml(compactNumber(row.total))}</strong><small>${escapeHtml(row.label)}</small></div>`).join('')}
+      <div class="operations-stack-legend" aria-label="Product legend">${legend.map(([name, color]) => `<span><i style="--stack-color:${color}"></i>${escapeHtml(name)}</span>`).join('')}</div>
+      <div class="operations-stack-chart" role="group" aria-label="Monthly production units by product">
+        <div class="operations-stack-plot" style="--stack-columns:${months.length}">
+          <div class="operations-stack-grid" aria-hidden="true">${[4, 3, 2, 1, 0].map(() => '<span></span>').join('')}</div>
+          ${months.map((row) => `<div class="operations-stack-group"><div class="operations-stack-bar-slot"><div class="operations-stack-bar" style="height:${(Number(row.total || 0) / ceiling) * 100}%">${(row.segments || []).filter((segment) => Number(segment.quantity) > 0).map((segment) => `<span tabindex="0" role="img" aria-label="${escapeHtml(`${row.label}: ${segment.product} - ${Number(segment.quantity).toLocaleString('en-IN')} units`)}" style="height:${(Number(segment.quantity) / Number(row.total)) * 100}%;--stack-color:${colorMap.get(String(segment.product).toLowerCase())}" title="${escapeHtml(`${row.label}: ${segment.product} - ${Number(segment.quantity).toLocaleString('en-IN')} units`)}"></span>`).join('')}</div></div><small>${escapeHtml(row.label)}</small></div>`).join('')}
+        </div>
+        <div class="operations-stack-axis" aria-hidden="true">${[4, 3, 2, 1, 0].map((index) => `<span>${escapeHtml(compactNumber((ceiling / 4) * index))}</span>`).join('')}</div>
       </div>`;
   }
 
