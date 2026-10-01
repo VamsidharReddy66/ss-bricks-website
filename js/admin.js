@@ -747,7 +747,7 @@
     const formatter = options.formatter || compactNumber;
     const legendRows = options.showAllRows ? rows : visibleRows;
     target.innerHTML = `
-      <div class="admin-donut" role="img" aria-label="${escapeHtml(total ? `${options.centerLabel || 'total'}: ${formatter(total)}` : 'No invoiced sales in this period')}" style="--donut-fill:${total ? `conic-gradient(${segments})` : '#dedbd6'}">
+      <div class="admin-donut" role="img" aria-label="${escapeHtml(total ? `${options.centerLabel || 'total'}: ${formatter(total)}` : options.emptyAriaLabel || 'No invoiced sales in this period')}" style="--donut-fill:${total ? `conic-gradient(${segments})` : '#dedbd6'}">
         <div class="admin-donut-center"><strong>${escapeHtml(total ? formatter(total) : '—')}</strong><span>${escapeHtml(options.centerLabel || 'total')}</span></div>
       </div>
       <div class="admin-donut-legend">
@@ -1258,11 +1258,17 @@
       </article>
     `;
     renderSalesProductMix(report.sales.products || []);
-    const customerMixTarget = document.getElementById('admin-sales-customer-mix');
-    customerMixTarget.innerHTML = `
-      <div class="sales-unavailable-donut" aria-hidden="true"><span>?</span></div>
-      <div class="sales-unavailable-copy"><strong>Unavailable</strong></div>
-    `;
+    renderDonutChart('admin-sales-customer-mix', [
+      { name: 'Builders', color: '#552722', value: 0 },
+      { name: 'House Owners', color: '#06619e', value: 0 },
+      { name: 'Contractors', color: '#12af00', value: 0 },
+      { name: 'Commission Based', color: '#cf7c00', value: 0 },
+    ], {
+      formatter: (value) => `${value}%`,
+      centerLabel: 'unavailable',
+      emptyAriaLabel: 'Customer type is not recorded in the workbook',
+      showAllRows: true,
+    });
     renderSalesPeriodChart(report.sales.chart || report.sales.monthly || [], report.sales.chartGranularity);
     const chartCaption = document.getElementById('admin-sales-chart-caption');
     chartCaption.textContent = report.sales.chartGranularity === 'DAY' ? 'Daily sales' : 'Monthly sales';
