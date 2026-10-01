@@ -1232,10 +1232,32 @@
     `).join('');
   }
 
+  function renderOperationsInventoryRows(materials) {
+    const referenceMaterials = [
+      'Crusher Dust 6mm',
+      'Crusher Mix 12mm',
+      'Cement',
+      'Fly Ash',
+      'Red Soil',
+      'Paver Block Colors',
+    ];
+    const recordedMaterials = new Map(materials.map((row) => [String(row.name || '').toLowerCase(), row]));
+    const rows = referenceMaterials.map((name) => {
+      const row = recordedMaterials.get(name.toLowerCase());
+      recordedMaterials.delete(name.toLowerCase());
+      return { name, purchases: row?.records };
+    });
+    for (const row of recordedMaterials.values()) rows.push({ name: row.name, purchases: row.records });
+    document.getElementById('admin-operations-inventory-summary').innerHTML = rows.map((row) => `
+      <tr><th scope="row">${escapeHtml(row.name)}</th><td>${Number(row.purchases) > 0 ? Number(row.purchases).toLocaleString('en-IN') : '&mdash;'}</td><td>&mdash;</td></tr>
+    `).join('');
+  }
+
   function renderBusinessAnalytics() {
     const report = analytics.business || {};
     renderBusinessTrust(report);
     renderOperationsStockRows(report.operations?.products || []);
+    renderOperationsInventoryRows(report.operations?.materials || []);
     if (!report.available) {
       renderBusinessLogs(report);
       return;

@@ -527,7 +527,16 @@
               </div>
               <p class="operations-stock-note">Rated line capacities are not recorded.</p>
             </article>
-            <article class="operations-reference-card"><h3>Inventory</h3><div class="operations-unavailable"><strong>Unavailable</strong></div></article>
+            <article class="operations-reference-card operations-inventory-card">
+              <h3>Inventory</h3>
+              <div class="operations-stock-table-wrap">
+                <table class="operations-stock-table operations-inventory-table">
+                  <thead><tr><th scope="col">Material</th><th scope="col">Purchases</th><th scope="col">Stock</th></tr></thead>
+                  <tbody id="admin-operations-inventory-summary"></tbody>
+                </table>
+              </div>
+              <p class="operations-stock-note">Purchase counts are for the selected period. Stock levels and thresholds are not recorded.</p>
+            </article>
           </div>
 
         <div class="operations-production-section">
