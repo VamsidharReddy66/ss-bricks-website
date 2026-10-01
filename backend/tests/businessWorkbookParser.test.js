@@ -119,6 +119,13 @@ test('count-only breakdowns rank no-production reasons by row frequency', () => 
   assert.deepEqual(rows.map((row) => [row.name, row.records]), [['Rain', 2], ['Delivery', 1]]);
 });
 
+test('expense breakdown can retain every recorded category for the donut', () => {
+  const expenses = Array.from({ length: 10 }, (_, index) => ({ category: `CATEGORY_${index}`, amount: index + 1 }));
+  const categories = analyticsPrivate.breakdown(expenses, 'category', 'amount', expenses.length);
+  assert.equal(categories.length, 10);
+  assert.equal(categories.reduce((total, row) => total + row.value, 0), 55);
+});
+
 test('business insights prioritize actionable workbook signals with department ownership', () => {
   const insights = analyticsPrivate.buildInsights({
     trust: {

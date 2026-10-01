@@ -552,7 +552,7 @@ async function getBusinessAnalytics(range, now = new Date()) {
         monthly: monthlyRows.map(({ key, label, expenses: factory, materials, driverBatta: batta, labour: labourValue, recordedOutflows: total }) => ({ key, label, factory, materials, driverBatta: batta, labour: labourValue, total })),
         outflowComposition,
         expenses: breakdown(expenses, 'description', 'amount'),
-        expenseCategories: breakdown(expenses, 'category', 'amount'),
+        expenseCategories: breakdown(expenses, 'category', 'amount', expenses.length),
         materials: breakdown(purchases, 'materialName', 'purchaseAmount'),
         vendors: breakdown(purchases, 'vendorName', 'purchaseAmount'),
         purchaseStatuses: breakdown(purchases, 'paymentStatus', 'purchaseAmount'),

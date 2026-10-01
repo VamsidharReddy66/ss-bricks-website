@@ -762,6 +762,7 @@
       return `${row.color || analyticsColors[index % analyticsColors.length]} ${start}% ${cursor}%`;
     }).join(', ');
     const formatter = options.formatter || compactNumber;
+    const legendFormatter = options.legendFormatter || ((value) => formatter(value));
     const legendRows = options.showAllRows ? rows : visibleRows;
     target.innerHTML = `
       <div class="admin-donut" role="img" aria-label="${escapeHtml(total ? `${options.centerLabel || 'total'}: ${formatter(total)}` : options.emptyAriaLabel || 'No invoiced sales in this period')}" style="--donut-fill:${total ? `conic-gradient(${segments})` : '#dedbd6'}">
@@ -769,10 +770,10 @@
       </div>
       <div class="admin-donut-legend">
         ${legendRows.map((row, index) => `
-          <div class="admin-donut-legend-row${Number(row.value || 0) > 0 ? '' : ' unavailable'}"${row.records ? ` title="${Number(row.records)} invoiced row${Number(row.records) === 1 ? '' : 's'}"` : ''}>
+          <div class="admin-donut-legend-row${Number(row.value || 0) > 0 ? '' : ' unavailable'}"${row.records ? ` title="${Number(row.records)} ${escapeHtml(options.recordLabel || 'record')}${Number(row.records) === 1 ? '' : 's'}"` : ''}>
             <i class="admin-donut-swatch" style="--swatch-color:${row.color || analyticsColors[index % analyticsColors.length]}"></i>
             <span>${escapeHtml(row.name)}</span>
-            <strong>${Number(row.value || 0) > 0 ? escapeHtml(formatter(row.value)) : '—'}</strong>
+            <strong>${Number(row.value || 0) > 0 ? escapeHtml(legendFormatter(row.value, total)) : '—'}</strong>
           </div>
         `).join('')}
       </div>
@@ -1136,6 +1137,46 @@
     }
   }
 
+  function renderAccountsExpenseMix(categories) {
+    const catalog = [
+      { name: 'Power & Fuel', color: '#06619e', keys: ['POWER_FUEL', 'POWER_AND_FUEL', 'POWER', 'FUEL'] },
+      { name: 'Manufacturing overhead', color: '#cf1c00', keys: ['MANUFACTURING_OVERHEAD', 'OVERHEAD'] },
+      { name: 'Labour wages', color: '#ffc400', keys: ['LABOUR_WAGES', 'LABOR_WAGES', 'WAGES'] },
+      { name: 'Administrative', color: '#cf7c00', keys: ['ADMINISTRATIVE', 'ADMIN'] },
+      { name: 'Miscellaneous & others', color: '#552722', keys: ['MISCELLANEOUS_AND_OTHERS', 'MISCELLANEOUS', 'MISC', 'OTHER', 'OTHERS'] },
+    ];
+    const rows = catalog.map(({ name, color }) => ({ name, color, value: 0, records: 0 }));
+    const extras = new Map();
+    let unclassified = null;
+    for (const category of categories) {
+      const key = String(category.name || '').toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_|_$/g, '');
+      const index = catalog.findIndex((item) => item.keys.includes(key));
+      if (index >= 0) {
+        rows[index].value += Number(category.value || 0);
+        rows[index].records += Number(category.records || 0);
+      } else if (!key || key === 'UNCATEGORIZED' || key === 'UNCLASSIFIED') {
+        unclassified ||= { name: 'Unclassified', color: '#808080', value: 0, records: 0 };
+        unclassified.value += Number(category.value || 0);
+        unclassified.records += Number(category.records || 0);
+      } else {
+        const row = extras.get(key) || { name: category.name, color: ['#397f79', '#8b5798', '#946c36'][extras.size % 3], value: 0, records: 0 };
+        row.value += Number(category.value || 0);
+        row.records += Number(category.records || 0);
+        extras.set(key, row);
+      }
+    }
+    rows.push(...extras.values());
+    if (unclassified) rows.push(unclassified);
+    renderDonutChart('admin-accounts-expense-donut', rows, {
+      formatter: compactMoney,
+      legendFormatter: (value, total) => `${(value / total * 100).toLocaleString('en-IN', { maximumFractionDigits: 1 })}%`,
+      centerLabel: 'factory expenses',
+      emptyAriaLabel: 'No recorded factory expenses in this period',
+      recordLabel: 'expense row',
+      showAllRows: true,
+    });
+  }
+
   function renderAccountsAnalytics(report) {
     const finance = report.finance || {};
     const unavailable = (name) => `<article class="accounts-kpi unavailable"><span>${escapeHtml(name)}</span><strong>Unavailable</strong></article>`;
@@ -1155,9 +1196,6 @@
     const asOf = `As of ${dateTime(report.generatedAt || new Date())}`;
     document.getElementById('admin-accounts-payables-asof').textContent = asOf;
     document.getElementById('admin-accounts-receivables-asof').textContent = asOf;
-    const expenseColors = ['#06619e', '#cf1c00', '#ffc400', '#cf7c00', '#552722'];
-    const expenseCategories = (finance.expenseCategories || []).map((row, index) => ({ ...row, color: expenseColors[index % expenseColors.length] }));
-    renderDonutChart('admin-accounts-expense-donut', expenseCategories, { formatter: compactMoney, centerLabel: 'Overall Expenses' });
   }
 
   function renderHrAnalytics(report) {
@@ -1275,6 +1313,7 @@
     renderBusinessTrust(report);
     renderOperationsStockRows(report.operations?.products || []);
     renderOperationsInventoryRows(report.operations?.materials || []);
+    renderAccountsExpenseMix(report.finance?.expenseCategories || []);
     if (!report.available) {
       renderBusinessLogs(report);
       return;
