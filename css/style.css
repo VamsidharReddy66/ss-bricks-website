@@ -4228,7 +4228,18 @@ body.admin-dark-theme .admin-lead-preview-card { background: #fff; color: #28252
 .operations-production-card { min-height: 490px; }
 .operations-production-card .admin-line-chart { min-height: 405px; }
 .operations-cost-card { min-height: 320px; }
-.operations-cost-card .operations-unavailable { min-height: 245px; }
+.operations-cost-legend { display: flex; justify-content: center; gap: 1.25rem; margin: 1.2rem 0 1.5rem; font-size: .75rem; font-weight: 700; }
+.operations-cost-legend span, .operations-cost-product span { display: inline-flex; align-items: center; gap: .35rem; }
+.operations-cost-legend i, .operations-cost-product i { display: inline-block; width: 10px; height: 10px; flex: none; }
+.operations-cost-legend i.actual, .operations-cost-product i.actual { background: #06619e; }
+.operations-cost-legend i.standard, .operations-cost-product i.standard { background: #83b7d2; }
+.operations-cost-chart { display: grid; grid-template-columns: repeat(6,minmax(130px,1fr)); overflow-x: auto; border-top: 1px solid #a6a29e; border-bottom: 1px solid #a6a29e; }
+.operations-cost-product { display: grid; align-content: center; gap: .75rem; min-height: 160px; padding: 1rem .7rem; border-right: 1px solid #d2d2d2; font-size: .74rem; }
+.operations-cost-product:last-child { border-right: 0; }
+.operations-cost-product > strong { min-height: 2.5em; line-height: 1.25; }
+.operations-cost-product span { justify-content: space-between; color: #34312e; }
+.operations-cost-product span b { margin-left: auto; font-size: .9rem; }
+.operations-cost-card .operations-stock-note { margin-top: 1rem; }
 .operations-log-card .admin-table-wrap { min-height: 360px; max-height: 590px; overflow: auto; background: #f5f1ea; }
 .operations-log-card .admin-table th { position: sticky; top: 0; z-index: 1; background: #eceae4; }
 body.admin-dark-theme .operations-reference-dashboard { color: #f6f2eb; }
@@ -4236,6 +4247,8 @@ body.admin-dark-theme .operations-reference-card { background: #1a1917; border-c
 body.admin-dark-theme .operations-stock-table thead th { background: #302d29; }
 body.admin-dark-theme .operations-stock-table th, body.admin-dark-theme .operations-stock-table td { border-bottom-color: #77716a; }
 body.admin-dark-theme .operations-capacity-head, body.admin-dark-theme .operations-capacity-track { background: #302d29; }
+body.admin-dark-theme .operations-cost-chart { border-color: #77716a; }
+body.admin-dark-theme .operations-cost-product { border-right-color: #77716a; }
 body.admin-dark-theme .operations-unavailable, body.admin-dark-theme .operations-log-card .admin-table-wrap { background: #151412; }
 body.admin-dark-theme .operations-log-card .admin-table th { background: #26231f; }
 @media (max-width: 1100px) { .operations-summary-grid { grid-template-columns: 1fr 1fr; } .operations-summary-grid > :last-child { grid-column: 1 / -1; } }
