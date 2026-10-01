@@ -4208,6 +4208,14 @@ body.admin-dark-theme .admin-lead-preview-card { background: #fff; color: #28252
 .operations-summary-grid { display: grid; grid-template-columns: 1.15fr .98fr 1fr; gap: 1rem; }
 .operations-reference-card { background: #fff; border: 1px solid #e2ded7; border-radius: 8px; box-shadow: 0 5px 14px rgba(33,32,32,.08); padding: 1.35rem; }
 .operations-reference-card h3 { font-size: 1rem; margin: 0 0 .75rem; }
+.operations-stock-table-wrap { width: 100%; overflow-x: auto; }
+.operations-stock-table { width: 100%; border-collapse: collapse; text-align: left; font-size: .76rem; }
+.operations-stock-table th, .operations-stock-table td { padding: .68rem .5rem; border-bottom: 1px solid #a6a29e; white-space: nowrap; }
+.operations-stock-table thead th { background: #e9e7e3; font-weight: 700; }
+.operations-stock-table tbody th { font-weight: 600; }
+.operations-stock-table tbody tr:last-child th, .operations-stock-table tbody tr:last-child td { border-bottom: 0; }
+.operations-stock-table td { color: #69645f; }
+.operations-stock-note { margin: .7rem 0 0; color: #5d5853; font-size: .72rem; line-height: 1.4; }
 .operations-unavailable { min-height: 180px; display: grid; align-content: center; text-align: center; padding: 1.25rem; background: #f5f1ea; }
 .operations-unavailable strong { font-size: 1rem; }
 .operations-unavailable p { color: #5d5853; line-height: 1.55; margin: .65rem auto 0; max-width: 36ch; }
@@ -4219,6 +4227,8 @@ body.admin-dark-theme .admin-lead-preview-card { background: #fff; color: #28252
 .operations-log-card .admin-table th { position: sticky; top: 0; z-index: 1; background: #eceae4; }
 body.admin-dark-theme .operations-reference-dashboard { color: #f6f2eb; }
 body.admin-dark-theme .operations-reference-card { background: #1a1917; border-color: #36332f; }
+body.admin-dark-theme .operations-stock-table thead th { background: #302d29; }
+body.admin-dark-theme .operations-stock-table th, body.admin-dark-theme .operations-stock-table td { border-bottom-color: #77716a; }
 body.admin-dark-theme .operations-unavailable, body.admin-dark-theme .operations-log-card .admin-table-wrap { background: #151412; }
 body.admin-dark-theme .operations-log-card .admin-table th { background: #26231f; }
 @media (max-width: 1100px) { .operations-summary-grid { grid-template-columns: 1fr 1fr; } .operations-summary-grid > :last-child { grid-column: 1 / -1; } }

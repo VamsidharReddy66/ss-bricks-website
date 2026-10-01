@@ -1211,9 +1211,31 @@
     return target === 'accounts' ? 'Accounts' : target === 'hr' ? 'HR Management' : target === 'overview' ? 'Overview' : item.department || label(target);
   }
 
+  function renderOperationsStockRows(products) {
+    const stockProducts = [
+      '8-inch Cement Blocks',
+      '9-inch Cement Blocks',
+      'Fly Ash Bricks',
+      'Mud Bricks',
+      'Paver Blocks',
+      'Colored Paver Blocks',
+    ];
+    const recordedProducts = new Map(products.map((row) => [String(row.name || '').toLowerCase(), row]));
+    const stockRows = stockProducts.map((name) => {
+      const row = recordedProducts.get(name.toLowerCase());
+      recordedProducts.delete(name.toLowerCase());
+      return { name, units: row?.value, recorded: Boolean(row) };
+    });
+    for (const row of recordedProducts.values()) stockRows.push({ name: row.name, units: row.value, recorded: true });
+    document.getElementById('admin-operations-stock-rows').innerHTML = stockRows.map((row) => `
+      <tr><th scope="row">${escapeHtml(row.name)}</th><td>${row.recorded && Number(row.units) > 0 ? Number(row.units).toLocaleString('en-IN', { maximumFractionDigits: 3 }) : '&mdash;'}</td><td>&mdash;</td></tr>
+    `).join('');
+  }
+
   function renderBusinessAnalytics() {
     const report = analytics.business || {};
     renderBusinessTrust(report);
+    renderOperationsStockRows(report.operations?.products || []);
     if (!report.available) {
       renderBusinessLogs(report);
       return;

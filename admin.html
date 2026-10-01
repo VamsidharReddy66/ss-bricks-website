@@ -504,7 +504,16 @@
       <div class="admin-analytics-panel" id="admin-analytics-operations" role="tabpanel" hidden>
         <div class="operations-reference-dashboard">
           <div class="operations-summary-grid">
-            <article class="operations-reference-card"><h3>Closing Stock</h3><div class="operations-unavailable"><strong>Unavailable</strong></div></article>
+            <article class="operations-reference-card operations-stock-card">
+              <h3>Closing Stock</h3>
+              <div class="operations-stock-table-wrap">
+                <table class="operations-stock-table">
+                  <thead><tr><th scope="col">Product</th><th scope="col">Produced Units</th><th scope="col">Closing Stock</th></tr></thead>
+                  <tbody id="admin-operations-stock-rows"></tbody>
+                </table>
+              </div>
+              <p class="operations-stock-note">Production is recorded for the selected period. Closing stock needs opening balances and dispatches in units.</p>
+            </article>
             <article class="operations-reference-card"><h3>Capacity Utilisation</h3><div class="operations-unavailable"><strong>Unavailable</strong></div></article>
             <article class="operations-reference-card"><h3>Inventory</h3><div class="operations-unavailable"><strong>Unavailable</strong></div></article>
           </div>
