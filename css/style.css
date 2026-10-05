@@ -4281,6 +4281,7 @@ body.admin-dark-theme .operations-stack-grid span { border-top-color: #5b5750; }
 .accounts-kpi.unavailable::before { background: #817d79; }
 .accounts-kpi span { display: block; font-weight: 700; }
 .accounts-kpi strong { display: block; font-size: clamp(1.7rem,3vw,2.6rem); line-height: 1; margin: .9rem 0 .45rem; }
+.accounts-kpi.estimate strong { font-size: 1.8rem; overflow-wrap: anywhere; }
 .accounts-kpi.unavailable strong { font-size: 1.35rem; }
 .accounts-kpi small { color: #5d5853; line-height: 1.35; }
 .accounts-main-grid { display: grid; grid-template-columns: minmax(330px,.82fr) minmax(480px,1.18fr); gap: 1.5rem; }

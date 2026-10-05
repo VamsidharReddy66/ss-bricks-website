@@ -1179,10 +1179,15 @@
 
   function renderAccountsAnalytics(report) {
     const finance = report.finance || {};
+    const sales = report.sales || {};
+    const recordedOutflows = Number(finance.recordedOutflows || 0);
+    const hasEstimate = Number(sales.records || 0) > 0 || recordedOutflows > 0;
+    const netProfitEstimate = Number(sales.invoicedAmount || 0) - recordedOutflows;
+    const estimateLabel = netProfitEstimate < 0 ? `-${money(Math.abs(netProfitEstimate))}` : money(netProfitEstimate);
     const unavailable = (name) => `<article class="accounts-kpi unavailable"><span>${escapeHtml(name)}</span><strong>Unavailable</strong></article>`;
     document.getElementById('admin-accounts-kpis').innerHTML = `
-      <article class="accounts-kpi expense"><span>Total Expenses</span><strong>${escapeHtml(money(finance.factoryExpenses || 0))}</strong><small>Selected period</small></article>
-      ${unavailable('Net Profit')}
+      <article class="accounts-kpi expense"><span>Recorded Outflows</span><strong>${escapeHtml(money(recordedOutflows))}</strong><small>Expenses, purchases, batta and labour</small></article>
+      <article class="accounts-kpi estimate"><span>Net Profit Estimate</span><strong>${hasEstimate ? escapeHtml(estimateLabel) : 'Unavailable'}</strong><small>Invoiced sales less recorded outflows; not accounting net profit</small></article>
       ${unavailable('Cash Flow')}
       ${unavailable('Outstanding Loans')}
     `;
