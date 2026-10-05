@@ -1182,7 +1182,7 @@
     const unavailable = (name) => `<article class="accounts-kpi unavailable"><span>${escapeHtml(name)}</span><strong>Unavailable</strong></article>`;
     document.getElementById('admin-accounts-kpis').innerHTML = `
       <article class="accounts-kpi expense"><span>Total Expenses</span><strong>${escapeHtml(money(finance.factoryExpenses || 0))}</strong><small>Selected period</small></article>
-      ${unavailable('Gross Profit')}
+      ${unavailable('Net Profit')}
       ${unavailable('Cash Flow')}
       ${unavailable('Outstanding Loans')}
     `;
@@ -1343,7 +1343,7 @@
         <div>${salesTrendMarkup(report.sales.trends?.sales, 'sales')}<small>${Number(report.sales.records).toLocaleString('en-IN')} workbook records</small></div>
       </article>
       <article class="sales-kpi-card unavailable">
-        <span>Net Profit</span>
+        <span>Gross Profit</span>
         <strong>Unavailable</strong>
       </article>
       <article class="sales-kpi-card positive">
