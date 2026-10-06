@@ -216,7 +216,7 @@
       const message = encodeURIComponent(
         `Hello SS Bricks! I used your wall material calculator.\nProduct: ${data.brickType}\nProduct Size: ${data.brickSize}\nWall: ${height.value} ${heightUnit.value} x ${width.value} ${widthUnit.value}\nThickness: ${selectedThickness}\nRequired Quantity: ${requiredQuantity}\nEstimated Cost: ${formatMoney(data.estimatedCost)}\nPlease share the final quotation.`
       );
-      waBtn.href = `https://wa.me/919876543210?text=${message}`;
+      waBtn.href = `https://wa.me/918886100065?text=${message}`;
       waBtn.removeAttribute('aria-disabled');
     }
 
