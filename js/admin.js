@@ -139,11 +139,11 @@
       ['notes', 'Notes', 'textarea'],
     ],
     production: [
-      ['recordDate', 'Record Date', 'date', true],
+      ['recordDate', 'Date *', 'date', true],
       ['recordType', 'Record Type', 'select', true, 'PRODUCTION', ['PRODUCTION', 'NO_PRODUCTION', 'SUNDAY', 'UNKNOWN']],
       ['productName', 'Product', 'text'],
-      ['quantity', 'Quantity', 'number'],
-      ['reason', 'Reason', 'text'],
+      ['quantity', 'Units Produced', 'number'],
+      ['reason', 'Reason / Stoppage', 'text'],
       ['qualityNote', 'Quality Note', 'textarea'],
     ],
     labour: [
@@ -2522,6 +2522,33 @@
     return `<label class="form-field"><span class="form-label">${escapeHtml(text)}</span><input class="form-input" type="${escapeHtml(type)}" data-business-field="${escapeHtml(name)}" value="${escapeHtml(value)}" ${numberAttributes} ${requiredAttribute} /></label>`;
   }
 
+  function productionLogMarkup(record) {
+    const fields = BUSINESS_RECORD_FIELDS.production;
+    const field = (name) => businessFieldMarkup(fields.find(([key]) => key === name), record);
+    return `
+      <fieldset class="admin-lead-log-section">
+        <legend>Shift / Batch</legend>
+        <div class="admin-modal-grid">
+          <label class="form-field"><span class="form-label">Entry ID</span><input class="form-input" type="text" value="${record ? escapeHtml(record.id) : 'Assigned on save'}" readonly /></label>
+          ${field('recordDate')}
+          ${field('recordType')}
+          ${field('productName')}
+        </div>
+      </fieldset>
+      <fieldset class="admin-lead-log-section">
+        <legend>Output</legend>
+        <div class="admin-modal-grid">${field('quantity')}</div>
+      </fieldset>
+      <fieldset class="admin-lead-log-section">
+        <legend>Production Notes</legend>
+        <div class="admin-modal-grid">
+          ${field('reason')}
+          ${field('qualityNote')}
+        </div>
+      </fieldset>
+    `;
+  }
+
   function openBusinessRecordModal(type, record = null) {
     const fields = BUSINESS_RECORD_FIELDS[type];
     if (!fields) return;
@@ -2530,10 +2557,19 @@
     document.getElementById('business-record-id').value = record?.id || '';
     const titles = { sales: 'Sale Record', receipts: 'Payment Received', expenses: 'Expense', purchases: 'Material Purchase', production: 'Production Record', labour: 'Labour Payment', events: 'Business Event' };
     document.getElementById('admin-business-record-title').textContent = `${record ? 'Edit' : 'Add'} ${titles[type]}`;
+    const isProduction = type === 'production';
+    businessRecordModal.querySelector('.admin-business-record-card').classList.toggle('admin-production-log-card', isProduction);
+    businessRecordModal.querySelector('[role="dialog"]').setAttribute('aria-labelledby', isProduction ? 'admin-production-log-title' : 'admin-business-record-title');
+    businessRecordForm.classList.toggle('admin-lead-log', isProduction);
+    document.getElementById('admin-business-record-default-head').hidden = isProduction;
+    document.getElementById('admin-production-log-head').hidden = !isProduction;
+    document.getElementById('admin-production-log-title').textContent = `${record ? 'Edit' : 'Add'} Production Log`;
     document.getElementById('admin-business-record-scope-note').textContent = record
       ? `Editing a ${record.origin === 'XLSX_IMPORT' ? 'workbook-import' : 'manual'} record. The correction is retained in the audit history.`
       : 'This entry will be saved with a Manual source label. Workbook-only KPIs and charts will not include it.';
-    document.getElementById('admin-business-record-fields').innerHTML = fields.map((field) => businessFieldMarkup(field, record)).join('');
+    const fieldContainer = document.getElementById('admin-business-record-fields');
+    fieldContainer.classList.toggle('admin-production-log-fields', isProduction);
+    fieldContainer.innerHTML = isProduction ? productionLogMarkup(record) : fields.map((field) => businessFieldMarkup(field, record)).join('');
     const correctionField = document.getElementById('admin-business-correction-field');
     correctionField.hidden = !record;
     document.getElementById('business-record-reason').value = '';
