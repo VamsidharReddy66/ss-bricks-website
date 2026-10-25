@@ -2652,6 +2652,13 @@ select.admin-grid-input {
 .admin-expense-log-fields .admin-modal-grid { gap: .7rem 1rem; }
 .admin-expense-log-card .admin-record-source-note { margin-top: 1rem; }
 .admin-expense-log-card .admin-modal-actions { justify-content: center; }
+.admin-item-master-card .admin-lead-log-head { padding: 0 5rem .5rem; }
+.admin-item-master-card .admin-modal-grid { gap: .7rem 1rem; }
+.admin-item-master-card .admin-lead-log-section .form-field { min-width: 0; }
+.admin-item-master-card .admin-item-checkbox { display: flex; align-items: center; gap: .75rem; }
+.admin-item-master-card .admin-item-checkbox .form-label { margin: 0; }
+.admin-item-master-card .admin-item-checkbox input { width: 18px; height: 18px; accent-color: var(--maroon); }
+.admin-item-master-card .admin-modal-actions { justify-content: center; }
 #admin-business-record-default-head[hidden], #admin-production-log-head[hidden], #admin-expense-log-head[hidden] { display: none; }
 @media (max-width: 600px) {
   .admin-lead-log-card { padding: 1.2rem; }

@@ -17,6 +17,9 @@
   const importModal = document.getElementById('admin-import-modal');
   const businessImportModal = document.getElementById('admin-business-import-modal');
   const businessRecordModal = document.getElementById('admin-business-record-modal');
+  const materialItemModal = document.getElementById('admin-material-item-modal');
+  const materialItemForm = document.getElementById('admin-material-item-form');
+  const materialItemStatus = document.getElementById('admin-material-item-status');
   const saleModal = document.getElementById('admin-sale-modal');
   const productForm = document.getElementById('admin-product-form');
   const leadForm = document.getElementById('admin-lead-form');
@@ -43,6 +46,8 @@
   const pageTitle = document.getElementById('admin-page-title');
 
   let products = [];
+  let materialItems = [];
+  let materialItemsReady = false;
   let dashboard = {};
   let admin = null;
   let importRows = [];
@@ -2472,6 +2477,7 @@
       panel.hidden = !active;
     });
     if (isMarketing && !marketingAnalytics) loadMarketingAnalytics().catch((error) => showToast(error.message));
+    if (name === 'operations') loadMaterialItems();
   }
 
   function setAdminTheme(theme) {
@@ -2567,6 +2573,106 @@
         </div>
       </fieldset>
     `;
+  }
+
+  const MATERIAL_ITEM_SECTIONS = [
+    ['Item Details', [
+      ['itemCode', 'Item Code', 'text', true],
+      ['itemName', 'Item Name', 'text', true],
+      ['category', 'Category', 'text', true],
+      ['subCategory', 'Sub-Category', 'text', true],
+      ['unit', 'Unit', 'text', true],
+      ['conversion', 'Conversion (e.g. 1 bag = 50 kg)', 'text'],
+      ['gradeSpec', 'Grade / Spec', 'text'],
+      ['preferredSupplier', 'Preferred Supplier', 'text'],
+      ['alternateSupplier', 'Alternate Supplier', 'text'],
+      ['criticalItem', 'Critical Item', 'checkbox'],
+      ['storageLocation', 'Storage Location', 'text'],
+    ]],
+    ['Planning', [
+      ['standardRate', 'Std Purchase Rate (INR / unit)', 'number'],
+      ['standardUseProduct', 'Std Use - For Product', 'text'],
+      ['standardUsePer1000', 'Std Use per 1,000 units', 'number'],
+      ['reorderLevel', 'Reorder Level', 'number'],
+      ['reorderQuantity', 'Reorder Qty', 'number'],
+      ['leadTimeDays', 'Lead Time (days)', 'integer'],
+      ['shelfLifeDays', 'Shelf Life (days)', 'integer'],
+    ]],
+    ['Opening Stock', [
+      ['openingStock', 'Opening Stock', 'number'],
+      ['openingStockAsOn', 'Opening Stock As On', 'date'],
+    ]],
+  ];
+
+  function materialItemFieldMarkup(field, item) {
+    const [name, title, type, required] = field;
+    const id = `material-item-${name}`;
+    if (type === 'checkbox') {
+      return `<label class="form-field admin-item-checkbox" for="${id}"><span class="form-label">${escapeHtml(title)}</span><input type="checkbox" id="${id}" data-material-item-field="${name}" ${item?.[name] ? 'checked' : ''} /></label>`;
+    }
+    const value = item?.[name] == null ? '' : type === 'date' ? dateInputValue(item[name]) : item[name];
+    const inputType = type === 'integer' ? 'number' : type;
+    const numberAttrs = type === 'number' || type === 'integer' ? `min="0" step="${type === 'integer' ? '1' : 'any'}"` : '';
+    return `<label class="form-field" for="${id}"><span class="form-label">${escapeHtml(title)}${required ? ' *' : ''}</span><input class="form-input" id="${id}" type="${inputType}" data-material-item-field="${name}" value="${escapeHtml(value)}" ${numberAttrs} ${required ? 'required' : ''} /></label>`;
+  }
+
+  function openMaterialItemModal(item = null) {
+    if (!materialItemsReady) return;
+    materialItemForm.reset();
+    hideStatus(materialItemStatus);
+    document.getElementById('admin-material-item-id').value = item?.id || '';
+    document.getElementById('admin-material-item-title').textContent = item ? 'Edit Item Master & Material Stock' : 'Item Master & Material Stock';
+    const sections = MATERIAL_ITEM_SECTIONS.map(([title, fields]) => `
+      <fieldset class="admin-lead-log-section"><legend>${title}</legend><div class="admin-modal-grid">${fields.map((field) => materialItemFieldMarkup(field, item)).join('')}</div></fieldset>
+    `).join('');
+    const stockStatus = [
+      'Received', 'Issued (net of returns)', 'Wastage / Adjustments', 'Closing Stock',
+      'Avg Landed Cost (INR / unit)', 'Stock Value (INR)', 'Avg Daily Use (last 30 days)',
+      'Days of Cover', 'Reorder Alert', 'Last Receipt Date', 'Days Since Last Receipt',
+      'Past Shelf Life?', 'Last Physical Count',
+    ].map((title) => `<label class="form-field"><span class="form-label">${title}</span><input class="form-input" type="text" value="Not available" readonly /></label>`).join('');
+    document.getElementById('admin-material-item-fields').innerHTML = `${sections}
+      <fieldset class="admin-lead-log-section"><legend>Stock Status</legend><p class="body-sm text-muted">Stock movements and physical counts are not recorded yet.</p><div class="admin-modal-grid">${stockStatus}</div></fieldset>`;
+    materialItemModal.hidden = false;
+    document.getElementById('material-item-itemCode').focus();
+  }
+
+  function closeMaterialItemModal() {
+    materialItemModal.hidden = true;
+  }
+
+  function materialItemPayload() {
+    return Object.fromEntries(MATERIAL_ITEM_SECTIONS.flatMap(([, fields]) => fields.map(([name, , type]) => {
+      const input = materialItemForm.querySelector(`[data-material-item-field="${name}"]`);
+      if (type === 'checkbox') return [name, input.checked];
+      if (type === 'number' || type === 'integer') return [name, input.value === '' ? null : Number(input.value)];
+      return [name, input.value.trim() || null];
+    })));
+  }
+
+  function renderMaterialItems() {
+    const query = document.getElementById('admin-material-item-search').value.trim().toLowerCase();
+    const rows = materialItems.filter((item) => [item.itemCode, item.itemName, item.category, item.subCategory].some((value) => String(value || '').toLowerCase().includes(query)));
+    document.getElementById('admin-material-items-log').innerHTML = rows.length ? rows.map((item) => `
+      <tr><td>${escapeHtml(item.itemCode)}</td><td>${escapeHtml(item.itemName)}</td><td>${escapeHtml(item.category)} / ${escapeHtml(item.subCategory)}</td><td>${escapeHtml(item.unit)}</td><td>${item.openingStock == null ? '-' : Number(item.openingStock).toLocaleString('en-IN')}</td><td>Not available</td><td><button class="admin-link-button inline" type="button" data-edit-material-item="${Number(item.id)}">Edit</button></td></tr>
+    `).join('') : '<tr><td colspan="7" class="text-muted">No items found.</td></tr>';
+  }
+
+  async function loadMaterialItems() {
+    const addButton = document.querySelector('[data-open-material-item]');
+    try {
+      const data = await api('/api/admin/material-items');
+      materialItems = data.items || [];
+      materialItemsReady = true;
+      addButton.disabled = false;
+      addButton.removeAttribute('title');
+      renderMaterialItems();
+    } catch (_error) {
+      materialItemsReady = false;
+      addButton.disabled = true;
+      addButton.title = 'Item Master is unavailable until database setup is complete';
+      document.getElementById('admin-material-items-log').innerHTML = '<tr><td colspan="7" class="text-muted">Item Master is not available yet. Database setup may still be pending.</td></tr>';
+    }
   }
 
   function openBusinessRecordModal(type, record = null) {
@@ -3399,6 +3505,18 @@
       return;
     }
 
+    if (event.target.closest('[data-open-material-item]')) {
+      openMaterialItemModal();
+      return;
+    }
+
+    const editMaterialItemButton = event.target.closest('[data-edit-material-item]');
+    if (editMaterialItemButton) {
+      const item = materialItems.find((entry) => entry.id === Number(editMaterialItemButton.dataset.editMaterialItem));
+      if (item) openMaterialItemModal(item);
+      return;
+    }
+
     const openBusinessRecordButton = event.target.closest('[data-open-business-record]');
     if (openBusinessRecordButton) {
       openBusinessRecordModal(openBusinessRecordButton.dataset.openBusinessRecord);
@@ -3654,6 +3772,10 @@
 
     if (event.target.closest('[data-close-business-record]')) {
       closeBusinessRecordModal();
+    }
+
+    if (event.target.closest('[data-close-material-item]')) {
+      closeMaterialItemModal();
     }
 
     if (event.target.closest('[data-close-sale-modal]')) {
@@ -4141,6 +4263,35 @@
     } finally {
       button.disabled = true;
       button.textContent = button.dataset.label || 'Import Workbook';
+    }
+  });
+
+  document.getElementById('admin-material-item-search').addEventListener('input', renderMaterialItems);
+
+  materialItemForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    hideStatus(materialItemStatus);
+    if (!materialItemForm.checkValidity()) {
+      materialItemForm.reportValidity();
+      return;
+    }
+    const id = document.getElementById('admin-material-item-id').value;
+    const button = materialItemForm.querySelector('[type="submit"]');
+    button.disabled = true;
+    button.textContent = 'Saving...';
+    try {
+      await api(id ? `/api/admin/material-items/${id}` : '/api/admin/material-items', {
+        method: id ? 'PUT' : 'POST',
+        body: JSON.stringify(materialItemPayload()),
+      });
+      await loadMaterialItems();
+      closeMaterialItemModal();
+      showToast(id ? 'Item updated' : 'Item added');
+    } catch (error) {
+      showStatus(materialItemStatus, error.errors?.[0]?.message || error.message, true);
+    } finally {
+      button.disabled = false;
+      button.textContent = button.dataset.label || 'Save Item';
     }
   });
 

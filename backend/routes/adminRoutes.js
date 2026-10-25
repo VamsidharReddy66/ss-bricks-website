@@ -6,6 +6,7 @@ const analyticsController = require('../controllers/analyticsController');
 const businessController = require('../controllers/businessController');
 const integrationController = require('../controllers/integrationController');
 const paymentController = require('../controllers/paymentController');
+const materialItemController = require('../controllers/materialItemController');
 const requireAdminAuth = require('../middleware/requireAdminAuth');
 
 const router = express.Router();
@@ -41,6 +42,9 @@ router.post('/quotes/:quoteId/whatsapp/retry', integrationController.retryQuoteW
 router.get('/analytics', analyticsController.analytics);
 router.get('/marketing-analytics', analyticsController.marketingAnalytics);
 router.get('/business-imports', businessController.listImports);
+router.get('/material-items', materialItemController.list);
+router.post('/material-items', materialItemController.create);
+router.put('/material-items/:id', materialItemController.update);
 router.post('/business-import/preview', upload.single('file'), businessController.previewImport);
 router.post('/business-import/commit', upload.single('file'), businessController.commitImport);
 router.get('/business-records/sales/customer-log', businessController.salesCustomerLog);

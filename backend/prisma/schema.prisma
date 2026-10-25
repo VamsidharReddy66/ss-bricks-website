@@ -21,6 +21,7 @@ model Admin {
   ledgerReceipts         LedgerReceipt[]
   expenseEntries         ExpenseEntry[]
   materialPurchases      MaterialPurchase[]
+  materialItems          MaterialItem[]
   productionRecords      ProductionRecord[]
   labourPayments         LabourPayment[]
   businessEvents         BusinessEvent[]
@@ -548,6 +549,38 @@ model ExpenseEntry {
   @@index([category])
   @@index([recordState])
   @@map("expense_entries")
+}
+
+model MaterialItem {
+  id                 Int       @id @default(autoincrement())
+  itemCode           String    @unique @map("item_code") @db.VarChar(64)
+  itemName           String    @map("item_name") @db.VarChar(160)
+  category           String    @db.VarChar(100)
+  subCategory        String    @map("sub_category") @db.VarChar(100)
+  unit               String    @db.VarChar(40)
+  conversion         String?   @db.VarChar(120)
+  gradeSpec          String?   @map("grade_spec") @db.VarChar(160)
+  preferredSupplier  String?   @map("preferred_supplier") @db.VarChar(160)
+  alternateSupplier  String?   @map("alternate_supplier") @db.VarChar(160)
+  criticalItem       Boolean   @default(false) @map("critical_item")
+  storageLocation    String?   @map("storage_location") @db.VarChar(160)
+  standardRate       Decimal?  @map("standard_rate") @db.Decimal(14, 2)
+  standardUseProduct String?   @map("standard_use_product") @db.VarChar(160)
+  standardUsePer1000 Decimal?  @map("standard_use_per_1000") @db.Decimal(14, 3)
+  reorderLevel       Decimal?  @map("reorder_level") @db.Decimal(14, 3)
+  reorderQuantity    Decimal?  @map("reorder_quantity") @db.Decimal(14, 3)
+  leadTimeDays       Int?      @map("lead_time_days")
+  shelfLifeDays      Int?      @map("shelf_life_days")
+  openingStock       Decimal?  @map("opening_stock") @db.Decimal(14, 3)
+  openingStockAsOn   DateTime? @map("opening_stock_as_on") @db.Date
+  createdBy          Int       @map("created_by")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+  admin              Admin     @relation(fields: [createdBy], references: [id], onDelete: Restrict)
+
+  @@index([category])
+  @@index([itemName])
+  @@map("material_items")
 }
 
 model MaterialPurchase {
