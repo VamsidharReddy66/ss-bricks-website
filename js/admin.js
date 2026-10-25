@@ -2549,6 +2549,26 @@
     `;
   }
 
+  function expenseLogMarkup(record) {
+    const fields = BUSINESS_RECORD_FIELDS.expenses;
+    const field = (name) => businessFieldMarkup(fields.find(([key]) => key === name), record);
+    return `
+      <fieldset class="admin-lead-log-section">
+        <legend>Expense Details</legend>
+        <div class="admin-modal-grid">
+          <label class="form-field"><span class="form-label">Expense ID</span><input class="form-input" type="text" value="${record ? escapeHtml(record.id) : 'Assigned on save'}" readonly /></label>
+          ${field('expenseDate')}
+          ${field('category')}
+          ${field('description')}
+          ${field('amount')}
+          ${field('paymentMethod')}
+          ${field('paidBy')}
+          ${field('notes')}
+        </div>
+      </fieldset>
+    `;
+  }
+
   function openBusinessRecordModal(type, record = null) {
     const fields = BUSINESS_RECORD_FIELDS[type];
     if (!fields) return;
@@ -2558,18 +2578,23 @@
     const titles = { sales: 'Sale Record', receipts: 'Payment Received', expenses: 'Expense', purchases: 'Material Purchase', production: 'Production Record', labour: 'Labour Payment', events: 'Business Event' };
     document.getElementById('admin-business-record-title').textContent = `${record ? 'Edit' : 'Add'} ${titles[type]}`;
     const isProduction = type === 'production';
+    const isExpense = type === 'expenses';
     businessRecordModal.querySelector('.admin-business-record-card').classList.toggle('admin-production-log-card', isProduction);
-    businessRecordModal.querySelector('[role="dialog"]').setAttribute('aria-labelledby', isProduction ? 'admin-production-log-title' : 'admin-business-record-title');
-    businessRecordForm.classList.toggle('admin-lead-log', isProduction);
-    document.getElementById('admin-business-record-default-head').hidden = isProduction;
+    businessRecordModal.querySelector('.admin-business-record-card').classList.toggle('admin-expense-log-card', isExpense);
+    businessRecordModal.querySelector('[role="dialog"]').setAttribute('aria-labelledby', isProduction ? 'admin-production-log-title' : isExpense ? 'admin-expense-log-title' : 'admin-business-record-title');
+    businessRecordForm.classList.toggle('admin-lead-log', isProduction || isExpense);
+    document.getElementById('admin-business-record-default-head').hidden = isProduction || isExpense;
     document.getElementById('admin-production-log-head').hidden = !isProduction;
+    document.getElementById('admin-expense-log-head').hidden = !isExpense;
     document.getElementById('admin-production-log-title').textContent = `${record ? 'Edit' : 'Add'} Production Log`;
+    document.getElementById('admin-expense-log-title').textContent = `${record ? 'Edit' : 'Add'} Expense Log`;
     document.getElementById('admin-business-record-scope-note').textContent = record
       ? `Editing a ${record.origin === 'XLSX_IMPORT' ? 'workbook-import' : 'manual'} record. The correction is retained in the audit history.`
       : 'This entry will be saved with a Manual source label. Workbook-only KPIs and charts will not include it.';
     const fieldContainer = document.getElementById('admin-business-record-fields');
     fieldContainer.classList.toggle('admin-production-log-fields', isProduction);
-    fieldContainer.innerHTML = isProduction ? productionLogMarkup(record) : fields.map((field) => businessFieldMarkup(field, record)).join('');
+    fieldContainer.classList.toggle('admin-expense-log-fields', isExpense);
+    fieldContainer.innerHTML = isProduction ? productionLogMarkup(record) : isExpense ? expenseLogMarkup(record) : fields.map((field) => businessFieldMarkup(field, record)).join('');
     const correctionField = document.getElementById('admin-business-correction-field');
     correctionField.hidden = !record;
     document.getElementById('business-record-reason').value = '';
