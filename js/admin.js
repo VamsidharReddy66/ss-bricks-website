@@ -2832,6 +2832,15 @@
     if (Number.isFinite(quantity) && quantity > 0 && Number.isFinite(unitPrice) && unitPrice > 0) {
       document.getElementById('sale-invoiced-amount').value = (quantity * unitPrice).toFixed(2);
     }
+    updateSalePaymentSummary();
+  }
+
+  function updateSalePaymentSummary() {
+    const total = Number(document.getElementById('sale-invoiced-amount').value);
+    const received = Number(document.getElementById('sale-received-amount').value);
+    const valid = Number.isFinite(total) && total > 0 && Number.isFinite(received) && received >= 0;
+    document.getElementById('sale-outstanding').value = valid ? Math.max(total - received, 0).toFixed(2) : '';
+    document.getElementById('sale-payment-status').value = !valid ? 'Not available' : received === 0 ? 'Due' : received >= total ? 'Paid' : 'Partially paid';
   }
 
   function selectSaleProduct(productName) {
@@ -2845,7 +2854,8 @@
     hideStatus(saleFormStatus);
     saleForm.reset();
     document.getElementById('admin-sale-id').value = sale?.recordId || '';
-    document.getElementById('admin-sale-modal-title').textContent = sale ? 'Edit Offline Sale' : 'Add Offline Sale';
+    document.getElementById('admin-sale-modal-title').textContent = sale ? 'Edit Sales Log' : 'Add Sales Log';
+    document.getElementById('sale-order-id').value = sale?.recordId || 'Assigned on save';
     document.getElementById('sale-customer-name').value = sale?.customerName || '';
     document.getElementById('sale-customer-phone').value = sale?.customerPhone || '';
     document.getElementById('sale-location').value = sale?.location || '';
@@ -2859,6 +2869,7 @@
     document.getElementById('sale-payment-method').value = sale?.paymentMethod || '';
     document.getElementById('sale-notes').value = sale?.notes || '';
     if (!sale) updateSaleTotal();
+    updateSalePaymentSummary();
     saleModal.hidden = false;
     document.getElementById('sale-customer-name').focus();
   }
@@ -3761,7 +3772,9 @@
   document.getElementById('sale-received-amount').addEventListener('input', (event) => {
     const receivedDate = document.getElementById('sale-received-date');
     if (Number(event.target.value) > 0 && !receivedDate.value) receivedDate.value = todayInputValue();
+    updateSalePaymentSummary();
   });
+  document.getElementById('sale-invoiced-amount').addEventListener('input', updateSalePaymentSummary);
 
   document.getElementById('admin-export-sales').addEventListener('click', async (event) => {
     const button = event.currentTarget;

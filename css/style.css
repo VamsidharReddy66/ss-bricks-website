@@ -2637,8 +2637,12 @@ select.admin-grid-input {
 .admin-lead-log .admin-modal-actions { justify-content: center; padding-top: .5rem; }
 .admin-lead-log .admin-modal-actions .btn { min-width: 128px; }
 .admin-lead-log-edit { margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+.admin-sales-log-card { width: min(880px, 100%); max-height: min(92vh, 940px); border-radius: 6px; }
+.admin-sales-log-card .admin-lead-log-head { padding: 0 5rem .5rem; }
+.admin-sales-log-card .admin-modal-grid { gap: .7rem 1rem; }
 @media (max-width: 600px) {
   .admin-lead-log-card { padding: 1.2rem; }
+  .admin-sales-log-card { padding: 1.2rem; }
   .admin-lead-log-head { padding-right: 4rem; }
   .admin-lead-log-section .admin-modal-grid { grid-template-columns: 1fr; }
 }

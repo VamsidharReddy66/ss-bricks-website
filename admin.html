@@ -1366,53 +1366,70 @@
 
 <div class="admin-modal" id="admin-sale-modal" hidden>
   <div class="admin-modal-backdrop" data-close-sale-modal></div>
-  <section class="admin-modal-card" role="dialog" aria-modal="true" aria-labelledby="admin-sale-modal-title">
-    <form id="admin-sale-form" novalidate>
+  <section class="admin-modal-card admin-sales-log-card" role="dialog" aria-modal="true" aria-labelledby="admin-sale-modal-title">
+    <form id="admin-sale-form" class="admin-lead-log" novalidate>
       <input type="hidden" id="admin-sale-id" />
-      <div class="admin-modal-head">
-        <div>
-          <span class="label">Sales Log</span>
-          <h2 class="h-md" id="admin-sale-modal-title">Add Offline Sale</h2>
-        </div>
-        <button class="admin-icon-button" type="button" aria-label="Close" data-close-sale-modal>&times;</button>
+      <div class="admin-lead-log-head">
+        <h2 id="admin-sale-modal-title">Sales Log</h2>
+        <button class="admin-lead-log-exit" type="button" data-close-sale-modal aria-label="Exit sales log">&times; Exit</button>
       </div>
-
-      <div class="admin-modal-grid">
+      <fieldset class="admin-lead-log-section">
+        <legend>Order Details</legend>
+        <div class="admin-modal-grid">
         <div class="form-field">
-          <label class="form-label" for="sale-customer-name">Customer Name</label>
+          <label class="form-label" for="sale-order-id">Order ID</label>
+          <input class="form-input" type="text" id="sale-order-id" value="Assigned on save" readonly />
+        </div>
+        <div class="form-field">
+          <label class="form-label" for="sale-date">Order Date *</label>
+          <input class="form-input" type="date" id="sale-date" required />
+        </div>
+        <div class="form-field">
+          <label class="form-label" for="sale-customer-name">Customer Name *</label>
           <input class="form-input" type="text" id="sale-customer-name" maxlength="100" required />
         </div>
         <div class="form-field">
-          <label class="form-label" for="sale-customer-phone">Phone</label>
+          <label class="form-label" for="sale-customer-phone">Phone No.</label>
           <input class="form-input" type="tel" id="sale-customer-phone" inputmode="numeric" maxlength="15" />
         </div>
-        <div class="form-field">
-          <label class="form-label" for="sale-location">Location</label>
-          <input class="form-input" type="text" id="sale-location" maxlength="100" />
         </div>
+      </fieldset>
+      <fieldset class="admin-lead-log-section">
+        <legend>Product &amp; Price</legend>
+        <div class="admin-modal-grid">
         <div class="form-field">
-          <label class="form-label" for="sale-product">Product</label>
+          <label class="form-label" for="sale-product">Product *</label>
           <select class="form-select" id="sale-product" required></select>
         </div>
         <div class="form-field">
-          <label class="form-label" for="sale-quantity">Quantity</label>
+          <label class="form-label" for="sale-quantity">Quantity (units) *</label>
           <input class="form-input" type="number" id="sale-quantity" min="1" step="1" required />
         </div>
         <div class="form-field">
-          <label class="form-label" for="sale-unit-price">Unit Price (INR)</label>
+          <label class="form-label" for="sale-unit-price">Final Rate (INR / unit) *</label>
           <input class="form-input" type="number" id="sale-unit-price" min="0.01" step="0.01" required />
         </div>
         <div class="form-field">
-          <label class="form-label" for="sale-invoiced-amount">Invoiced Amount (INR)</label>
+          <label class="form-label" for="sale-invoiced-amount">Order Total (INR) *</label>
           <input class="form-input" type="number" id="sale-invoiced-amount" min="0.01" step="0.01" required />
         </div>
-        <div class="form-field">
-          <label class="form-label" for="sale-received-amount">Received Amount (INR)</label>
-          <input class="form-input" type="number" id="sale-received-amount" min="0" step="0.01" value="0" required />
         </div>
+      </fieldset>
+      <fieldset class="admin-lead-log-section">
+        <legend>Delivery &amp; Logistics</legend>
+        <div class="admin-modal-grid">
         <div class="form-field">
-          <label class="form-label" for="sale-date">Sale Date</label>
-          <input class="form-input" type="date" id="sale-date" required />
+          <label class="form-label" for="sale-location">Delivery Location</label>
+          <input class="form-input" type="text" id="sale-location" maxlength="100" />
+        </div>
+        </div>
+      </fieldset>
+      <fieldset class="admin-lead-log-section">
+        <legend>Payment &amp; Collections</legend>
+        <div class="admin-modal-grid">
+        <div class="form-field">
+          <label class="form-label" for="sale-received-amount">Received Amount (INR) *</label>
+          <input class="form-input" type="number" id="sale-received-amount" min="0" step="0.01" value="0" required />
         </div>
         <div class="form-field">
           <label class="form-label" for="sale-received-date">Received Date</label>
@@ -1430,14 +1447,25 @@
             <option value="OTHER">Other</option>
           </select>
         </div>
-      </div>
-      <div class="form-field">
-        <label class="form-label" for="sale-notes">Notes</label>
-        <textarea class="form-input form-textarea" id="sale-notes" maxlength="1000"></textarea>
-      </div>
+        <div class="form-field">
+          <label class="form-label" for="sale-outstanding">Outstanding (INR)</label>
+          <input class="form-input" type="text" id="sale-outstanding" readonly />
+        </div>
+        <div class="form-field">
+          <label class="form-label" for="sale-payment-status">Payment Status</label>
+          <input class="form-input" type="text" id="sale-payment-status" readonly />
+        </div>
+        </div>
+      </fieldset>
+      <fieldset class="admin-lead-log-section">
+        <legend>Notes</legend>
+        <div class="form-field">
+          <label class="form-label" for="sale-notes">Order Notes</label>
+          <textarea class="form-input form-textarea" id="sale-notes" maxlength="1000"></textarea>
+        </div>
+      </fieldset>
       <div class="form-success" id="admin-sale-status" role="alert" aria-live="polite"></div>
       <div class="admin-modal-actions">
-        <button class="btn btn-outline" type="button" data-close-sale-modal>Cancel</button>
         <button class="btn btn-maroon" type="submit" data-label="Save Sale">Save Sale</button>
       </div>
     </form>
