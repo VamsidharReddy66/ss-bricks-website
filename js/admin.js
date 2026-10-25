@@ -2806,10 +2806,12 @@
   function openLeadModal() {
     hideStatus(leadStatus);
     leadForm.reset();
+    document.getElementById('lead-received-date').value = todayInputValue();
     document.getElementById('lead-quantity').value = 0;
     document.getElementById('lead-email').value = '';
     document.getElementById('lead-source').value = 'PHONE';
     document.getElementById('lead-priority').value = 'MEDIUM';
+    document.getElementById('lead-status').value = 'NEW';
     leadModal.hidden = false;
     document.getElementById('lead-name').focus();
   }
@@ -2965,6 +2967,8 @@
 
   function renderLeadDetail(lead) {
     document.getElementById('admin-lead-detail-title').textContent = lead.customerName;
+    document.getElementById('edit-lead-number-display').value = lead.enquiryNumber || '';
+    document.getElementById('edit-lead-received-date').value = dateInputValue(lead.createdAt);
     document.getElementById('admin-lead-note-id').value = lead.id;
     document.getElementById('edit-lead-id').value = lead.id;
     document.getElementById('edit-lead-name').value = lead.customerName || '';
@@ -3081,11 +3085,13 @@
     ` : '<p class="body-sm text-muted">No timeline activity yet.</p>';
   }
 
-  async function openLeadDetail(leadId) {
+  async function openLeadDetail(leadId, focusLog = false) {
     const data = await api(`/api/admin/leads/${leadId}`);
     showAllTimeline = false;
     renderLeadDetail(data.lead);
     leadDetailModal.hidden = false;
+    const card = leadDetailModal.querySelector('.admin-modal-card');
+    card.scrollTop = focusLog ? leadEditForm.offsetTop - 16 : 0;
   }
 
   function closeLeadDetailModal() {
@@ -3136,8 +3142,10 @@
       product: document.getElementById('lead-product').value,
       quantity: Number(document.getElementById('lead-quantity').value),
       source: document.getElementById('lead-source').value,
+      status: document.getElementById('lead-status').value,
       priority: document.getElementById('lead-priority').value,
       assignedTo: document.getElementById('lead-assigned-to').value.trim(),
+      nextFollowUpDate: document.getElementById('lead-follow-up').value,
       notes: document.getElementById('lead-notes').value.trim(),
     };
   }
@@ -3427,7 +3435,8 @@
 
     const viewLeadButton = event.target.closest('[data-view-lead]');
     if (viewLeadButton) {
-      openLeadDetail(viewLeadButton.dataset.viewLead).catch((error) => showToast(error.message));
+      openLeadDetail(viewLeadButton.dataset.viewLead, Boolean(viewLeadButton.closest('#admin-marketing-leads')))
+        .catch((error) => showToast(error.message));
       return;
     }
 
@@ -3448,7 +3457,7 @@
       const leadId = leadPreviewModal.dataset.leadId;
       closeLeadPreviewModal();
       if (!leadId) return;
-      openLeadDetail(leadId)
+      openLeadDetail(leadId, true)
         .then(() => {
           if (previewTaskButton) document.getElementById('edit-lead-follow-up').focus();
         })

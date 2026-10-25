@@ -2622,6 +2622,27 @@ select.admin-grid-input {
   width: min(1040px, 100%);
 }
 
+.admin-lead-log-card { width: min(880px, 100%); max-height: min(92vh, 940px); border-radius: 6px; }
+.admin-lead-log { color: var(--charcoal); }
+.admin-lead-log-head { position: relative; min-height: 42px; display: grid; place-items: center; border-bottom: 1px solid var(--border); }
+.admin-lead-log-head h2, .admin-lead-log-head h3 { margin: 0; font: 700 1rem/1.25 Arial, sans-serif; color: var(--charcoal); text-transform: uppercase; }
+.admin-lead-log-exit { position: absolute; right: 0; top: 0; border: 0; border-radius: 3px; background: var(--maroon); color: #fff; padding: .35rem .7rem; font-size: .75rem; cursor: pointer; }
+.admin-lead-log-section { min-width: 0; margin: 1.25rem 0 0; padding: 0; border: 0; }
+.admin-lead-log-section legend { width: 100%; margin-bottom: .8rem; padding: 0 0 .45rem; border-bottom: 1px solid var(--border); color: var(--charcoal); font-size: .75rem; font-weight: 700; text-transform: uppercase; }
+.admin-lead-log-section .admin-modal-grid { gap: .7rem 1rem; }
+.admin-lead-log .form-field { min-width: 0; }
+.admin-lead-log .form-label { margin-bottom: .3rem; font-size: .77rem; }
+.admin-lead-log .form-input, .admin-lead-log .form-select { min-width: 0; width: 100%; min-height: 40px; border-radius: 5px; }
+.admin-lead-log .form-input[readonly] { background: var(--cream-2); color: var(--taupe); }
+.admin-lead-log .admin-modal-actions { justify-content: center; padding-top: .5rem; }
+.admin-lead-log .admin-modal-actions .btn { min-width: 128px; }
+.admin-lead-log-edit { margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+@media (max-width: 600px) {
+  .admin-lead-log-card { padding: 1.2rem; }
+  .admin-lead-log-head { padding-right: 4rem; }
+  .admin-lead-log-section .admin-modal-grid { grid-template-columns: 1fr; }
+}
+
 .admin-payment-panel {
   margin-top: 1.5rem;
   padding-top: 1.5rem;

@@ -848,17 +848,24 @@
 
 <div class="admin-modal" id="admin-lead-modal" hidden>
   <div class="admin-modal-backdrop" data-close-lead-modal></div>
-  <section class="admin-modal-card" role="dialog" aria-modal="true" aria-labelledby="admin-lead-modal-title">
-    <form id="admin-lead-form" novalidate>
-      <div class="admin-modal-head">
-        <div>
-          <span class="label">Add Lead</span>
-          <h2 class="h-md" id="admin-lead-modal-title">New Lead</h2>
-        </div>
-        <button class="admin-icon-button" type="button" aria-label="Close" data-close-lead-modal>&times;</button>
+  <section class="admin-modal-card admin-lead-log-card" role="dialog" aria-modal="true" aria-labelledby="admin-lead-modal-title">
+    <form id="admin-lead-form" class="admin-lead-log" novalidate>
+      <div class="admin-lead-log-head">
+        <h2 id="admin-lead-modal-title">Lead Log</h2>
+        <button class="admin-lead-log-exit" type="button" data-close-lead-modal aria-label="Exit lead log">&times; Exit</button>
       </div>
 
-      <div class="admin-modal-grid">
+      <fieldset class="admin-lead-log-section">
+        <legend>Lead Contact Details</legend>
+        <div class="admin-modal-grid">
+        <div class="form-field">
+          <label class="form-label" for="lead-number-display">Lead ID</label>
+          <input class="form-input" type="text" id="lead-number-display" value="Assigned on save" readonly />
+        </div>
+        <div class="form-field">
+          <label class="form-label" for="lead-received-date">Date Received</label>
+          <input class="form-input" type="date" id="lead-received-date" readonly />
+        </div>
         <div class="form-field">
           <label class="form-label" for="lead-name">Customer Name</label>
           <input class="form-input" type="text" id="lead-name" required />
@@ -868,25 +875,23 @@
           <input class="form-input" type="tel" id="lead-phone" required />
         </div>
         <div class="form-field">
-          <label class="form-label" for="lead-email">Email</label>
-          <input class="form-input" type="email" id="lead-email" />
-        </div>
-        <div class="form-field">
-          <label class="form-label" for="lead-location">Location</label>
-          <input class="form-input" type="text" id="lead-location" required />
-        </div>
-        <div class="form-field">
           <label class="form-label" for="lead-company">Company</label>
           <input class="form-input" type="text" id="lead-company" />
         </div>
         <div class="form-field">
-          <label class="form-label" for="lead-product">Interested Product</label>
-          <select class="form-select" id="lead-product" required></select>
+          <label class="form-label" for="lead-email">Email</label>
+          <input class="form-input" type="email" id="lead-email" />
         </div>
         <div class="form-field">
-          <label class="form-label" for="lead-quantity">Quantity</label>
-          <input class="form-input" type="number" id="lead-quantity" min="0" step="1" value="0" required />
+          <label class="form-label" for="lead-location">Area / Location</label>
+          <input class="form-input" type="text" id="lead-location" required />
         </div>
+        </div>
+      </fieldset>
+
+      <fieldset class="admin-lead-log-section">
+        <legend>Source &amp; Assignment</legend>
+        <div class="admin-modal-grid">
         <div class="form-field">
           <label class="form-label" for="lead-source">Lead Source</label>
           <select class="form-select" id="lead-source" required>
@@ -902,6 +907,24 @@
           </select>
         </div>
         <div class="form-field">
+          <label class="form-label" for="lead-assigned-to">Assigned Sales Executive</label>
+          <input class="form-input" type="text" id="lead-assigned-to" />
+        </div>
+        </div>
+      </fieldset>
+
+      <fieldset class="admin-lead-log-section">
+        <legend>Qualification</legend>
+        <div class="admin-modal-grid">
+        <div class="form-field">
+          <label class="form-label" for="lead-product">Interested Product</label>
+          <select class="form-select" id="lead-product" required></select>
+        </div>
+        <div class="form-field">
+          <label class="form-label" for="lead-quantity">Estimated Quantity (units)</label>
+          <input class="form-input" type="number" id="lead-quantity" min="0" step="1" value="0" required />
+        </div>
+        <div class="form-field">
           <label class="form-label" for="lead-priority">Priority</label>
           <select class="form-select" id="lead-priority" required>
             <option value="MEDIUM">Medium</option>
@@ -909,15 +932,39 @@
             <option value="LOW">Low</option>
           </select>
         </div>
-        <div class="form-field">
-          <label class="form-label" for="lead-assigned-to">Assigned To</label>
-          <input class="form-input" type="text" id="lead-assigned-to" />
         </div>
-      </div>
-      <div class="form-field">
-        <label class="form-label" for="lead-notes">Notes</label>
-        <textarea class="form-input form-textarea" id="lead-notes" maxlength="1000"></textarea>
-      </div>
+      </fieldset>
+
+      <fieldset class="admin-lead-log-section">
+        <legend>Pipeline</legend>
+        <div class="admin-modal-grid">
+          <div class="form-field">
+            <label class="form-label" for="lead-status">Pipeline Stage</label>
+            <select class="form-select" id="lead-status" required>
+              <option value="NEW">New</option>
+              <option value="CONTACTED">Contacted</option>
+              <option value="FOLLOW_UP">Follow Up</option>
+              <option value="QUOTATION_SENT">Quotation Sent</option>
+              <option value="NEGOTIATION">Negotiation</option>
+              <option value="WON">Won</option>
+              <option value="LOST">Lost</option>
+              <option value="CLOSED">Closed</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label class="form-label" for="lead-follow-up">Next Follow-up Date</label>
+            <input class="form-input" type="date" id="lead-follow-up" />
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset class="admin-lead-log-section">
+        <legend>Outcome</legend>
+        <div class="form-field">
+          <label class="form-label" for="lead-notes">Notes</label>
+          <textarea class="form-input form-textarea" id="lead-notes" maxlength="1000"></textarea>
+        </div>
+      </fieldset>
       <div class="form-success" id="admin-lead-status" role="alert" aria-live="polite"></div>
       <div class="admin-modal-actions">
         <button class="btn btn-outline" type="button" data-close-lead-modal>Cancel</button>
@@ -1138,15 +1185,22 @@
       <div class="form-success" id="admin-quotation-status" role="alert" aria-live="polite"></div>
     </section>
 
-    <form id="admin-lead-edit-form" novalidate>
+    <form id="admin-lead-edit-form" class="admin-lead-log admin-lead-log-edit" novalidate>
       <input type="hidden" id="edit-lead-id" />
-      <div class="admin-section-head">
-        <div>
-          <h3 class="h-sm">Edit Lead</h3>
-          <p class="body-sm text-muted">Update customer, product, assignment, and follow-up details.</p>
-        </div>
+      <div class="admin-lead-log-head">
+        <h3>Lead Log</h3>
       </div>
-      <div class="admin-modal-grid">
+      <fieldset class="admin-lead-log-section">
+        <legend>Lead Contact Details</legend>
+        <div class="admin-modal-grid">
+        <div class="form-field">
+          <label class="form-label" for="edit-lead-number-display">Lead ID</label>
+          <input class="form-input" type="text" id="edit-lead-number-display" readonly />
+        </div>
+        <div class="form-field">
+          <label class="form-label" for="edit-lead-received-date">Date Received</label>
+          <input class="form-input" type="date" id="edit-lead-received-date" readonly />
+        </div>
         <div class="form-field">
           <label class="form-label" for="edit-lead-name">Customer Name</label>
           <input class="form-input" type="text" id="edit-lead-name" required />
@@ -1156,25 +1210,23 @@
           <input class="form-input" type="tel" id="edit-lead-phone" required />
         </div>
         <div class="form-field">
-          <label class="form-label" for="edit-lead-email">Email</label>
-          <input class="form-input" type="email" id="edit-lead-email" />
-        </div>
-        <div class="form-field">
-          <label class="form-label" for="edit-lead-location">Location</label>
-          <input class="form-input" type="text" id="edit-lead-location" required />
-        </div>
-        <div class="form-field">
           <label class="form-label" for="edit-lead-company">Company</label>
           <input class="form-input" type="text" id="edit-lead-company" />
         </div>
         <div class="form-field">
-          <label class="form-label" for="edit-lead-product">Interested Product</label>
-          <select class="form-select" id="edit-lead-product" required></select>
+          <label class="form-label" for="edit-lead-email">Email</label>
+          <input class="form-input" type="email" id="edit-lead-email" />
         </div>
         <div class="form-field">
-          <label class="form-label" for="edit-lead-quantity">Quantity</label>
-          <input class="form-input" type="number" id="edit-lead-quantity" min="0" step="1" required />
+          <label class="form-label" for="edit-lead-location">Area / Location</label>
+          <input class="form-input" type="text" id="edit-lead-location" required />
         </div>
+        </div>
+      </fieldset>
+
+      <fieldset class="admin-lead-log-section">
+        <legend>Source &amp; Assignment</legend>
+        <div class="admin-modal-grid">
         <div class="form-field">
           <label class="form-label" for="edit-lead-source">Lead Source</label>
           <select class="form-select" id="edit-lead-source" required>
@@ -1191,6 +1243,24 @@
           </select>
         </div>
         <div class="form-field">
+          <label class="form-label" for="edit-lead-assigned-to">Assigned Sales Executive</label>
+          <input class="form-input" type="text" id="edit-lead-assigned-to" />
+        </div>
+        </div>
+      </fieldset>
+
+      <fieldset class="admin-lead-log-section">
+        <legend>Qualification</legend>
+        <div class="admin-modal-grid">
+        <div class="form-field">
+          <label class="form-label" for="edit-lead-product">Interested Product</label>
+          <select class="form-select" id="edit-lead-product" required></select>
+        </div>
+        <div class="form-field">
+          <label class="form-label" for="edit-lead-quantity">Estimated Quantity (units)</label>
+          <input class="form-input" type="number" id="edit-lead-quantity" min="0" step="1" required />
+        </div>
+        <div class="form-field">
           <label class="form-label" for="edit-lead-priority">Priority</label>
           <select class="form-select" id="edit-lead-priority" required>
             <option value="MEDIUM">Medium</option>
@@ -1198,8 +1268,14 @@
             <option value="LOW">Low</option>
           </select>
         </div>
+        </div>
+      </fieldset>
+
+      <fieldset class="admin-lead-log-section">
+        <legend>Pipeline</legend>
+        <div class="admin-modal-grid">
         <div class="form-field">
-          <label class="form-label" for="edit-lead-status">Status</label>
+          <label class="form-label" for="edit-lead-status">Pipeline Stage</label>
           <select class="form-select" id="edit-lead-status" required>
             <option value="NEW">New</option>
             <option value="CONTACTED">Contacted</option>
@@ -1212,17 +1288,29 @@
           </select>
         </div>
         <div class="form-field">
-          <label class="form-label" for="edit-lead-assigned-to">Assigned To</label>
-          <input class="form-input" type="text" id="edit-lead-assigned-to" />
-        </div>
-        <div class="form-field">
-          <label class="form-label" for="edit-lead-follow-up">Next Follow-up</label>
+          <label class="form-label" for="edit-lead-follow-up">Next Follow-up Date</label>
           <input class="form-input" type="date" id="edit-lead-follow-up" />
         </div>
-      </div>
+        </div>
+      </fieldset>
       <div class="form-success" id="admin-lead-edit-status" role="alert" aria-live="polite"></div>
       <div class="admin-modal-actions">
         <button class="btn btn-maroon" type="submit" data-label="Save Lead Changes">Save Lead Changes</button>
+      </div>
+    </form>
+
+    <form id="admin-lead-notes-form" class="admin-lead-log admin-lead-log-notes" novalidate>
+      <fieldset class="admin-lead-log-section">
+        <legend>Outcome</legend>
+        <div class="form-field">
+          <label class="form-label" for="edit-lead-notes">Notes</label>
+          <textarea class="form-input form-textarea" id="edit-lead-notes" maxlength="1000"></textarea>
+        </div>
+      </fieldset>
+      <div class="form-success" id="admin-lead-notes-status" role="alert" aria-live="polite"></div>
+      <div class="admin-modal-actions">
+        <button class="btn btn-outline" type="button" id="admin-delete-lead-notes">Delete Note</button>
+        <button class="btn btn-maroon" type="submit" data-label="Save Note">Save Note</button>
       </div>
     </form>
 
@@ -1250,24 +1338,6 @@
         <a class="btn btn-outline" id="admin-open-payment-link" href="#" target="_blank" rel="noopener" aria-disabled="true">Open Payment Page</a>
         <a class="btn btn-outline" id="admin-payment-receipt" href="#" target="_blank" rel="noopener" hidden>Download Receipt</a>
         <button class="btn btn-maroon" type="submit" data-label="Save Payment Amount">Save Payment Amount</button>
-      </div>
-    </form>
-
-    <form id="admin-lead-notes-form" novalidate>
-      <div class="admin-section-head">
-        <div>
-          <h3 class="h-sm">CRM Notes</h3>
-          <p class="body-sm text-muted">Plain notes for this lead.</p>
-        </div>
-      </div>
-      <div class="form-field">
-        <label class="form-label" for="edit-lead-notes">Notes</label>
-        <textarea class="form-input form-textarea" id="edit-lead-notes" maxlength="1000"></textarea>
-      </div>
-      <div class="form-success" id="admin-lead-notes-status" role="alert" aria-live="polite"></div>
-      <div class="admin-modal-actions">
-        <button class="btn btn-outline" type="button" id="admin-delete-lead-notes">Delete Note</button>
-        <button class="btn btn-maroon" type="submit" data-label="Save Note">Save Note</button>
       </div>
     </form>
 
