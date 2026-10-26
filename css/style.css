@@ -2676,6 +2676,25 @@ select.admin-grid-input {
 .admin-item-master-card .admin-item-checkbox .form-label { margin: 0; }
 .admin-item-master-card .admin-item-checkbox input { width: 18px; height: 18px; accent-color: var(--maroon); }
 .admin-item-master-card .admin-modal-actions { justify-content: center; }
+.admin-modal-card:is(.admin-lead-log-card, .admin-sales-log-card, .admin-production-log-card, .admin-receipt-log-card, .admin-item-master-card) {
+  width: min(820px, calc(100vw - 2rem));
+  max-height: min(92vh, 940px);
+  border-radius: 6px;
+  padding: clamp(1.25rem, 3vw, 2.25rem);
+}
+:is(.admin-lead-log-card, .admin-sales-log-card, .admin-production-log-card, .admin-receipt-log-card, .admin-item-master-card) .admin-lead-log-section { margin-top: 1.5rem; }
+:is(.admin-lead-log-card, .admin-sales-log-card, .admin-production-log-card, .admin-receipt-log-card, .admin-item-master-card) .admin-lead-log-section legend { margin-bottom: .7rem; padding-bottom: .45rem; font-size: .7rem; letter-spacing: 0; }
+:is(.admin-lead-log-card, .admin-sales-log-card, .admin-production-log-card, .admin-receipt-log-card, .admin-item-master-card) .admin-modal-grid { gap: .6rem 1.15rem; }
+:is(.admin-lead-log-card, .admin-sales-log-card, .admin-production-log-card, .admin-receipt-log-card, .admin-item-master-card) .form-label { font-size: .75rem; line-height: 1.35; }
+:is(.admin-lead-log-card, .admin-sales-log-card, .admin-production-log-card, .admin-receipt-log-card, .admin-item-master-card) .form-input,
+:is(.admin-lead-log-card, .admin-sales-log-card, .admin-production-log-card, .admin-receipt-log-card, .admin-item-master-card) .form-select { min-height: 38px; background: #fff; }
+:is(.admin-lead-log-card, .admin-sales-log-card, .admin-production-log-card, .admin-receipt-log-card, .admin-item-master-card) .form-input:disabled,
+:is(.admin-lead-log-card, .admin-sales-log-card, .admin-production-log-card, .admin-receipt-log-card, .admin-item-master-card) .form-select:disabled { color: #777; background: #f7f7f6; opacity: 1; }
+:is(.admin-lead-log-card, .admin-sales-log-card, .admin-production-log-card, .admin-receipt-log-card, .admin-item-master-card) .admin-log-auto-label { color: #c52c22; }
+:is(.admin-lead-log-card, .admin-sales-log-card, .admin-production-log-card, .admin-receipt-log-card, .admin-item-master-card) .admin-modal-actions { justify-content: center; margin-top: 1.6rem; }
+:is(.admin-lead-log-card, .admin-sales-log-card, .admin-production-log-card, .admin-receipt-log-card, .admin-item-master-card) .admin-modal-actions .btn-maroon { min-width: 130px; }
+:is(.admin-lead-log-card, .admin-sales-log-card, .admin-production-log-card, .admin-receipt-log-card, .admin-item-master-card) .admin-lead-log-head > :is(h2, h3) { grid-column: 1 / -1; justify-self: center; text-align: center; }
+@media (min-width: 600px) { .admin-item-opening-stock .form-field { grid-column: 1; } }
 #admin-business-record-default-head[hidden], #admin-business-sales-log-head[hidden], #admin-receipt-log-head[hidden], #admin-production-log-head[hidden], #admin-expense-log-head[hidden], #admin-generic-log-head[hidden] { display: none; }
 @media (max-width: 600px) {
   .admin-lead-log-card { padding: 1.2rem; }
@@ -3185,6 +3204,12 @@ select.admin-grid-input {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1rem;
 }
+
+#admin-business-record-fields.admin-sales-log-fields,
+#admin-business-record-fields.admin-receipt-log-fields,
+#admin-business-record-fields.admin-production-log-fields,
+#admin-business-record-fields.admin-expense-log-fields,
+#admin-business-record-fields.admin-generic-log-fields { display: block; }
 
 .admin-modal-actions {
   justify-content: flex-end;

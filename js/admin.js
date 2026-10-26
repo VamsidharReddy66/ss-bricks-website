@@ -2528,89 +2528,155 @@
     return `<label class="form-field"><span class="form-label">${escapeHtml(text)}</span><input class="form-input" type="${escapeHtml(type)}" data-business-field="${escapeHtml(name)}" value="${escapeHtml(value)}" ${numberAttributes} ${requiredAttribute} /></label>`;
   }
 
+  function referenceField(name) {
+    const auto = /Lead Score|Follow-up Due|Days to Close|Good Units to Curing|Output vs Target|Downtime|Actual Run Time|Rated Speed|Availability|Performance|Quality Rate|^OEE$|Output per Labour Hour|Units Used|Curing Complete Date|Net to Finished Stock|Material Costs|Energy Costs|^Overhead$|Total Cost|Cost per Unit|Cost per 1,000 Units|^Month$/i.test(name);
+    return `<label class="form-field"><span class="form-label${auto ? ' admin-log-auto-label' : ''}">${escapeHtml(name)}</span><input class="form-input" value="Not available" disabled /></label>`;
+  }
+
+  function namedBusinessField(fields, record, name, title) {
+    const markup = businessFieldMarkup(fields.find(([key]) => key === name), record);
+    return title ? markup.replace(/<span class="form-label">[^<]*<\/span>/, `<span class="form-label">${escapeHtml(title)}</span>`) : markup;
+  }
+
+  function referenceSection(title, content) {
+    return `<fieldset class="admin-lead-log-section"><legend>${escapeHtml(title)}</legend><div class="admin-modal-grid">${content}</div></fieldset>`;
+  }
+
+  const LEAD_REFERENCE_LAYOUT = [
+    ['Lead Contact Details', ['Lead ID', 'Date Received', 'Contact Name', 'Phone (WhatsApp)', 'Alternate Phone', 'Company / Organisation']],
+    ['Source & Type', ['Lead Source', 'Source Detail (who referred / which ad / tender no.)', 'Customer Type', 'Channel', 'Assigned Sales Exec', 'Product Interested']],
+    ['Qualification', ['Est Quantity (units)', 'Est Loads', 'Est Order Value (INR)', 'Project Type', 'Project Stage', 'Required Delivery Date', 'Area / Village', 'Mandal', 'District', 'PIN', 'Distance from Factory (km)', 'Decision Maker?', 'Price Sensitivity', 'Currently Buying From', 'Competitor Rate (INR / unit)', 'Expected Payment Mode', 'Lead Temperature', 'Lead Score (0-100)']],
+    ['Pipeline', ['Pipeline Stage', 'Date Qualified', 'Quotation No.', 'Quoted Rate', 'Quotation Date', 'Sample Given?', 'Factory Visit by Customer', 'Last Contact Date', 'Last Contact Mode', 'Next Follow-up Date', 'Follow-up Count', 'Follow-up Due?']],
+    ['Outcome', ['Date Closed (won / lost)', 'Won - Order ID', 'Lost Reason', 'Lost Competitor', 'Repeat Potential', 'Days to Close', 'Note']],
+    ['Government (only when Channel = Government)', ['Government Department / Buyer', 'Tender / GeM Bid No.', 'Bid Due Date', 'EMD Amount', 'EMD Status', 'Certificates Required', 'Bid Status', 'Month']],
+  ];
+  const LEAD_REFERENCE_INPUTS = {
+    'Lead ID': 'number-display', 'Date Received': 'received-date', 'Contact Name': 'name',
+    'Phone (WhatsApp)': 'phone', 'Company / Organisation': 'company', 'Lead Source': 'source',
+    'Assigned Sales Exec': 'assigned-to', 'Product Interested': 'product',
+    'Est Quantity (units)': 'quantity', 'Area / Village': 'location',
+    'Pipeline Stage': 'status', 'Next Follow-up Date': 'follow-up', 'Note': 'notes',
+  };
+
+  function arrangeLeadReference(form, prefix, notesForm = form) {
+    if (!form || form.hasAttribute('data-lead-reference-fields')) return;
+    form.dataset.leadReferenceFields = '';
+    const nodes = new Map(Object.entries(LEAD_REFERENCE_INPUTS).map(([title, suffix]) => [title, document.getElementById(`${prefix}${suffix}`)?.closest('.form-field')]));
+    const existing = [...form.querySelectorAll('.admin-lead-log-section')];
+    const notesSection = notesForm === form ? null : notesForm.querySelector('.admin-lead-log-section');
+    const sectionNodes = new Map(existing.map((node) => [node.querySelector('legend')?.textContent.trim(), node]));
+    if (notesSection) sectionNodes.set('Outcome', notesSection);
+    for (const [title, names] of LEAD_REFERENCE_LAYOUT) {
+      const key = title.startsWith('Government') ? 'Government' : title === 'Source & Type' ? 'Source & Assignment' : title;
+      const owner = title === 'Outcome' || title.startsWith('Government') ? notesForm : form;
+      let section = sectionNodes.get(key);
+      if (!section) {
+        section = document.createElement('fieldset');
+        section.className = 'admin-lead-log-section';
+        section.innerHTML = `<legend>${escapeHtml(title)}</legend><div class="admin-modal-grid"></div>`;
+        owner.querySelector('.admin-modal-actions')?.before(section);
+      }
+      section.querySelector('legend').textContent = title;
+      let grid = section.querySelector('.admin-modal-grid');
+      if (!grid) {
+        grid = document.createElement('div');
+        grid.className = 'admin-modal-grid';
+        section.append(grid);
+      }
+      grid.replaceChildren(...names.map((name) => {
+        const existingField = nodes.get(name);
+        if (existingField) {
+          existingField.querySelector('.form-label').textContent = name;
+          return existingField;
+        }
+        const template = document.createElement('template');
+        template.innerHTML = referenceField(name);
+        return template.content.firstElementChild;
+      }));
+    }
+    const extra = document.createElement('fieldset');
+    extra.className = 'admin-lead-log-section';
+    extra.innerHTML = '<legend>Additional Details</legend><div class="admin-modal-grid"></div>';
+    for (const suffix of ['email', 'priority']) {
+      const field = document.getElementById(`${prefix}${suffix}`)?.closest('.form-field');
+      if (field) extra.querySelector('.admin-modal-grid').append(field);
+    }
+    form.querySelector('.admin-modal-actions')?.before(extra);
+  }
+
+  arrangeLeadReference(leadModal?.querySelector('form'), 'lead-');
+  arrangeLeadReference(leadDetailModal?.querySelector('#admin-lead-edit-form'), 'edit-lead-', leadDetailModal?.querySelector('#admin-lead-notes-form'));
+
+  const PRODUCTION_REFERENCE_LAYOUT = [
+    ['Shift / Batch', ['Entry ID', 'Date', 'Shift', 'Start Time', 'Machine / Press', 'End Time', 'Product', 'Mould / Die', 'Batch No.', 'Supervisor', 'For Order ID / Stock']],
+    ['Raw Material Used', ['Cement (bags)', 'Cement Grade', 'Fly Ash (kg)', 'Quarry Dust (units / brass)', 'Sand / Aggregate (units)', 'Red Soil / Mud (units)', 'Lime / Gypsum (kg)', 'Water (litres)', 'Pigment / Admixture (kg)', 'Mix Ratio Used', 'Mixer Batches']],
+    ['Output', ['Target Output (units)', 'Units Produced (gross)', 'Rejected at Press (units)', 'Good Units to Curing', 'Output vs Target']],
+    ['Machine & OEE', ['Planned Run Time (hrs)', 'Downtime (mins)', 'Actual Run Time (hrs)', 'Rated Speed (units / hr)', 'Availability', 'Performance', 'Quality Rate', 'OEE']],
+    ['Labour', ['Workers Present', 'Worker Names / Crew', 'Labour Hours', 'Overtime Hours', 'Labour Cost', 'Workers Diverted Elsewhere', 'Output per Labour Hour']],
+    ['Energy', ['Meter Start (kWh)', 'Meter End (kWh)', 'Units Used (kWh)', 'Diesel (litres)', 'Power Cut (mins)']],
+    ['Curing & Stock', ['Curing Method', 'Curing Days', 'Curing Complete Date', 'Curing Loss (units)', 'Stacking Breakage (units)', 'Net to Finished Stock', 'Stock Yard Location']],
+    ['Cost (uses rates from Settings)', ['Material Costs', 'Energy Costs', 'Overhead', 'Total Cost', 'Cost per Unit', 'Cost per 1,000 Units']],
+    ['Safety', ['Incident / Near Miss?', 'PPE Compliance?', 'Remarks', 'Month']],
+  ];
+
+  const SALE_REFERENCE_LAYOUT = [
+    ['Order Details', ['Order ID', 'Order Date', 'Lead ID (from leads)', 'Lead Source', 'Customer Name', 'Phone No.', 'Customer Type', 'Channel', 'New / Repeat', 'Sales Executive', 'Order Reference (Quote / PO / GeM No.)']],
+    ['Product & Price', ['Product', 'Quantity (units)', 'Loads', 'List Rate (per unit)', 'Final Rate (per unit)', 'Discount (per unit)', 'Discount %', 'Line Value (excl. GST)', 'Discount Reason']],
+    ['Delivery & Logistics', ['Delivery Type', 'Planned Delivery Date', 'Actual Delivery Date', 'On Time?', 'Area / Village', 'Mandal', 'District', 'Distance (km)', 'Vehicle No.', 'Vehicle Type', 'Driver', 'Delivery Challan No.', 'Breakage on Delivery (units)', 'Returns / Replaced (units)', 'Transport Charged to Customer', 'Actual Transport Cost', 'Loading / Unloading Cost']],
+    ['Billing & GST', ['Bill Type', 'Invoice / Bill No.', 'Invoice Date', 'Customer GSTIN', 'GST Rate %', 'GST Amount', 'Line Invoice Total']],
+    ['Payment & Collections', ['Payment Terms', 'Credit Days', 'Due Date', 'Order Total', 'Received Incl. TDS', 'Outstanding', 'Days Since Invoice', 'Days Overdue', 'Aging Bucket', 'Payment Status']],
+    ['Margin', ['Cost Per Unit', 'Cost of Goods', 'Gross Margin', 'Margin %']],
+    ['Feedback & After-Sale', ['Quality Complaint?', 'Complaint Type', 'Satisfaction (1-5)', 'Reorder Expected?', 'Expected Reorder Date', 'Referral Given?', 'Month']],
+  ];
+
   function productionLogMarkup(record) {
     const fields = BUSINESS_RECORD_FIELDS.production;
-    const field = (name) => businessFieldMarkup(fields.find(([key]) => key === name), record);
-    return `
-      <fieldset class="admin-lead-log-section">
-        <legend>Shift / Batch</legend>
-        <div class="admin-modal-grid">
-          <label class="form-field"><span class="form-label">Entry ID</span><input class="form-input" type="text" value="${record ? escapeHtml(record.id) : 'Assigned on save'}" readonly /></label>
-          ${field('recordDate')}
-          ${field('recordType')}
-          ${field('productName')}
-        </div>
-      </fieldset>
-      <fieldset class="admin-lead-log-section">
-        <legend>Output</legend>
-        <div class="admin-modal-grid">${field('quantity')}</div>
-      </fieldset>
-      <fieldset class="admin-lead-log-section">
-        <legend>Production Notes</legend>
-        <div class="admin-modal-grid">
-          ${field('reason')}
-          ${field('qualityNote')}
-        </div>
-      </fieldset>
-    `;
+    const field = (name, title) => namedBusinessField(fields, record, name, title);
+    const input = (name) => {
+      if (name === 'Entry ID') return `<label class="form-field"><span class="form-label">Entry ID</span><input class="form-input" value="${record ? escapeHtml(record.id) : 'Assigned on save'}" readonly /></label>`;
+      const backed = { Date: 'recordDate', Product: 'productName', 'Units Produced (gross)': 'quantity', Remarks: 'qualityNote' }[name];
+      return backed ? field(backed, name) : referenceField(name);
+    };
+    return `${PRODUCTION_REFERENCE_LAYOUT.map(([title, names]) => referenceSection(title, names.map(input).join(''))).join('')}
+      ${referenceSection('Additional Details', `${field('recordType')}${field('reason')}`)}`;
   }
 
   function salesLogMarkup(record) {
     const fields = BUSINESS_RECORD_FIELDS.sales;
-    const field = (name) => businessFieldMarkup(fields.find(([key]) => key === name), record);
-    return `
-      <fieldset class="admin-lead-log-section">
-        <legend>Order Details</legend>
-        <div class="admin-modal-grid">
-          <label class="form-field"><span class="form-label">Order ID</span><input class="form-input" type="text" value="${record ? escapeHtml(record.id) : 'Assigned on save'}" readonly /></label>
-          ${field('saleDate')}
-          ${field('customerName')}
-          ${field('customerPhone')}
-        </div>
-      </fieldset>
-      <fieldset class="admin-lead-log-section">
-        <legend>Product &amp; Price</legend>
-        <div class="admin-modal-grid">
-          ${field('productName')}
-          ${field('quantity')}
-          ${field('quantityUnit')}
-          ${field('unitPrice')}
-          ${field('invoicedAmount')}
-        </div>
-      </fieldset>
-      <fieldset class="admin-lead-log-section">
-        <legend>Delivery &amp; Logistics</legend>
-        <div class="admin-modal-grid">${field('location')}${field('driverBatta')}</div>
-      </fieldset>
-      <fieldset class="admin-lead-log-section">
-        <legend>Payment Details</legend>
-        <div class="admin-modal-grid">${field('paymentMethod')}${field('receivedTo')}</div>
-      </fieldset>
-      <fieldset class="admin-lead-log-section">
-        <legend>Notes</legend>
-        <div class="admin-modal-grid">${field('notes')}</div>
-      </fieldset>
-    `;
+    const field = (name, title) => namedBusinessField(fields, record, name, title);
+    const input = (name) => {
+      if (name === 'Order ID') return `<label class="form-field"><span class="form-label">Order ID</span><input class="form-input" value="${record ? escapeHtml(record.id) : 'Assigned on save'}" readonly /></label>`;
+      const backed = {
+        'Order Date': 'saleDate', 'Customer Name': 'customerName', 'Phone No.': 'customerPhone',
+        Product: 'productName', 'Quantity (units)': 'quantity', 'Final Rate (per unit)': 'unitPrice',
+        'Area / Village': 'location', 'Order Total': 'invoicedAmount',
+      }[name];
+      return backed ? field(backed, name) : referenceField(name);
+    };
+    return `${SALE_REFERENCE_LAYOUT.map(([title, names]) => referenceSection(title, names.map(input).join(''))).join('')}
+      ${referenceSection('Additional Details', `${field('quantityUnit')}${field('driverBatta')}${field('paymentMethod')}${field('receivedTo')}${field('notes')}`)}`;
   }
 
   function receiptLogMarkup(record) {
     const fields = BUSINESS_RECORD_FIELDS.receipts;
-    const field = (name) => businessFieldMarkup(fields.find(([key]) => key === name), record);
+    const field = (name, title) => namedBusinessField(fields, record, name, title);
     return `
       <fieldset class="admin-lead-log-section">
-        <legend>Payment Receipt</legend>
+        <legend>Payments Receipts</legend>
         <div class="admin-modal-grid">
           <label class="form-field"><span class="form-label">Payment ID</span><input class="form-input" type="text" value="${record ? escapeHtml(record.id) : 'Assigned on save'}" readonly /></label>
-          ${field('receiptDate')}
-          ${field('saleId')}
-          ${field('customerName')}
-          ${field('amount')}
-          ${field('paymentMethod')}
-          ${field('reference')}
-          ${field('receivedTo')}
-          ${field('notes')}
+          ${field('receiptDate', 'Payment Date')}
+          ${field('saleId', 'Order ID')}
+          ${field('customerName', 'Customer')}
+          ${field('amount', 'Amount Received (INR)')}
+          ${referenceField('TDS / Retention Deducted (INR)')}
+          ${field('paymentMethod', 'Payment Mode')}
+          ${field('reference', 'Reference (UTR / Cheque No.)')}
+          ${field('receivedTo', 'Collected By')}
+          <label class="form-field"><span class="form-label admin-log-auto-label">Month</span><input class="form-input" value="${escapeHtml((fieldValue(record, 'receiptDate', 'date', new Date().toISOString().slice(0, 10)) || '').slice(0, 7))}" readonly /></label>
         </div>
       </fieldset>
+      ${referenceSection('Additional Details', field('notes'))}
     `;
   }
 
@@ -2687,16 +2753,16 @@
     materialItemForm.reset();
     hideStatus(materialItemStatus);
     document.getElementById('admin-material-item-id').value = item?.id || '';
-    document.getElementById('admin-material-item-title').textContent = item ? 'Edit Item Master & Material Stock' : 'Item Master & Material Stock';
+    document.getElementById('admin-material-item-title').textContent = 'Item Master & Material Stock';
     const sections = MATERIAL_ITEM_SECTIONS.map(([title, fields]) => `
-      <fieldset class="admin-lead-log-section"><legend>${title}</legend><div class="admin-modal-grid">${fields.map((field) => materialItemFieldMarkup(field, item)).join('')}</div></fieldset>
+      <fieldset class="admin-lead-log-section${title === 'Opening Stock' ? ' admin-item-opening-stock' : ''}"><legend>${title}</legend><div class="admin-modal-grid">${fields.map((field) => materialItemFieldMarkup(field, item)).join('')}</div></fieldset>
     `).join('');
     const stockStatus = [
       'Received', 'Issued (net of returns)', 'Wastage / Adjustments', 'Closing Stock',
       'Avg Landed Cost (INR / unit)', 'Stock Value (INR)', 'Avg Daily Use (last 30 days)',
       'Days of Cover', 'Reorder Alert', 'Last Receipt Date', 'Days Since Last Receipt',
       'Past Shelf Life?', 'Last Physical Count',
-    ].map((title) => `<label class="form-field"><span class="form-label">${title}</span><input class="form-input" type="text" value="Not available" readonly /></label>`).join('');
+    ].map((title) => `<label class="form-field"><span class="form-label admin-log-auto-label">${title}</span><input class="form-input" type="text" value="Not available" readonly /></label>`).join('');
     document.getElementById('admin-material-item-fields').innerHTML = `${sections}
       <fieldset class="admin-lead-log-section"><legend>Stock Status</legend><p class="body-sm text-muted">Stock movements and physical counts are not recorded yet.</p><div class="admin-modal-grid">${stockStatus}</div></fieldset>`;
     materialItemModal.hidden = false;
@@ -2769,14 +2835,15 @@
     document.getElementById('admin-production-log-head').hidden = !isProduction;
     document.getElementById('admin-expense-log-head').hidden = !isExpense;
     document.getElementById('admin-generic-log-head').hidden = !isGeneric;
-    document.getElementById('admin-production-log-title').textContent = `${record ? 'Edit' : 'Add'} Production Log`;
-    document.getElementById('admin-business-sales-log-title').textContent = `${record ? 'Edit' : 'Add'} Sales Log`;
-    document.getElementById('admin-receipt-log-title').textContent = `${record ? 'Edit' : 'Add'} Payment Received`;
+    document.getElementById('admin-production-log-title').textContent = 'Production Log';
+    document.getElementById('admin-business-sales-log-title').textContent = 'Sales Log';
+    document.getElementById('admin-receipt-log-title').textContent = 'Payments Received';
     document.getElementById('admin-expense-log-title').textContent = `${record ? 'Edit' : 'Add'} Expense Log`;
     document.getElementById('admin-generic-log-title').textContent = `${record ? 'Edit' : 'Add'} ${titles[type]}`;
     document.getElementById('admin-business-record-scope-note').textContent = record
       ? `Editing a ${record.origin === 'XLSX_IMPORT' ? 'workbook-import' : 'manual'} record. The correction is retained in the audit history.`
       : 'This entry will be saved with a Manual source label. Workbook-only KPIs and charts will not include it.';
+    document.getElementById('admin-business-record-scope-note').hidden = isSales || isReceipt || isProduction;
     const fieldContainer = document.getElementById('admin-business-record-fields');
     fieldContainer.classList.toggle('admin-production-log-fields', isProduction);
     fieldContainer.classList.toggle('admin-sales-log-fields', isSales);
@@ -2784,6 +2851,11 @@
     fieldContainer.classList.toggle('admin-expense-log-fields', isExpense);
     fieldContainer.classList.toggle('admin-generic-log-fields', isGeneric);
     fieldContainer.innerHTML = isSales ? salesLogMarkup(record) : isReceipt ? receiptLogMarkup(record) : isProduction ? productionLogMarkup(record) : isExpense ? expenseLogMarkup(record) : genericLogMarkup(type, record);
+    const referenceLog = isSales || isReceipt || isProduction;
+    businessRecordForm.querySelector('[data-close-business-record].btn-outline').hidden = referenceLog;
+    const submitButton = businessRecordForm.querySelector('[type="submit"]');
+    submitButton.textContent = referenceLog ? 'Submit' : 'Save Record';
+    submitButton.dataset.label = submitButton.textContent;
     const correctionField = document.getElementById('admin-business-correction-field');
     correctionField.hidden = !record;
     document.getElementById('business-record-reason').value = '';
