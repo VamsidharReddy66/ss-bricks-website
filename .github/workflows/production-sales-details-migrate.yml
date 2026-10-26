@@ -1,0 +1,174 @@
+name: Apply reviewed Sales details migration
+
+on:
+  workflow_dispatch:
+    inputs:
+      reviewed_sha:
+        description: Full reviewed main-branch commit SHA
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-prisma-migration
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: production
+
+    steps:
+      - name: Check out reviewed main commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Verify commit and Sales migration checksum
+        shell: bash
+        env:
+          REVIEWED_SHA: ${{ inputs.reviewed_sha }}
+          EVENT_SHA: ${{ github.sha }}
+          EVENT_REF: ${{ github.ref }}
+        run: |
+          set -euo pipefail
+          if [[ "$EVENT_REF" != 'refs/heads/main' ]] ||
+             [[ ! "$REVIEWED_SHA" =~ ^[0-9a-f]{40}$ ]] ||
+             [[ "$REVIEWED_SHA" != "$EVENT_SHA" ]] ||
+             [[ "$(git rev-parse HEAD)" != "$REVIEWED_SHA" ]]; then
+            echo '::error::Select main and enter its exact reviewed commit SHA.'
+            exit 1
+          fi
+          migration_file='backend/prisma/migrations/20261026000000_add_ledger_sale_details/migration.sql'
+          expected_checksum='F85B3AC6ED20FCB94D1452411B9A7BEC63F8776B205E6D1B56973B407A2AA439'
+          if [[ ! -f "$migration_file" ]]; then
+            echo '::error::Reviewed Sales migration file is missing.'
+            exit 1
+          fi
+          actual_checksum="$(sha256sum "$migration_file" | awk '{print toupper($1)}')"
+          if [[ "$actual_checksum" != "$expected_checksum" ]]; then
+            echo '::error::Sales migration checksum differs from the reviewed file.'
+            exit 1
+          fi
+          echo 'Reviewed commit and Sales migration checksum verified.'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Verify exact pending migration
+        id: preflight
+        shell: bash
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          set +x
+          set -euo pipefail
+          status_file="$RUNNER_TEMP/sales-status-before.txt"
+          pending_file="$RUNNER_TEMP/sales-pending.txt"
+          expected_file="$RUNNER_TEMP/sales-expected.txt"
+          trap 'rm -f "$status_file" "$pending_file" "$expected_file"' EXIT
+          printf '%s\n' '20261026000000_add_ledger_sale_details' > "$expected_file"
+          if [[ -z "${DATABASE_URL:-}" ]]; then
+            echo '::error::The protected Production DATABASE_URL secret is missing.'
+            exit 1
+          fi
+          set +e
+          ./node_modules/.bin/prisma migrate status --schema=backend/prisma/schema.prisma >"$status_file" 2>&1
+          status_code=$?
+          set -e
+          if [[ $status_code -eq 0 ]]; then
+            if ! grep -Fq 'Database schema is up to date' "$status_file"; then
+              echo '::error::Migration status is not explicitly up to date.'
+              exit 1
+            fi
+            echo 'should_migrate=false' >> "$GITHUB_OUTPUT"
+            echo 'result=ALREADY_APPLIED' >> "$GITHUB_OUTPUT"
+            echo 'All repository migrations are already applied. No mutation will run.'
+            exit 0
+          fi
+          if grep -Eqi 'failed migration|failed to apply|rolled back' "$status_file" ||
+             ! grep -Fq 'have not yet been applied' "$status_file"; then
+            echo '::error::Migration status is failed or unclear.'
+            exit 1
+          fi
+          grep -Eo '[0-9]{14}_[A-Za-z0-9_-]+' "$status_file" > "$pending_file" || true
+          if [[ ! -s "$pending_file" ]] || ! cmp -s "$expected_file" "$pending_file"; then
+            echo '::error::Pending migrations differ from the single reviewed Sales migration.'
+            exit 1
+          fi
+          echo 'should_migrate=true' >> "$GITHUB_OUTPUT"
+          echo 'result=APPROVED_SINGLE_MIGRATION' >> "$GITHUB_OUTPUT"
+          echo 'Only the reviewed Sales migration is pending.'
+
+      - name: Verify current Sales column state read-only
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SALES_DETAILS_COLUMN_EXPECTED: ${{ steps.preflight.outputs.should_migrate == 'true' && 'absent' || 'present' }}
+        run: node scripts/verify-ledger-sale-details-column.js
+
+      - name: Apply reviewed Sales migration
+        if: steps.preflight.outputs.should_migrate == 'true'
+        shell: bash
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          set +x
+          set -euo pipefail
+          deploy_log="$RUNNER_TEMP/sales-deploy.txt"
+          trap 'rm -f "$deploy_log"' EXIT
+          if ! npm run prisma:deploy >"$deploy_log" 2>&1; then
+            echo '::error::Prisma migration failed. Inspect database-side logs privately.'
+            exit 1
+          fi
+          echo 'Reviewed Sales migration command completed.'
+
+      - name: Verify no pending or failed migrations
+        if: steps.preflight.outputs.should_migrate == 'true'
+        shell: bash
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          set +x
+          set -euo pipefail
+          status_file="$RUNNER_TEMP/sales-status-after.txt"
+          trap 'rm -f "$status_file"' EXIT
+          if ! ./node_modules/.bin/prisma migrate status --schema=backend/prisma/schema.prisma >"$status_file" 2>&1; then
+            echo '::error::Post-migration status failed.'
+            exit 1
+          fi
+          if grep -Eqi 'failed migration|failed to apply|rolled back|have not yet been applied' "$status_file" ||
+             ! grep -Fq 'Database schema is up to date' "$status_file"; then
+            echo '::error::Post-migration status is not clean.'
+            exit 1
+          fi
+          echo 'Prisma confirms all repository migrations are applied.'
+
+      - name: Verify Sales column read-only
+        if: steps.preflight.outputs.should_migrate == 'true'
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SALES_DETAILS_COLUMN_EXPECTED: present
+        run: node scripts/verify-ledger-sale-details-column.js
+
+      - name: Record safe result
+        if: always()
+        shell: bash
+        env:
+          PREFLIGHT_RESULT: ${{ steps.preflight.outputs.result }}
+        run: |
+          {
+            echo '## Sales details Production migration'
+            echo '- Migration: `20261026000000_add_ledger_sale_details`'
+            echo "- Preflight: \`${PREFLIGHT_RESULT:-NOT_ESTABLISHED}\`"
+            echo '- Mutation runs only when the exact reviewed Sales migration is the sole pending migration.'
+          } >> "$GITHUB_STEP_SUMMARY"
