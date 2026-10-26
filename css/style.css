@@ -2640,6 +2640,23 @@ select.admin-grid-input {
 .admin-sales-log-card { width: min(880px, 100%); max-height: min(92vh, 940px); border-radius: 6px; }
 .admin-sales-log-card .admin-lead-log-head { padding: 0 5rem .5rem; }
 .admin-sales-log-card .admin-modal-grid { gap: .7rem 1rem; }
+.admin-business-sales-log-head { padding: 0 5rem .5rem; }
+.admin-sales-log-fields { display: block; }
+.admin-sales-log-fields .admin-modal-grid { gap: .7rem 1rem; }
+.admin-sales-log-card .admin-record-source-note { margin-top: 1rem; }
+.admin-sales-log-card .admin-modal-actions { justify-content: center; }
+.admin-receipt-log-card { width: min(880px, calc(100vw - 2rem)); max-height: min(92vh, 940px); border-radius: 6px; }
+.admin-receipt-log-head { padding: 0 5rem .5rem; }
+.admin-receipt-log-fields { display: block; }
+.admin-receipt-log-fields .admin-modal-grid { gap: .7rem 1rem; }
+.admin-receipt-log-card .admin-record-source-note { margin-top: 1rem; }
+.admin-receipt-log-card .admin-modal-actions { justify-content: center; }
+.admin-generic-log-card { width: min(880px, calc(100vw - 2rem)); max-height: min(92vh, 940px); border-radius: 6px; }
+.admin-generic-log-head { padding: 0 5rem .5rem; }
+.admin-generic-log-fields { display: block; }
+.admin-generic-log-fields .admin-modal-grid { gap: .7rem 1rem; }
+.admin-generic-log-card .admin-record-source-note { margin-top: 1rem; }
+.admin-generic-log-card .admin-modal-actions { justify-content: center; }
 .admin-production-log-card { width: min(880px, calc(100vw - 2rem)); max-height: min(92vh, 940px); border-radius: 6px; }
 .admin-production-log-head { padding: 0 5rem .5rem; }
 .admin-production-log-fields { display: block; }
@@ -2659,10 +2676,12 @@ select.admin-grid-input {
 .admin-item-master-card .admin-item-checkbox .form-label { margin: 0; }
 .admin-item-master-card .admin-item-checkbox input { width: 18px; height: 18px; accent-color: var(--maroon); }
 .admin-item-master-card .admin-modal-actions { justify-content: center; }
-#admin-business-record-default-head[hidden], #admin-production-log-head[hidden], #admin-expense-log-head[hidden] { display: none; }
+#admin-business-record-default-head[hidden], #admin-business-sales-log-head[hidden], #admin-receipt-log-head[hidden], #admin-production-log-head[hidden], #admin-expense-log-head[hidden], #admin-generic-log-head[hidden] { display: none; }
 @media (max-width: 600px) {
   .admin-lead-log-card { padding: 1.2rem; }
   .admin-sales-log-card { padding: 1.2rem; }
+  .admin-receipt-log-card { padding: 1.2rem; }
+  .admin-generic-log-card { padding: 1.2rem; }
   .admin-production-log-card { padding: 1.2rem; }
   .admin-expense-log-card { padding: 1.2rem; }
   .admin-lead-log-head { padding-right: 4rem; }

@@ -2555,6 +2555,65 @@
     `;
   }
 
+  function salesLogMarkup(record) {
+    const fields = BUSINESS_RECORD_FIELDS.sales;
+    const field = (name) => businessFieldMarkup(fields.find(([key]) => key === name), record);
+    return `
+      <fieldset class="admin-lead-log-section">
+        <legend>Order Details</legend>
+        <div class="admin-modal-grid">
+          <label class="form-field"><span class="form-label">Order ID</span><input class="form-input" type="text" value="${record ? escapeHtml(record.id) : 'Assigned on save'}" readonly /></label>
+          ${field('saleDate')}
+          ${field('customerName')}
+          ${field('customerPhone')}
+        </div>
+      </fieldset>
+      <fieldset class="admin-lead-log-section">
+        <legend>Product &amp; Price</legend>
+        <div class="admin-modal-grid">
+          ${field('productName')}
+          ${field('quantity')}
+          ${field('quantityUnit')}
+          ${field('unitPrice')}
+          ${field('invoicedAmount')}
+        </div>
+      </fieldset>
+      <fieldset class="admin-lead-log-section">
+        <legend>Delivery &amp; Logistics</legend>
+        <div class="admin-modal-grid">${field('location')}${field('driverBatta')}</div>
+      </fieldset>
+      <fieldset class="admin-lead-log-section">
+        <legend>Payment Details</legend>
+        <div class="admin-modal-grid">${field('paymentMethod')}${field('receivedTo')}</div>
+      </fieldset>
+      <fieldset class="admin-lead-log-section">
+        <legend>Notes</legend>
+        <div class="admin-modal-grid">${field('notes')}</div>
+      </fieldset>
+    `;
+  }
+
+  function receiptLogMarkup(record) {
+    const fields = BUSINESS_RECORD_FIELDS.receipts;
+    const field = (name) => businessFieldMarkup(fields.find(([key]) => key === name), record);
+    return `
+      <fieldset class="admin-lead-log-section">
+        <legend>Payment Receipt</legend>
+        <div class="admin-modal-grid">
+          <label class="form-field"><span class="form-label">Payment ID</span><input class="form-input" type="text" value="${record ? escapeHtml(record.id) : 'Assigned on save'}" readonly /></label>
+          ${field('receiptDate')}
+          ${field('saleId')}
+          ${field('customerName')}
+          ${field('amount')}
+          ${field('paymentMethod')}
+          ${field('reference')}
+          ${field('receivedTo')}
+          ${field('notes')}
+        </div>
+      </fieldset>
+    `;
+  }
+
   function expenseLogMarkup(record) {
     const fields = BUSINESS_RECORD_FIELDS.expenses;
     const field = (name) => businessFieldMarkup(fields.find(([key]) => key === name), record);
@@ -2573,6 +2632,14 @@
         </div>
       </fieldset>
     `;
+  }
+
+  function genericLogMarkup(type, record) {
+    const title = { purchases: 'Material Purchase', labour: 'Labour Payment', events: 'Business Event' }[type] || 'Record';
+    return `<fieldset class="admin-lead-log-section"><legend>${title} Details</legend><div class="admin-modal-grid">
+      <label class="form-field"><span class="form-label">Entry ID</span><input class="form-input" type="text" value="${record ? escapeHtml(record.id) : 'Assigned on save'}" readonly /></label>
+      ${BUSINESS_RECORD_FIELDS[type].map((field) => businessFieldMarkup(field, record)).join('')}
+    </div></fieldset>`;
   }
 
   const MATERIAL_ITEM_SECTIONS = [
@@ -2617,7 +2684,6 @@
   }
 
   function openMaterialItemModal(item = null) {
-    if (!materialItemsReady) return;
     materialItemForm.reset();
     hideStatus(materialItemStatus);
     document.getElementById('admin-material-item-id').value = item?.id || '';
@@ -2634,6 +2700,9 @@
     document.getElementById('admin-material-item-fields').innerHTML = `${sections}
       <fieldset class="admin-lead-log-section"><legend>Stock Status</legend><p class="body-sm text-muted">Stock movements and physical counts are not recorded yet.</p><div class="admin-modal-grid">${stockStatus}</div></fieldset>`;
     materialItemModal.hidden = false;
+    const saveButton = materialItemForm.querySelector('[type="submit"]');
+    saveButton.disabled = !materialItemsReady;
+    if (!materialItemsReady) showStatus(materialItemStatus, 'Item Master is view-only until database setup is complete.', true);
     document.getElementById('material-item-itemCode').focus();
   }
 
@@ -2669,8 +2738,7 @@
       renderMaterialItems();
     } catch (_error) {
       materialItemsReady = false;
-      addButton.disabled = true;
-      addButton.title = 'Item Master is unavailable until database setup is complete';
+      addButton.title = 'View Item Master form; saving requires database setup';
       document.getElementById('admin-material-items-log').innerHTML = '<tr><td colspan="7" class="text-muted">Item Master is not available yet. Database setup may still be pending.</td></tr>';
     }
   }
@@ -2683,24 +2751,39 @@
     document.getElementById('business-record-id').value = record?.id || '';
     const titles = { sales: 'Sale Record', receipts: 'Payment Received', expenses: 'Expense', purchases: 'Material Purchase', production: 'Production Record', labour: 'Labour Payment', events: 'Business Event' };
     document.getElementById('admin-business-record-title').textContent = `${record ? 'Edit' : 'Add'} ${titles[type]}`;
+    const isSales = type === 'sales';
+    const isReceipt = type === 'receipts';
     const isProduction = type === 'production';
     const isExpense = type === 'expenses';
+    const isGeneric = !isSales && !isReceipt && !isProduction && !isExpense;
     businessRecordModal.querySelector('.admin-business-record-card').classList.toggle('admin-production-log-card', isProduction);
+    businessRecordModal.querySelector('.admin-business-record-card').classList.toggle('admin-sales-log-card', isSales);
+    businessRecordModal.querySelector('.admin-business-record-card').classList.toggle('admin-receipt-log-card', isReceipt);
     businessRecordModal.querySelector('.admin-business-record-card').classList.toggle('admin-expense-log-card', isExpense);
-    businessRecordModal.querySelector('[role="dialog"]').setAttribute('aria-labelledby', isProduction ? 'admin-production-log-title' : isExpense ? 'admin-expense-log-title' : 'admin-business-record-title');
-    businessRecordForm.classList.toggle('admin-lead-log', isProduction || isExpense);
-    document.getElementById('admin-business-record-default-head').hidden = isProduction || isExpense;
+    businessRecordModal.querySelector('.admin-business-record-card').classList.toggle('admin-generic-log-card', isGeneric);
+    businessRecordModal.querySelector('[role="dialog"]').setAttribute('aria-labelledby', isSales ? 'admin-business-sales-log-title' : isReceipt ? 'admin-receipt-log-title' : isProduction ? 'admin-production-log-title' : isExpense ? 'admin-expense-log-title' : 'admin-generic-log-title');
+    businessRecordForm.classList.add('admin-lead-log');
+    document.getElementById('admin-business-record-default-head').hidden = true;
+    document.getElementById('admin-business-sales-log-head').hidden = !isSales;
+    document.getElementById('admin-receipt-log-head').hidden = !isReceipt;
     document.getElementById('admin-production-log-head').hidden = !isProduction;
     document.getElementById('admin-expense-log-head').hidden = !isExpense;
+    document.getElementById('admin-generic-log-head').hidden = !isGeneric;
     document.getElementById('admin-production-log-title').textContent = `${record ? 'Edit' : 'Add'} Production Log`;
+    document.getElementById('admin-business-sales-log-title').textContent = `${record ? 'Edit' : 'Add'} Sales Log`;
+    document.getElementById('admin-receipt-log-title').textContent = `${record ? 'Edit' : 'Add'} Payment Received`;
     document.getElementById('admin-expense-log-title').textContent = `${record ? 'Edit' : 'Add'} Expense Log`;
+    document.getElementById('admin-generic-log-title').textContent = `${record ? 'Edit' : 'Add'} ${titles[type]}`;
     document.getElementById('admin-business-record-scope-note').textContent = record
       ? `Editing a ${record.origin === 'XLSX_IMPORT' ? 'workbook-import' : 'manual'} record. The correction is retained in the audit history.`
       : 'This entry will be saved with a Manual source label. Workbook-only KPIs and charts will not include it.';
     const fieldContainer = document.getElementById('admin-business-record-fields');
     fieldContainer.classList.toggle('admin-production-log-fields', isProduction);
+    fieldContainer.classList.toggle('admin-sales-log-fields', isSales);
+    fieldContainer.classList.toggle('admin-receipt-log-fields', isReceipt);
     fieldContainer.classList.toggle('admin-expense-log-fields', isExpense);
-    fieldContainer.innerHTML = isProduction ? productionLogMarkup(record) : isExpense ? expenseLogMarkup(record) : fields.map((field) => businessFieldMarkup(field, record)).join('');
+    fieldContainer.classList.toggle('admin-generic-log-fields', isGeneric);
+    fieldContainer.innerHTML = isSales ? salesLogMarkup(record) : isReceipt ? receiptLogMarkup(record) : isProduction ? productionLogMarkup(record) : isExpense ? expenseLogMarkup(record) : genericLogMarkup(type, record);
     const correctionField = document.getElementById('admin-business-correction-field');
     correctionField.hidden = !record;
     document.getElementById('business-record-reason').value = '';
@@ -4270,6 +4353,10 @@
 
   materialItemForm.addEventListener('submit', async (event) => {
     event.preventDefault();
+    if (!materialItemsReady) {
+      showStatus(materialItemStatus, 'Item Master cannot be saved until database setup is complete.', true);
+      return;
+    }
     hideStatus(materialItemStatus);
     if (!materialItemForm.checkValidity()) {
       materialItemForm.reportValidity();
