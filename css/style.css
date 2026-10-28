@@ -4612,6 +4612,12 @@ body.admin-dark-theme .reference-overview-chart-card { background: #fff; border-
   color: #111;
 }
 
+.admin-entry-id {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
 .admin-table td,
 .marketing-lead-table td,
 .accounts-balance-row {

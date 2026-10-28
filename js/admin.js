@@ -921,13 +921,24 @@
     `;
   }
 
+  const ENTRY_PREFIX = { sales: 'SAL', receipts: 'PAY', expenses: 'EXP', purchases: 'PUR', production: 'PRO', labour: 'LAB', events: 'EVT', items: 'ITM' };
+
+  function entryReference(type, id) {
+    return id == null || id === '' ? 'Assigned on save' : `${ENTRY_PREFIX[type]}-${String(id).padStart(6, '0')}`;
+  }
+
+  function entryCell(type, id) {
+    return `<td class="admin-entry-id">${escapeHtml(entryReference(type, id))}</td>`;
+  }
+
   function renderBusinessLogs(report) {
     const salesRows = report.sales?.recent || [];
     cacheBusinessRecords('sales', salesRows);
     document.getElementById('admin-business-sales-log').innerHTML = salesRows.length ? salesRows.map((row) => `
       <tr>
+        ${entryCell('sales', row.id)}
         <td>${escapeHtml(dateOnly(row.saleDate || row.reportingMonth))}</td>
-        <td><button class="sales-customer-link" type="button" data-sales-customer-name="${escapeHtml(row.customerName)}"${row.customerId ? ` data-sales-customer-id="${Number(row.customerId)}"` : ''}>${escapeHtml(row.customerName)}</button><br><span class="sales-log-meta">${businessSource(row)} Ledger #${Number(row.id).toLocaleString('en-IN')}</span></td>
+        <td><button class="sales-customer-link" type="button" data-sales-customer-name="${escapeHtml(row.customerName)}"${row.customerId ? ` data-sales-customer-id="${Number(row.customerId)}"` : ''}>${escapeHtml(row.customerName)}</button><br><span class="sales-log-meta">${businessSource(row)}</span></td>
         <td>${escapeHtml(row.productName || 'Not specified')}</td>
         <td>${row.quantity === null ? '-' : Number(row.quantity).toLocaleString('en-IN')} <span class="text-muted">${escapeHtml(row.quantityUnit || '')}</span></td>
         <td>${row.unitPrice === null ? '<span class="text-muted">Not recorded</span>' : escapeHtml(money(row.unitPrice))}</td>
@@ -935,55 +946,55 @@
         <td><span class="sales-payment-state review" title="Workbook collections and outstanding values require invoice-level confirmation">${row.sourceReceivedAmount != null || row.sourceOutstandingAmount != null ? 'Review source' : 'Not recorded'}</span></td>
         <td>${businessActions('sales', row)}</td>
       </tr>
-    `).join('') : '<tr><td colspan="8" class="text-muted">No sales records match this period and filter.</td></tr>';
+    `).join('') : '<tr><td colspan="9" class="text-muted">No sales records match this period and filter.</td></tr>';
 
     const receipts = report.finance?.recentReceipts || [];
     cacheBusinessRecords('receipts', receipts);
     document.getElementById('admin-receipt-log').innerHTML = receipts.length ? receipts.map((row) => `
-      <tr><td>${escapeHtml(dateOnly(row.receiptDate || row.reportingMonth))}</td><td>${row.saleId ? `#${Number(row.saleId).toLocaleString('en-IN')}` : '-'}</td><td><strong>${escapeHtml(row.customerName || 'Not specified')}</strong></td><td class="admin-amount-received">${escapeHtml(money(row.amount))}</td><td>${escapeHtml(row.paymentMethod || '-')}</td><td>${businessSource(row)}</td><td>${businessActions('receipts', row)}</td></tr>
-    `).join('') : '<tr><td colspan="7" class="text-muted">No receipt references in this period.</td></tr>';
+      <tr>${entryCell('receipts', row.id)}<td>${escapeHtml(dateOnly(row.receiptDate || row.reportingMonth))}</td><td>${row.saleId ? entryReference('sales', row.saleId) : '-'}</td><td><strong>${escapeHtml(row.customerName || 'Not specified')}</strong></td><td class="admin-amount-received">${escapeHtml(money(row.amount))}</td><td>${escapeHtml(row.paymentMethod || '-')}</td><td>${businessSource(row)}</td><td>${businessActions('receipts', row)}</td></tr>
+    `).join('') : '<tr><td colspan="8" class="text-muted">No receipt references in this period.</td></tr>';
 
     const expenses = report.finance?.recentExpenses || [];
     cacheBusinessRecords('expenses', expenses);
     document.getElementById('admin-expense-log').innerHTML = expenses.length ? expenses.map((row) => `
-      <tr><td>${escapeHtml(dateOnly(row.expenseDate || row.reportingMonth))}</td><td><strong>${escapeHtml(row.description || 'No description')}</strong><br><span class="text-muted">${escapeHtml(label(row.category))}</span></td><td>${escapeHtml(money(row.amount))}</td><td>${escapeHtml(row.paidBy || '-')}</td><td>${businessSource(row)}</td><td>${businessActions('expenses', row)}</td></tr>
-    `).join('') : '<tr><td colspan="6" class="text-muted">No expense records in this period.</td></tr>';
+      <tr>${entryCell('expenses', row.id)}<td>${escapeHtml(dateOnly(row.expenseDate || row.reportingMonth))}</td><td><strong>${escapeHtml(row.description || 'No description')}</strong><br><span class="text-muted">${escapeHtml(label(row.category))}</span></td><td>${escapeHtml(money(row.amount))}</td><td>${escapeHtml(row.paidBy || '-')}</td><td>${businessSource(row)}</td><td>${businessActions('expenses', row)}</td></tr>
+    `).join('') : '<tr><td colspan="7" class="text-muted">No expense records in this period.</td></tr>';
     const accountsExpenses = document.getElementById('admin-accounts-expense-log');
     if (accountsExpenses) accountsExpenses.innerHTML = expenses.length ? expenses.map((row) => `
-      <tr><td>${escapeHtml(dateOnly(row.expenseDate || row.reportingMonth))}</td><td><strong>${escapeHtml(row.description || 'No description')}</strong></td><td>${escapeHtml(label(row.category))}</td><td>${escapeHtml(money(row.amount))}</td><td>${businessActions('expenses', row)}</td></tr>
-    `).join('') : '<tr><td colspan="5" class="text-muted">No expenses in this period.</td></tr>';
+      <tr>${entryCell('expenses', row.id)}<td>${escapeHtml(dateOnly(row.expenseDate || row.reportingMonth))}</td><td><strong>${escapeHtml(row.description || 'No description')}</strong></td><td>${escapeHtml(label(row.category))}</td><td>${escapeHtml(money(row.amount))}</td><td>${businessActions('expenses', row)}</td></tr>
+    `).join('') : '<tr><td colspan="6" class="text-muted">No expenses in this period.</td></tr>';
 
     const purchases = report.finance?.recentPurchases || [];
     cacheBusinessRecords('purchases', purchases);
     document.getElementById('admin-purchase-log').innerHTML = purchases.length ? purchases.map((row) => `
-      <tr><td>${escapeHtml(dateOnly(row.purchaseDate || row.reportingMonth))}</td><td><strong>${escapeHtml(row.materialName)}</strong><br><span class="text-muted">${escapeHtml(row.vendorName || 'Vendor not specified')}</span></td><td>${row.quantity === null ? '-' : Number(row.quantity).toLocaleString('en-IN')}</td><td>${escapeHtml(money(row.purchaseAmount))}</td><td>${escapeHtml(label(row.paymentStatus))}</td><td>${businessSource(row)}</td><td>${businessActions('purchases', row)}</td></tr>
-    `).join('') : '<tr><td colspan="7" class="text-muted">No material purchase records in this period.</td></tr>';
+      <tr>${entryCell('purchases', row.id)}<td>${escapeHtml(dateOnly(row.purchaseDate || row.reportingMonth))}</td><td><strong>${escapeHtml(row.materialName)}</strong><br><span class="text-muted">${escapeHtml(row.vendorName || 'Vendor not specified')}</span></td><td>${row.quantity === null ? '-' : Number(row.quantity).toLocaleString('en-IN')}</td><td>${escapeHtml(money(row.purchaseAmount))}</td><td>${escapeHtml(label(row.paymentStatus))}</td><td>${businessSource(row)}</td><td>${businessActions('purchases', row)}</td></tr>
+    `).join('') : '<tr><td colspan="8" class="text-muted">No material purchase records in this period.</td></tr>';
     const operationsInventory = document.getElementById('admin-operations-inventory-log');
     if (operationsInventory) operationsInventory.innerHTML = purchases.length ? purchases.map((row) => `
-      <tr><td>${escapeHtml(dateOnly(row.purchaseDate || row.reportingMonth))}</td><td><button class="sales-customer-link" type="button" data-inventory-category="${escapeHtml(row.materialName)}">${escapeHtml(row.materialName)}</button></td><td>${row.unitPrice === null ? 'Not recorded' : escapeHtml(money(row.unitPrice))}</td><td>${row.quantity === null ? 'Not recorded' : Number(row.quantity).toLocaleString('en-IN')}</td><td>${escapeHtml(money(row.purchaseAmount))}</td><td>${escapeHtml(row.vendorName || 'Not specified')}</td><td>${businessSource(row)}</td><td>${businessActions('purchases', row)}</td></tr>
-    `).join('') : '<tr><td colspan="8" class="text-muted">No material purchase records in this period.</td></tr>';
+      <tr>${entryCell('purchases', row.id)}<td>${escapeHtml(dateOnly(row.purchaseDate || row.reportingMonth))}</td><td><button class="sales-customer-link" type="button" data-inventory-category="${escapeHtml(row.materialName)}">${escapeHtml(row.materialName)}</button></td><td>${row.unitPrice === null ? 'Not recorded' : escapeHtml(money(row.unitPrice))}</td><td>${row.quantity === null ? 'Not recorded' : Number(row.quantity).toLocaleString('en-IN')}</td><td>${escapeHtml(money(row.purchaseAmount))}</td><td>${escapeHtml(row.vendorName || 'Not specified')}</td><td>${businessSource(row)}</td><td>${businessActions('purchases', row)}</td></tr>
+    `).join('') : '<tr><td colspan="9" class="text-muted">No material purchase records in this period.</td></tr>';
 
     const production = report.operations?.recentProduction || [];
     cacheBusinessRecords('production', production);
     document.getElementById('admin-production-log').innerHTML = production.length ? production.map((row) => `
-      <tr><td>${escapeHtml(dateOnly(row.recordDate || row.reportingMonth))}</td><td>${escapeHtml(label(row.recordType))}</td><td><strong>${escapeHtml(row.productName || row.reason || '-')}</strong></td><td>${row.quantity === null ? '-' : Number(row.quantity).toLocaleString('en-IN')}</td><td>${businessSource(row)}</td><td>${businessActions('production', row)}</td></tr>
-    `).join('') : '<tr><td colspan="6" class="text-muted">No production records in this period.</td></tr>';
+      <tr>${entryCell('production', row.id)}<td>${escapeHtml(dateOnly(row.recordDate || row.reportingMonth))}</td><td>${escapeHtml(label(row.recordType))}</td><td><strong>${escapeHtml(row.productName || row.reason || '-')}</strong></td><td>${row.quantity === null ? '-' : Number(row.quantity).toLocaleString('en-IN')}</td><td>${businessSource(row)}</td><td>${businessActions('production', row)}</td></tr>
+    `).join('') : '<tr><td colspan="7" class="text-muted">No production records in this period.</td></tr>';
 
     const labour = report.labour?.recent || [];
     cacheBusinessRecords('labour', labour);
     document.getElementById('admin-labour-log').innerHTML = labour.length ? labour.map((row) => `
-      <tr><td>${escapeHtml(dateOnly(row.paymentDate || row.reportingMonth))}</td><td><strong>${escapeHtml(row.workDescription)}</strong></td><td>${row.quantity === null ? escapeHtml(row.rawQuantity || '-') : Number(row.quantity).toLocaleString('en-IN')}</td><td>${escapeHtml(money(row.totalAmount))}</td><td>${row.pendingAmount === null ? '-' : escapeHtml(money(row.pendingAmount))}</td><td>${businessSource(row)}</td><td>${businessActions('labour', row)}</td></tr>
-    `).join('') : '<tr><td colspan="7" class="text-muted">No labour payment records in this period.</td></tr>';
+      <tr>${entryCell('labour', row.id)}<td>${escapeHtml(dateOnly(row.paymentDate || row.reportingMonth))}</td><td><strong>${escapeHtml(row.workDescription)}</strong></td><td>${row.quantity === null ? escapeHtml(row.rawQuantity || '-') : Number(row.quantity).toLocaleString('en-IN')}</td><td>${escapeHtml(money(row.totalAmount))}</td><td>${row.pendingAmount === null ? '-' : escapeHtml(money(row.pendingAmount))}</td><td>${businessSource(row)}</td><td>${businessActions('labour', row)}</td></tr>
+    `).join('') : '<tr><td colspan="8" class="text-muted">No labour payment records in this period.</td></tr>';
     const hrLabourLog = document.getElementById('admin-hr-labour-log');
     if (hrLabourLog) hrLabourLog.innerHTML = labour.length ? labour.map((row) => `
-      <tr><td>${escapeHtml(dateOnly(row.paymentDate || row.reportingMonth))}</td><td><strong>${escapeHtml(row.workDescription)}</strong></td><td>${row.quantity === null ? escapeHtml(row.rawQuantity || '-') : Number(row.quantity).toLocaleString('en-IN')}</td><td>${escapeHtml(money(row.totalAmount))}</td><td>${row.pendingAmount === null ? 'Not recorded' : escapeHtml(money(row.pendingAmount))}</td><td>${businessSource(row)}</td><td>${businessActions('labour', row)}</td></tr>
-    `).join('') : '<tr><td colspan="7" class="text-muted">No labour payment records in this period.</td></tr>';
+      <tr>${entryCell('labour', row.id)}<td>${escapeHtml(dateOnly(row.paymentDate || row.reportingMonth))}</td><td><strong>${escapeHtml(row.workDescription)}</strong></td><td>${row.quantity === null ? escapeHtml(row.rawQuantity || '-') : Number(row.quantity).toLocaleString('en-IN')}</td><td>${escapeHtml(money(row.totalAmount))}</td><td>${row.pendingAmount === null ? 'Not recorded' : escapeHtml(money(row.pendingAmount))}</td><td>${businessSource(row)}</td><td>${businessActions('labour', row)}</td></tr>
+    `).join('') : '<tr><td colspan="8" class="text-muted">No labour payment records in this period.</td></tr>';
 
     const events = report.events || [];
     cacheBusinessRecords('events', events);
     document.getElementById('admin-business-events-log').innerHTML = events.length ? events.map((row) => `
-      <tr><td>${escapeHtml(dateTime(row.occurredAt))}</td><td>${escapeHtml(label(row.type))}</td><td><strong>${escapeHtml(row.description)}</strong>${row.category ? `<br><span class="text-muted">${escapeHtml(row.category)}</span>` : ''}</td><td>${escapeHtml(label(row.impact))}</td><td>${escapeHtml(label(row.status))}</td><td>${businessActions('events', row)}</td></tr>
-    `).join('') : '<tr><td colspan="6" class="text-muted">No business events recorded in this period.</td></tr>';
+      <tr>${entryCell('events', row.id)}<td>${escapeHtml(dateTime(row.occurredAt))}</td><td>${escapeHtml(label(row.type))}</td><td><strong>${escapeHtml(row.description)}</strong>${row.category ? `<br><span class="text-muted">${escapeHtml(row.category)}</span>` : ''}</td><td>${escapeHtml(label(row.impact))}</td><td>${escapeHtml(label(row.status))}</td><td>${businessActions('events', row)}</td></tr>
+    `).join('') : '<tr><td colspan="7" class="text-muted">No business events recorded in this period.</td></tr>';
   }
 
   function salesCustomerTotal(value) {
@@ -1019,6 +1030,7 @@
       const payment = salesCustomerPayment(row.paymentStatus);
       return `
         <tr>
+          ${entryCell('sales', row.id)}
           <td>${escapeHtml(dateOnly(row.saleDate || row.reportingMonth))}</td>
           <td>${escapeHtml(row.productName || 'Unavailable')}</td>
           <td>${row.quantity == null ? 'Unavailable' : `${Number(row.quantity).toLocaleString('en-IN')} ${escapeHtml(row.quantityUnit || '')}`}</td>
@@ -1029,7 +1041,7 @@
           <td><button class="admin-link-button inline" type="button" data-edit-business-record="${Number(row.id)}" data-business-type="sales">Edit</button></td>
         </tr>
       `;
-    }).join('') : '<tr><td colspan="8" class="text-muted">No active sales records are available for this customer.</td></tr>';
+    }).join('') : '<tr><td colspan="9" class="text-muted">No active sales records are available for this customer.</td></tr>';
   }
 
   function closeSalesCustomerModal() {
@@ -1039,7 +1051,7 @@
   async function openSalesCustomerLog(customerName, customerId) {
     document.getElementById('admin-sales-customer-details').innerHTML = '<div><dt>Name</dt><dd>Loading...</dd></div>';
     document.getElementById('admin-sales-customer-total').textContent = 'Loading...';
-    document.getElementById('admin-sales-customer-rows').innerHTML = '<tr><td colspan="8" class="text-muted">Loading customer sales...</td></tr>';
+    document.getElementById('admin-sales-customer-rows').innerHTML = '<tr><td colspan="9" class="text-muted">Loading customer sales...</td></tr>';
     salesCustomerModal.hidden = false;
     const params = new URLSearchParams({ customerName });
     if (customerId) params.set('customerId', customerId);
@@ -1067,6 +1079,7 @@
       const payment = salesCustomerPayment(row.displayPaymentStatus);
       return `
         <tr>
+          ${entryCell('purchases', row.id)}
           <td>${escapeHtml(dateOnly(row.purchaseDate || row.reportingMonth))}</td>
           <td>${escapeHtml(row.materialName || 'Unavailable')}</td>
           <td>${row.unitPrice == null ? 'Unavailable' : escapeHtml(money(row.unitPrice))}</td>
@@ -1077,7 +1090,7 @@
           <td><button class="admin-link-button inline" type="button" data-edit-business-record="${Number(row.id)}" data-business-type="purchases">Edit</button></td>
         </tr>
       `;
-    }).join('') : '<tr><td colspan="8" class="text-muted">No active purchase records are available for this vendor.</td></tr>';
+    }).join('') : '<tr><td colspan="9" class="text-muted">No active purchase records are available for this vendor.</td></tr>';
   }
 
   function closeVendorLogModal() {
@@ -1087,7 +1100,7 @@
   async function openVendorLog(vendorName, vendorId) {
     document.getElementById('admin-vendor-log-details').innerHTML = '<div><dt>Name</dt><dd>Loading...</dd></div>';
     document.getElementById('admin-vendor-log-total').textContent = 'Loading...';
-    document.getElementById('admin-vendor-log-rows').innerHTML = '<tr><td colspan="8" class="text-muted">Loading vendor purchases...</td></tr>';
+    document.getElementById('admin-vendor-log-rows').innerHTML = '<tr><td colspan="9" class="text-muted">Loading vendor purchases...</td></tr>';
     vendorLogModal.hidden = false;
     const params = new URLSearchParams({ vendorName });
     if (vendorId) params.set('vendorId', vendorId);
@@ -1112,6 +1125,7 @@
       const payment = salesCustomerPayment(row.displayPaymentStatus);
       return `
         <tr>
+          ${entryCell('purchases', row.id)}
           <td>${escapeHtml(dateOnly(row.purchaseDate || row.reportingMonth))}</td>
           <td>${escapeHtml(row.notes || row.materialName || 'Unavailable')}</td>
           <td>${escapeHtml(money(row.purchaseAmount || 0))}</td>
@@ -1120,7 +1134,7 @@
           <td><button class="admin-link-button inline" type="button" data-edit-business-record="${Number(row.id)}" data-business-type="purchases">Edit</button></td>
         </tr>
       `;
-    }).join('') : '<tr><td colspan="6" class="text-muted">No active inventory records are available for this category.</td></tr>';
+    }).join('') : '<tr><td colspan="7" class="text-muted">No active inventory records are available for this category.</td></tr>';
   }
 
   function closeInventoryCategoryModal() {
@@ -1130,7 +1144,7 @@
   async function openInventoryCategoryLog(category) {
     document.getElementById('admin-inventory-category-details').innerHTML = '<div><dt>Category</dt><dd>Loading...</dd></div>';
     document.getElementById('admin-inventory-category-total').textContent = 'Loading...';
-    document.getElementById('admin-inventory-category-rows').innerHTML = '<tr><td colspan="6" class="text-muted">Loading category purchases...</td></tr>';
+    document.getElementById('admin-inventory-category-rows').innerHTML = '<tr><td colspan="7" class="text-muted">Loading category purchases...</td></tr>';
     inventoryCategoryModal.hidden = false;
     try {
       const params = new URLSearchParams({ category });
@@ -1635,7 +1649,7 @@
       if (product !== 'ALL' && lead.product !== product) return false;
       if (start && date < start) return false;
       if (end && date > end) return false;
-      return !search || [lead.customerName, lead.phone, lead.location].some((value) => String(value || '').toLowerCase().includes(search));
+      return !search || [lead.enquiryNumber, lead.customerName, lead.phone, lead.location].some((value) => String(value || '').toLowerCase().includes(search));
     });
     document.getElementById('admin-marketing-leads').innerHTML = rows.length ? rows.map((lead) => {
       const pdfUrl = String(lead.pdfUrl || '');
@@ -1643,8 +1657,8 @@
       const pdfAction = safePdfUrl
         ? `<a class="marketing-pdf-link" href="${escapeHtml(safePdfUrl)}" target="_blank" rel="noopener" aria-label="View quotation PDF for ${escapeHtml(lead.customerName)}"><span aria-hidden="true">PDF</span>View</a>`
         : '<span class="marketing-pdf-unavailable">Unavailable</span>';
-      return `<tr><td>${escapeHtml(dateOnly(lead.date))}</td><td><button class="marketing-customer-link" type="button" data-preview-lead="${lead.id}">${escapeHtml(lead.customerName)}</button><small>${escapeHtml(lead.phone || '')}</small></td><td>${escapeHtml(lead.product)}</td><td>${Number(lead.quantity).toLocaleString('en-IN')}</td><td>${escapeHtml(label(lead.priority))}</td><td><span class="admin-status ${String(lead.status).toLowerCase()}">${escapeHtml(label(lead.status))}</span></td><td>${lead.followUp ? escapeHtml(dateOnly(lead.followUp)) : 'Not scheduled'}</td><td>${escapeHtml(label(lead.source))}</td><td><button class="admin-link-button inline" type="button" data-view-lead="${lead.id}">Edit</button></td><td>${pdfAction}</td></tr>`;
-    }).join('') : '<tr><td colspan="10" class="text-muted">No matching leads.</td></tr>';
+      return `<tr><td class="admin-entry-id">${escapeHtml(lead.enquiryNumber)}</td><td>${escapeHtml(dateOnly(lead.date))}</td><td><button class="marketing-customer-link" type="button" data-preview-lead="${lead.id}">${escapeHtml(lead.customerName)}</button><small>${escapeHtml(lead.phone || '')}</small></td><td>${escapeHtml(lead.product)}</td><td>${Number(lead.quantity).toLocaleString('en-IN')}</td><td>${escapeHtml(label(lead.priority))}</td><td><span class="admin-status ${String(lead.status).toLowerCase()}">${escapeHtml(label(lead.status))}</span></td><td>${lead.followUp ? escapeHtml(dateOnly(lead.followUp)) : 'Not scheduled'}</td><td>${escapeHtml(label(lead.source))}</td><td><button class="admin-link-button inline" type="button" data-view-lead="${lead.id}">Edit</button></td><td>${pdfAction}</td></tr>`;
+    }).join('') : '<tr><td colspan="11" class="text-muted">No matching leads.</td></tr>';
     document.getElementById('admin-marketing-lead-summary').textContent = `${rows.length.toLocaleString('en-IN')} of ${(marketingAnalytics?.leads || []).length.toLocaleString('en-IN')} records shown`;
   }
 
@@ -2633,7 +2647,7 @@
     const fields = BUSINESS_RECORD_FIELDS.production;
     const field = (name, title) => namedBusinessField(fields, record, name, title);
     const input = (name) => {
-      if (name === 'Entry ID') return `<label class="form-field"><span class="form-label">Entry ID</span><input class="form-input" value="${record ? escapeHtml(record.id) : 'Assigned on save'}" readonly /></label>`;
+      if (name === 'Entry ID') return `<label class="form-field"><span class="form-label">Entry ID</span><input class="form-input" value="${escapeHtml(entryReference('production', record?.id))}" readonly /></label>`;
       const backed = { Date: 'recordDate', Product: 'productName', 'Units Produced (gross)': 'quantity', Remarks: 'qualityNote' }[name];
       return backed ? field(backed, name) : referenceField(name);
     };
@@ -2645,7 +2659,7 @@
     const fields = BUSINESS_RECORD_FIELDS.sales;
     const field = (name, title) => namedBusinessField(fields, record, name, title);
     const input = (name) => {
-      if (name === 'Order ID') return `<label class="form-field"><span class="form-label">Order ID</span><input class="form-input" value="${record ? escapeHtml(record.id) : 'Assigned on save'}" readonly /></label>`;
+      if (name === 'Order ID') return `<label class="form-field"><span class="form-label">Order ID</span><input class="form-input" value="${escapeHtml(entryReference('sales', record?.id))}" readonly /></label>`;
       const backed = {
         'Order Date': 'saleDate', 'Customer Name': 'customerName', 'Phone No.': 'customerPhone',
         Product: 'productName', 'Quantity (units)': 'quantity', 'Final Rate (per unit)': 'unitPrice',
@@ -2664,7 +2678,7 @@
       <fieldset class="admin-lead-log-section">
         <legend>Payments Receipts</legend>
         <div class="admin-modal-grid">
-          <label class="form-field"><span class="form-label">Payment ID</span><input class="form-input" type="text" value="${record ? escapeHtml(record.id) : 'Assigned on save'}" readonly /></label>
+          <label class="form-field"><span class="form-label">Payment ID</span><input class="form-input" type="text" value="${escapeHtml(entryReference('receipts', record?.id))}" readonly /></label>
           ${field('receiptDate', 'Payment Date')}
           ${field('saleId', 'Order ID')}
           ${field('customerName', 'Customer')}
@@ -2687,7 +2701,7 @@
       <fieldset class="admin-lead-log-section">
         <legend>Expense Details</legend>
         <div class="admin-modal-grid">
-          <label class="form-field"><span class="form-label">Expense ID</span><input class="form-input" type="text" value="${record ? escapeHtml(record.id) : 'Assigned on save'}" readonly /></label>
+          <label class="form-field"><span class="form-label">Expense ID</span><input class="form-input" type="text" value="${escapeHtml(entryReference('expenses', record?.id))}" readonly /></label>
           ${field('expenseDate')}
           ${field('category')}
           ${field('description')}
@@ -2703,7 +2717,7 @@
   function genericLogMarkup(type, record) {
     const title = { purchases: 'Material Purchase', labour: 'Labour Payment', events: 'Business Event' }[type] || 'Record';
     return `<fieldset class="admin-lead-log-section"><legend>${title} Details</legend><div class="admin-modal-grid">
-      <label class="form-field"><span class="form-label">Entry ID</span><input class="form-input" type="text" value="${record ? escapeHtml(record.id) : 'Assigned on save'}" readonly /></label>
+      <label class="form-field"><span class="form-label">Entry ID</span><input class="form-input" type="text" value="${escapeHtml(entryReference(type, record?.id))}" readonly /></label>
       ${BUSINESS_RECORD_FIELDS[type].map((field) => businessFieldMarkup(field, record)).join('')}
     </div></fieldset>`;
   }
@@ -2763,7 +2777,7 @@
       'Days of Cover', 'Reorder Alert', 'Last Receipt Date', 'Days Since Last Receipt',
       'Past Shelf Life?', 'Last Physical Count',
     ].map((title) => `<label class="form-field"><span class="form-label admin-log-auto-label">${title}</span><input class="form-input" type="text" value="Not available" readonly /></label>`).join('');
-    document.getElementById('admin-material-item-fields').innerHTML = `${sections}
+    document.getElementById('admin-material-item-fields').innerHTML = `<fieldset class="admin-lead-log-section"><legend>Tracking</legend><div class="admin-modal-grid"><label class="form-field"><span class="form-label">Entry ID</span><input class="form-input" value="${escapeHtml(entryReference('items', item?.id))}" readonly /></label></div></fieldset>${sections}
       <fieldset class="admin-lead-log-section"><legend>Stock Status</legend><p class="body-sm text-muted">Stock movements and physical counts are not recorded yet.</p><div class="admin-modal-grid">${stockStatus}</div></fieldset>`;
     materialItemModal.hidden = false;
     const saveButton = materialItemForm.querySelector('[type="submit"]');
@@ -2789,8 +2803,8 @@
     const query = document.getElementById('admin-material-item-search').value.trim().toLowerCase();
     const rows = materialItems.filter((item) => [item.itemCode, item.itemName, item.category, item.subCategory].some((value) => String(value || '').toLowerCase().includes(query)));
     document.getElementById('admin-material-items-log').innerHTML = rows.length ? rows.map((item) => `
-      <tr><td>${escapeHtml(item.itemCode)}</td><td>${escapeHtml(item.itemName)}</td><td>${escapeHtml(item.category)} / ${escapeHtml(item.subCategory)}</td><td>${escapeHtml(item.unit)}</td><td>${item.openingStock == null ? '-' : Number(item.openingStock).toLocaleString('en-IN')}</td><td>Not available</td><td><button class="admin-link-button inline" type="button" data-edit-material-item="${Number(item.id)}">Edit</button></td></tr>
-    `).join('') : '<tr><td colspan="7" class="text-muted">No items found.</td></tr>';
+      <tr>${entryCell('items', item.id)}<td>${escapeHtml(item.itemCode)}</td><td>${escapeHtml(item.itemName)}</td><td>${escapeHtml(item.category)} / ${escapeHtml(item.subCategory)}</td><td>${escapeHtml(item.unit)}</td><td>${item.openingStock == null ? '-' : Number(item.openingStock).toLocaleString('en-IN')}</td><td>Not available</td><td><button class="admin-link-button inline" type="button" data-edit-material-item="${Number(item.id)}">Edit</button></td></tr>
+    `).join('') : '<tr><td colspan="8" class="text-muted">No items found.</td></tr>';
   }
 
   async function loadMaterialItems() {
@@ -2805,7 +2819,7 @@
     } catch (_error) {
       materialItemsReady = false;
       addButton.title = 'View Item Master form; saving requires database setup';
-      document.getElementById('admin-material-items-log').innerHTML = '<tr><td colspan="7" class="text-muted">Item Master is not available yet. Database setup may still be pending.</td></tr>';
+      document.getElementById('admin-material-items-log').innerHTML = '<tr><td colspan="8" class="text-muted">Item Master is not available yet. Database setup may still be pending.</td></tr>';
     }
   }
 
@@ -3247,6 +3261,7 @@
 
   function renderLeadPreview(lead) {
     const contactFields = [
+      leadPreviewField('Lead ID', lead.enquiryNumber),
       leadPreviewField('Name', lead.customerName),
       leadPreviewField('Contact', lead.phone),
       leadPreviewField('Email', lead.email),

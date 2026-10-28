@@ -205,11 +205,11 @@
               <label><span>Customer type</span><select disabled title="Customer type is not recorded"><option>Not tracked</option></select></label>
               <label><span>Start date</span><input type="date" id="marketing-start-date" /></label>
               <label><span>End date</span><input type="date" id="marketing-end-date" /></label>
-              <label class="marketing-search"><span>Search</span><input type="search" id="marketing-lead-search" placeholder="Name, phone, or district" /></label>
+              <label class="marketing-search"><span>Search</span><input type="search" id="marketing-lead-search" placeholder="Lead ID, name, phone, or district" /></label>
             </div>
             <div class="admin-table-wrap marketing-table-wrap">
               <table class="admin-table marketing-lead-table">
-                <thead><tr><th>Date</th><th>Customer name</th><th>Type of bricks</th><th>Quantity</th><th>Priority</th><th>Status</th><th>Follow-up</th><th>Source</th><th>Action</th><th>Quotation PDF</th></tr></thead>
+                <thead><tr><th>Lead ID</th><th>Date</th><th>Customer name</th><th>Type of bricks</th><th>Quantity</th><th>Priority</th><th>Status</th><th>Follow-up</th><th>Source</th><th>Action</th><th>Quotation PDF</th></tr></thead>
                 <tbody id="admin-marketing-leads"></tbody>
               </table>
             </div>
@@ -293,7 +293,7 @@
             <div class="sales-log-table-shell">
               <div class="admin-table-wrap admin-table-flat sales-log-scroll">
                 <table class="admin-table admin-analytics-table sales-reference-log-table">
-                  <thead><tr><th>Date</th><th>Customer name</th><th>Type of bricks</th><th>No. of bricks</th><th>Unit Price</th><th>Payable</th><th>Payment status</th><th>Actions</th></tr></thead>
+                  <thead><tr><th>Entry ID</th><th>Date</th><th>Customer name</th><th>Type of bricks</th><th>No. of bricks</th><th>Unit Price</th><th>Payable</th><th>Payment status</th><th>Actions</th></tr></thead>
                   <tbody id="admin-business-sales-log"></tbody>
                 </table>
               </div>
@@ -423,21 +423,21 @@
           <article class="admin-data-panel admin-data-panel-wide">
             <div class="admin-data-panel-head"><div><h3 class="h-sm">Receipt Log</h3><p class="body-sm text-muted">Workbook receipt references and separately labeled manual receipts. Historical workbook values remain review-only.</p></div><div class="admin-log-controls"><select class="form-select admin-log-origin" data-business-log-origin="receipts" aria-label="Receipt log source"><option value="ALL">All sources</option><option value="XLSX_IMPORT">Workbook only</option><option value="MANUAL">Manual only</option></select><input class="form-input admin-log-search" type="search" data-business-log-search="receipts" placeholder="Search receipts" /><button class="btn btn-maroon btn-sm" type="button" data-open-business-record="receipts">Add Receipt</button></div></div>
             <div class="admin-table-wrap admin-table-flat"><table class="admin-table admin-analytics-table">
-              <thead><tr><th>Date</th><th>Sale ID</th><th>Customer</th><th>Amount</th><th>Method</th><th>Source</th><th>Actions</th></tr></thead>
+              <thead><tr><th>Entry ID</th><th>Date</th><th>Sale ID</th><th>Customer</th><th>Amount</th><th>Method</th><th>Source</th><th>Actions</th></tr></thead>
               <tbody id="admin-receipt-log"></tbody>
             </table></div><div class="admin-pagination" data-business-log-pagination="receipts"></div>
           </article>
           <article class="admin-data-panel admin-data-panel-wide">
             <div class="admin-data-panel-head"><div><h3 class="h-sm">Expense Log</h3><p class="body-sm text-muted">Workbook expenses and separately labeled manual expense entries.</p></div><div class="admin-log-controls"><select class="form-select admin-log-origin" data-business-log-origin="expenses" aria-label="Expense log source"><option value="ALL">All sources</option><option value="XLSX_IMPORT">Workbook only</option><option value="MANUAL">Manual only</option></select><input class="form-input admin-log-search" type="search" data-business-log-search="expenses" placeholder="Search expenses" /><button class="btn btn-maroon btn-sm" type="button" data-open-business-record="expenses">Add Expense</button></div></div>
             <div class="admin-table-wrap admin-table-flat"><table class="admin-table admin-analytics-table">
-              <thead><tr><th>Date</th><th>Description</th><th>Amount</th><th>Paid By</th><th>Source</th><th>Actions</th></tr></thead>
+              <thead><tr><th>Entry ID</th><th>Date</th><th>Description</th><th>Amount</th><th>Paid By</th><th>Source</th><th>Actions</th></tr></thead>
               <tbody id="admin-expense-log"></tbody>
             </table></div><div class="admin-pagination" data-business-log-pagination="expenses"></div>
           </article>
           <article class="admin-data-panel admin-data-panel-wide">
             <div class="admin-data-panel-head"><div><h3 class="h-sm">Raw Material Purchase Log</h3><p class="body-sm text-muted">Workbook purchases and separately labeled manual material entries.</p></div><div class="admin-log-controls"><select class="form-select admin-log-origin" data-business-log-origin="purchases" aria-label="Purchase log source"><option value="ALL">All sources</option><option value="XLSX_IMPORT">Workbook only</option><option value="MANUAL">Manual only</option></select><input class="form-input admin-log-search" type="search" data-business-log-search="purchases" placeholder="Search purchases" /><button class="btn btn-maroon btn-sm" type="button" data-open-business-record="purchases">Add Purchase</button></div></div>
             <div class="admin-table-wrap admin-table-flat"><table class="admin-table admin-analytics-table">
-              <thead><tr><th>Date</th><th>Material</th><th>Quantity</th><th>Amount</th><th>Status</th><th>Source</th><th>Actions</th></tr></thead>
+              <thead><tr><th>Entry ID</th><th>Date</th><th>Material</th><th>Quantity</th><th>Amount</th><th>Status</th><th>Source</th><th>Actions</th></tr></thead>
               <tbody id="admin-purchase-log"></tbody>
             </table></div><div class="admin-pagination" data-business-log-pagination="purchases"></div>
           </article>
@@ -566,7 +566,7 @@
         <article class="operations-reference-card admin-report-panel operations-log-card">
           <div class="admin-data-panel-head"><div><h3 class="h-sm">Production Log</h3></div><div class="admin-log-controls"><select class="form-select admin-log-origin" data-business-log-origin="production" aria-label="Production log source"><option value="ALL">All sources</option><option value="XLSX_IMPORT">Workbook only</option><option value="MANUAL">Manual only</option></select><input class="form-input admin-log-search" type="search" data-business-log-search="production" placeholder="Search production" /><button class="btn btn-dark btn-sm" type="button" data-open-business-record="production">Add Entry</button></div></div>
           <div class="admin-table-wrap admin-table-flat"><table class="admin-table admin-analytics-table">
-            <thead><tr><th>Date</th><th>Type</th><th>Product / Reason</th><th>Quantity</th><th>Source</th><th>Actions</th></tr></thead>
+            <thead><tr><th>Entry ID</th><th>Date</th><th>Type</th><th>Product / Reason</th><th>Quantity</th><th>Source</th><th>Actions</th></tr></thead>
             <tbody id="admin-production-log"></tbody>
           </table></div><div class="admin-pagination" data-business-log-pagination="production"></div>
         </article>
@@ -574,15 +574,15 @@
         <article class="operations-reference-card admin-report-panel operations-log-card">
           <div class="admin-data-panel-head"><div><h3 class="h-sm">Inventory Log</h3></div><div class="admin-log-controls"><input class="form-input admin-log-search" id="admin-material-item-search" type="search" placeholder="Search items" aria-label="Search inventory items" /><button class="btn btn-dark btn-sm" type="button" data-open-material-item>Add Entry</button></div></div>
           <div class="admin-table-wrap admin-table-flat"><table class="admin-table admin-analytics-table">
-            <thead><tr><th>Item Code</th><th>Item Name</th><th>Category</th><th>Unit</th><th>Opening Stock</th><th>Closing Stock</th><th>Actions</th></tr></thead>
-            <tbody id="admin-material-items-log"><tr><td colspan="7" class="text-muted">Loading items...</td></tr></tbody>
+            <thead><tr><th>Entry ID</th><th>Item Code</th><th>Item Name</th><th>Category</th><th>Unit</th><th>Opening Stock</th><th>Closing Stock</th><th>Actions</th></tr></thead>
+            <tbody id="admin-material-items-log"><tr><td colspan="8" class="text-muted">Loading items...</td></tr></tbody>
           </table></div>
         </article>
 
         <article class="operations-reference-card admin-report-panel operations-log-card">
           <div class="admin-data-panel-head"><div><h3 class="h-sm">Material Purchase Log</h3></div><div class="admin-log-controls"><select class="form-select admin-log-origin" data-business-log-origin="purchases" aria-label="Material purchase log source"><option value="ALL">All sources</option><option value="XLSX_IMPORT">Workbook only</option><option value="MANUAL">Manual only</option></select><input class="form-input admin-log-search" type="search" data-business-log-search="purchases" placeholder="Search materials or vendors" /><button class="btn btn-dark btn-sm" type="button" data-open-business-record="purchases">Add Purchase</button></div></div>
           <div class="admin-table-wrap admin-table-flat"><table class="admin-table admin-analytics-table">
-            <thead><tr><th>Date</th><th>Material</th><th>Price per Unit</th><th>Quantity</th><th>Recorded Total</th><th>Vendor</th><th>Source</th><th>Actions</th></tr></thead>
+            <thead><tr><th>Entry ID</th><th>Date</th><th>Material</th><th>Price per Unit</th><th>Quantity</th><th>Recorded Total</th><th>Vendor</th><th>Source</th><th>Actions</th></tr></thead>
             <tbody id="admin-operations-inventory-log"></tbody>
           </table></div>
         </article>
@@ -686,7 +686,7 @@
           </div>
           <article class="accounts-card accounts-expense-log">
             <div class="accounts-log-head"><h3>Expense Log</h3><div class="admin-log-controls"><button class="btn btn-maroon btn-sm" type="button" data-open-business-record="expenses">+ Add Entry</button></div></div>
-            <div class="admin-table-wrap accounts-expense-table" tabindex="0"><table class="admin-table"><thead><tr><th>Date</th><th>Description</th><th>Category</th><th>Amount</th><th>Action</th></tr></thead><tbody id="admin-accounts-expense-log"></tbody></table></div>
+            <div class="admin-table-wrap accounts-expense-table" tabindex="0"><table class="admin-table"><thead><tr><th>Entry ID</th><th>Date</th><th>Description</th><th>Category</th><th>Amount</th><th>Action</th></tr></thead><tbody id="admin-accounts-expense-log"></tbody></table></div>
           </article>
         </div>
       </div>
@@ -732,7 +732,7 @@
         <article class="admin-data-panel admin-report-panel">
           <div class="admin-data-panel-head"><div><h3 class="h-sm">Labour Payment Log</h3><p class="body-sm text-muted">Workbook labour obligations and separately labeled manual payments. Employee roster and attendance remain unavailable.</p></div><div class="admin-log-controls"><select class="form-select admin-log-origin" data-business-log-origin="labour" aria-label="Labour log source"><option value="ALL">All sources</option><option value="XLSX_IMPORT">Workbook only</option><option value="MANUAL">Manual only</option></select><input class="form-input admin-log-search" type="search" data-business-log-search="labour" placeholder="Search labour" /><button class="btn btn-maroon btn-sm" type="button" data-open-business-record="labour">Add Labour</button></div></div>
           <div class="admin-table-wrap admin-table-flat"><table class="admin-table admin-analytics-table">
-            <thead><tr><th>Date</th><th>Work</th><th>Quantity</th><th>Total</th><th>Pending Stated</th><th>Source</th><th>Actions</th></tr></thead>
+            <thead><tr><th>Entry ID</th><th>Date</th><th>Work</th><th>Quantity</th><th>Total</th><th>Pending Stated</th><th>Source</th><th>Actions</th></tr></thead>
             <tbody id="admin-labour-log"></tbody>
           </table></div><div class="admin-pagination" data-business-log-pagination="labour"></div>
         </article>
@@ -810,7 +810,7 @@
         <article class="admin-data-panel admin-report-panel" data-application-events hidden>
           <div class="admin-data-panel-head"><div><h3 class="h-sm">Business Event Log</h3><p class="body-sm text-muted">Structured operational observations, issues, corrections, and follow-ups.</p></div><input class="form-input admin-log-search" type="search" data-business-log-search="events" placeholder="Search events" /></div>
           <div class="admin-table-wrap admin-table-flat"><table class="admin-table admin-analytics-table">
-            <thead><tr><th>Date</th><th>Type</th><th>Description</th><th>Impact</th><th>Status</th><th>Actions</th></tr></thead>
+            <thead><tr><th>Entry ID</th><th>Date</th><th>Type</th><th>Description</th><th>Impact</th><th>Status</th><th>Actions</th></tr></thead>
             <tbody id="admin-business-events-log"></tbody>
           </table></div><div class="admin-pagination" data-business-log-pagination="events"></div>
         </article>
@@ -1118,7 +1118,7 @@
     <div class="admin-sales-customer-table-wrap">
       <table class="admin-sales-customer-table">
         <thead>
-          <tr><th>Date</th><th>Type of bricks</th><th>No. of bricks</th><th>Selling price</th><th>Payable</th><th>Payment Status</th><th>Invoice</th><th>Actions</th></tr>
+          <tr><th>Entry ID</th><th>Date</th><th>Type of bricks</th><th>No. of bricks</th><th>Selling price</th><th>Payable</th><th>Payment Status</th><th>Invoice</th><th>Actions</th></tr>
         </thead>
         <tbody id="admin-sales-customer-rows"></tbody>
       </table>
@@ -1143,7 +1143,7 @@
     <div class="admin-sales-customer-table-wrap">
       <table class="admin-sales-customer-table">
         <thead>
-          <tr><th>Date</th><th>Type of material</th><th>Price per unit</th><th>Quantity</th><th>Total</th><th>Payment Status</th><th>Invoice</th><th>Actions</th></tr>
+          <tr><th>Entry ID</th><th>Date</th><th>Type of material</th><th>Price per unit</th><th>Quantity</th><th>Total</th><th>Payment Status</th><th>Invoice</th><th>Actions</th></tr>
         </thead>
         <tbody id="admin-vendor-log-rows"></tbody>
       </table>
@@ -1168,7 +1168,7 @@
     <div class="admin-sales-customer-table-wrap">
       <table class="admin-sales-customer-table">
         <thead>
-          <tr><th>Date</th><th>Description</th><th>Payable</th><th>Payment Status</th><th>Invoice</th><th>Actions</th></tr>
+          <tr><th>Entry ID</th><th>Date</th><th>Description</th><th>Payable</th><th>Payment Status</th><th>Invoice</th><th>Actions</th></tr>
         </thead>
         <tbody id="admin-inventory-category-rows"></tbody>
       </table>
