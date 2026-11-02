@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Prepare a brick and block order request for SS Bricks in Tirupati." />
+  <title>Place an Order Request | SS Bricks</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/order.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+</head>
+<body class="order-page">
+  <nav id="navbar" aria-label="Main navigation">
+    <div class="container"><div class="nav-wrap">
+      <a href="index.html" class="nav-logo" aria-label="SS Bricks Home">
+        <div class="nav-logo-icon" aria-hidden="true"><svg viewBox="0 0 26 26" fill="none"><rect x="2" y="2" width="10" height="6" rx="1" fill="white"/><rect x="14" y="2" width="10" height="6" rx="1" fill="rgba(255,255,255,.55)"/><rect x="2" y="10" width="10" height="6" rx="1" fill="rgba(255,255,255,.55)"/><rect x="14" y="10" width="10" height="6" rx="1" fill="white"/><rect x="2" y="18" width="22" height="6" rx="1" fill="rgba(255,255,255,.75)"/></svg></div>
+        <div class="nav-logo-text"><span class="nav-logo-name">SS Bricks</span><span class="nav-logo-sub">Tirupati, Andhra Pradesh</span></div>
+      </a>
+      <nav class="nav-links" aria-label="Site links"><a href="index.html" class="nav-link">Home</a><a href="products.html" class="nav-link">Products</a><a href="order.html" class="nav-link active" aria-current="page">Place Order</a><a href="index.html#bulk-offers" class="nav-link">Bulk Offers</a><a href="index.html#quote-form" class="nav-link">Contact</a></nav>
+      <div class="nav-right"><a href="tel:+918886100063" class="btn btn-outline">Call 088861 00063</a><button class="nav-burger" id="nav-burger" type="button" aria-label="Open menu" aria-expanded="false"><span></span><span></span><span></span></button></div>
+    </div></div>
+  </nav>
+  <div class="mobile-nav" id="mobile-nav" role="dialog" aria-label="Mobile navigation" aria-hidden="true"><button class="mobile-nav-close" id="nav-close" type="button" aria-label="Close menu">&times;</button><nav class="mobile-nav-links"><a href="index.html" class="mobile-nav-link">Home</a><a href="products.html" class="mobile-nav-link">Products</a><a href="order.html" class="mobile-nav-link" aria-current="page">Place Order</a><a href="index.html#bulk-offers" class="mobile-nav-link">Bulk Offers</a><a href="index.html#quote-form" class="mobile-nav-link">Contact</a></nav><div class="mobile-nav-cta"><a href="tel:+918886100063" class="btn btn-outline btn-lg btn-full">Call Now</a></div></div>
+
+  <main class="order-main container">
+    <div class="order-intro"><p class="order-breadcrumb"><a href="index.html">Home</a> / Place an order</p><h1>Place an order</h1><p>Choose your products and tell us where to deliver. Our Tirupati team will confirm the final price and dispatch date.</p></div>
+    <div class="order-layout">
+      <form id="order-form" class="order-form" novalidate>
+        <section class="order-section" aria-labelledby="order-products-title"><div class="order-section-title"><span>01</span><div><h2 id="order-products-title">Choose products &amp; quantity</h2><p>Enter pieces or the unit shown for each product.</p></div></div><div class="order-products" id="order-products"></div><p class="order-catalog-status" id="order-catalog-status" role="status" aria-live="polite">Loading current catalogue...</p></section>
+
+        <section class="order-section" aria-labelledby="order-buyer-title"><div class="order-section-title"><span>02</span><div><h2 id="order-buyer-title">Ordering as</h2></div></div><div class="order-choice-row" role="radiogroup" aria-label="Buyer type"><label><input type="radio" name="buyerType" value="Home builder" checked /><span>Home builder</span></label><label><input type="radio" name="buyerType" value="Contractor / dealer" /><span>Contractor / dealer</span></label><label><input type="radio" name="buyerType" value="Architect" /><span>Architect</span></label><label><input type="radio" name="buyerType" value="Government / PSU" /><span>Government / PSU</span></label></div></section>
+
+        <section class="order-section" aria-labelledby="order-delivery-title"><div class="order-section-title"><span>03</span><div><h2 id="order-delivery-title">Delivery details</h2></div></div><div class="order-field-grid"><label class="order-field">Full name <span>*</span><input name="name" autocomplete="name" maxlength="100" required placeholder="e.g. Ramesh Reddy" /></label><label class="order-field">Mobile (WhatsApp) <span>*</span><input name="phone" type="tel" inputmode="tel" autocomplete="tel" maxlength="16" required placeholder="+91 9XXXXXXXXX" /></label><label class="order-field order-field-wide">Site address <span>*</span><input name="address" autocomplete="street-address" maxlength="240" required placeholder="Plot / door no., street, landmark" /></label><label class="order-field">Area / village <span>*</span><input name="area" maxlength="100" required placeholder="e.g. Tiruchanoor" /></label><label class="order-field">Pincode <span>*</span><input name="pincode" inputmode="numeric" pattern="[0-9]{6}" minlength="6" maxlength="6" required placeholder="517501" /></label><label class="order-field">Preferred delivery date <span>*</span><input name="deliveryDate" type="date" required /></label><label class="order-field">Site location link <small>(optional)</small><input name="locationLink" type="url" pattern="https://.*" maxlength="500" placeholder="https://maps.google.com/..." /></label><label class="order-field order-field-wide">Notes for delivery <small>(optional)</small><textarea name="notes" maxlength="600" rows="3" placeholder="Access, unloading point, labour at site..."></textarea></label></div></section>
+
+        <section class="order-section" aria-labelledby="order-payment-title"><div class="order-section-title"><span>04</span><div><h2 id="order-payment-title">Payment preference</h2><p>Our team will confirm payment terms before dispatch.</p></div></div><div class="order-payment-choices"><label><input type="radio" name="payment" value="Cash on delivery" checked /><span><strong>Cash on delivery</strong><small>Pay at site after the final amount is confirmed.</small></span></label><label><input type="radio" name="payment" value="Part advance" /><span><strong>Part advance</strong><small>Discuss an advance amount with the SS Bricks team.</small></span></label></div></section>
+      </form>
+
+      <aside class="order-summary" aria-labelledby="order-summary-title"><h2 id="order-summary-title">Your order request</h2><div id="order-summary-items" class="order-summary-items"><p>No products selected. Use + to add quantities.</p></div><dl class="order-summary-totals"><div><dt>Total units</dt><dd id="order-total-units">0</dd></div><div><dt>Material estimate</dt><dd id="order-estimate">-</dd></div><div><dt>Transport</dt><dd>Confirmed by team</dd></div></dl><div class="order-summary-grand"><span>Estimated materials</span><strong id="order-estimate-large">-</strong></div><p class="order-estimate-note">Estimates use listed standard prices when available. Final price, taxes, transport and delivery date are confirmed by our team.</p><ul><li>Choose at least one product.</li><li>Complete the delivery details.</li><li>Review the request in WhatsApp and send it to SS Bricks.</li></ul><label class="order-consent"><input form="order-form" id="order-consent" type="checkbox" required /><span>I agree to be contacted about this order request.</span></label><button class="btn btn-maroon btn-full order-submit" type="submit" form="order-form" id="order-submit">Review order request</button><p class="order-error" id="order-error" role="alert" aria-live="polite"></p><p class="order-summary-footnote">No payment is collected on this page.</p></aside>
+    </div>
+
+    <section class="order-review" id="order-review" aria-labelledby="order-review-title" hidden><div class="order-review-head"><span class="order-review-check" aria-hidden="true">&#10003;</span><div><h2 id="order-review-title">Ready to send</h2><p>Your order request is prepared. It has not been received by SS Bricks yet.</p></div></div><div id="order-review-details" class="order-review-details"></div><p>Open WhatsApp and press <strong>Send</strong> to submit your request to our team. We will call to confirm pricing and dispatch.</p><div class="order-review-actions"><a class="btn btn-maroon" id="order-whatsapp-link" href="#" target="_blank" rel="noopener">Continue on WhatsApp</a><button class="btn btn-outline" id="order-edit" type="button">Edit request</button></div></section>
+  </main>
+  <footer class="order-footer"><div class="container"><span>SS Bricks &middot; Tirupati, Andhra Pradesh 517501</span><a href="tel:+918886100063">Call 088861 00063</a></div></footer>
+  <script src="js/order.js"></script>
+</body>
+</html>

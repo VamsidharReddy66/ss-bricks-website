@@ -11,6 +11,7 @@ const entries = [
   'images',
   'index.html',
   'js',
+  'order.html',
   'products.html',
   'payment.html',
 ];
